@@ -192,7 +192,7 @@ def subtract_continuum(Rfile, Hfile, gfile, rfile, mask=None,overwrite=False):
 
     print('Generate NET image')
 
-    # DONE: TODO - subtract sky from r-band image
+    # TODONE - subtract sky from r-band image
 
     print('Computing median values for r and halpha images')
     stat_r = stats.sigma_clipped_stats(rhdu[0].data,mask=mask)
@@ -206,7 +206,7 @@ def subtract_continuum(Rfile, Hfile, gfile, rfile, mask=None,overwrite=False):
     hdu.writeto(skysub_r_name, overwrite=True) #sky-subtracted r-band image - use this for photometry
 
     
-    # DONE: TODO - subtract sky from Halpha image    
+    # TODONE - subtract sky from Halpha image    
     stat_h = stats.sigma_clipped_stats(hhdu[0].data,mask=mask)
     print('Subtracting {0:3.2f} from halpha image'.format(stat_h[1]))
     data_h = hhdu[0].data - stat_g[1]
@@ -214,11 +214,11 @@ def subtract_continuum(Rfile, Hfile, gfile, rfile, mask=None,overwrite=False):
     # Generate the r band mag image and the r band calibrated to Halpha wave
     # This works only for positive flux pixels. Take this into account
 
-    # DONE: TODO - change ZP - get this from image header
+    # TODONE - change ZP - get this from image header
     mag_r = -2.5*np.log10(data_r) + rZP
 
     # Transform the mag_r image to the observed Halpha filter
-    # DONE: TODO - change the color conversion - need to use different conversion for each Halpha/r combo
+    # TODONE - change the color conversion - need to use different conversion for each Halpha/r combo
     mag_r_to_Ha = mag_r + filter_transformation(telescope,rfilter, gr_col)
 
 
