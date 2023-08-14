@@ -80,17 +80,20 @@ from reproject import reproject_interp
 filter_width_AA = {'BOK':80.48,'HDI':80.48,'INT':95,'MOS':80.48,'INT6657':80}
 
 filter_lambda_c_AA = {'BOK':6620.52,'HDI':6620.52,'INT':6568,'MOS':6620.52,'INT6657':6657}
-52
+
+
 
 def filter_transformation(telescope,rfilter, gr_col):
+    
     """use Matteo's linear fits to transform r to Halpha """
-    if telescope == 'BOK' | ((telescope == 'HDI' and (rfilter == 'r'):
+    
+    if (telescope == 'BOK') | ((telescope == 'HDI') and (rfilter == 'r')):
         #Ha4_KPSr = -0.1804 * (gr_col) + 0.0158
-        ha_r = -0.1804 * (gr_col) + 0.0158
+        ha_r = -0.1804*gr_col + 0.0158
     elif telescope == 'INT':
         #Intha_INTSr = -0.2334 * (gr_col) + 0.0711
         ha_r = -0.2334 * (gr_col) + 0.0711
-    elif telescope == 'MOS' | ((telescope == 'HDI') and (rfilter == 'R')):
+    elif (telescope == 'MOS') | ((telescope == 'HDI') and (rfilter == 'R')):
         #Ha4_KPHr = -0.0465 * (gr_col) + 0.0012
         ha_r = -0.0465 * (gr_col) + 0.0012
             
@@ -113,6 +116,9 @@ def get_gr(gfile,rfile,mask=None):
     print('Computing median values for g and r images')
     stat_r = stats.sigma_clipped_stats(data_r,mask=mask)
     print('Subtracting {0:3.2f} from r-band image'.format(stat_r[1]))
+
+    # this is not going to mask out the galaxy, so the sky values will likely be skewed
+    # I am going to assume that the legacy images don't need another round of sky subtraction???
     data_r -= stat_r[1]
     stat_g = stats.sigma_clipped_stats(data_g,mask=mask)
     print('Subtracting {0:3.2f} from g-band image'.format(stat_g[1]))
@@ -268,10 +274,14 @@ def subtract_continuum(Rfile, Hfile, gfile, rfile, mask=None,overwrite=False):
     hdu = fits.PrimaryHDU(clam_NB, header=hhdu[0].header)
     hdu.writeto(fileroot+'_cont_new.fits', overwrite=True)
     hdu.close()
+    
     #Calculate clipped statistic
     #stat is a tuple of mean, median, sigma
     stat = stats.sigma_clipped_stats(flam_net,mask=mask)
-    flam_net -= stat[1]
+
+    # RF - I implemented the sky subtraction of each cutout image in halphagui
+    # would rather keep it there b/c it masks out the central galaxy
+    #flam_net -= stat[1]
 
     print('Unbinned SB limit 1sigma {0:3.1f} e-18'.format(stat[2]/(pscale_NB[0]**2)))
 
@@ -307,18 +317,31 @@ def subtract_continuum(Rfile, Hfile, gfile, rfile, mask=None,overwrite=False):
     # close hdu files
     hhdu.close()
     rhdu.close()
+                              
 
  
 
 if __name__ == '__main__':
+
+    # directory to analyze is specified on the command line
+    # this makes the program easy to run with gnu parallel
     dirname = sys.argv[1]
 
+    # get current directory
+    topdir = os.getcwd()
+
+    # move to subdirectory specified in the command line
+    os.chdir(dirname)
+
+    # get prefix from the directory name
     t = dirname.split('-')
     prefix = t[0]+'-'+t[1]
+    
     # define the file names
     Rfile = os.path.join(dirname,dirname+'-R.fits') # r-band image taken with same telescope as halpha
     Hfile = os.path.join(dirname,dirname+'-Ha.fits')  # halpha image
 
+    # get legacy images that are reprojected to the halpha image
     rfiles = glob.glob(os.path.join(dirname,'legacy',prefix+'*r-ha.fits'))
     if len(rfiles) < 1:
         print("problem getting r-ha.fits legacy image")
@@ -334,6 +357,7 @@ if __name__ == '__main__':
     else:
         gfile = gfiles[0] # legacy r-band image
 
+    # define the mask file
     maskfile = Rfile.replace('-R.fits','-R-mask.fits')
     if not os.path.exists(maskfile):
         print("WARNING: no mask found")
@@ -341,4 +365,6 @@ if __name__ == '__main__':
     else:
         mask = fits.getdata(maskfile)
         mask = mask > 0
+
+    # call the main function to subtract the continuum
     subtract_continuum(Rfile, Hfile, gfile, rfile,mask=mask,overwrite=False)

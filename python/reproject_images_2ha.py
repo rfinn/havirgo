@@ -8,6 +8,19 @@ reproject legacy images to halpha pixel scale
 PROCEDURE:
 input: get directory name
 
+Run from the cutouts directory that contains a subdirectory for each galaxy.  
+Note galaxies that were observed more than once will have a directory for each observation.
+
+
+To run with parallel from the cutouts directory:
+
+create a list of all the subdirectories:
+
+ls -d VFID* > virgo-cutouts.txt
+
+Then call parallel:
+
+parallel --eta  ~/github/havirgo/python/reproject_images_2ha.py :::: virgo-cutouts.txt 
 
 """
 import sys

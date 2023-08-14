@@ -26,6 +26,8 @@ import numpy as np
 import glob
 
 from matplotlib import pyplot as plt
+from matplotlib.patches import Ellipse
+
 from scipy.stats import scoreatpercentile
 from astropy.io import fits
 from astropy import wcs
@@ -53,7 +55,8 @@ from build_web_common import *
 
 
 VFMAIN_PATH = homedir+'/research/Virgo/tables-north/v1/vf_north_v1_main.fits'
-VFMAIN_PATH = homedir+'/research/Virgo/tables-north/v2/vf_north_v2_main.fits'
+VFMAIN_PATH = homedir+'/research/Virgo/tables-north/v2/vf_v2_main.fits'
+VFEPHOT_PATH = homedir+'/research/Virgo/tables-north/v2/vf_v2_legacy_ephot.fits'
 haimaging_path = os.path.join(homedir,'github/HalphaImaging/python3/')
 #sys.path.append(haimaging_path)
 
@@ -203,7 +206,30 @@ def make_png(fitsimage,outname,mask=None):
     plt.savefig(outname)        
     plt.close(fig)
 
-def display_galfit_model(galfile,percentile1=.5,percentile2=99.5,p1residual=5,p2residual=99,cmap='viridis',zoom=None,outdir=None,mask=None):
+def plot_ellipse(ax,ellipseparams):
+
+    xc,yc,r,BA,PA = self.ellipseparams
+
+    #print("just checking - adding ellipse drawing ",self.ellipseparams)
+    
+    # need to reset b to be consistent with galfit ellipticity
+    BA = float(BA)
+    THETA = float(THETA)
+    #print('THETA inside phot wrapper',THETA, BA)
+    b = BA*self.sma
+    eps = 1 - BA
+    #print(self.b,self.eps,self.sma,BA)
+    t = THETA
+    if t < 0:
+        theta = (180. + t)
+    else:
+        theta = (t) # orientation in radians
+    # EllipticalAperture gives rotation angle in radians from +x axis, CCW
+    ellipse = Ellipse((xc,yc), r, b, angle=theta)
+    ax.add_patch(ellipse)
+
+    
+def display_galfit_model(galfile,percentile1=.5,percentile2=99.5,p1residual=5,p2residual=99,cmap='viridis',zoom=None,outdir=None,mask=None,ellipseparams=None):
       '''
       ARGS:
       galfile = galfit output image (with image, model, residual)
@@ -282,6 +308,11 @@ def display_galfit_model(galfile,percentile1=.5,percentile2=99.5,p1residual=5,p2
           plt.xlabel('RA (deg)',fontsize=16)
           plt.ylabel('DEC (deg)',fontsize=16)
           #plt.title(titles[i],fontsize=16)
+          
+          # TODO add ellipse to the residual image
+          if (i == 2) and (ellipseparams is not None):
+              # plot the ellipse
+              plot_ellipse(plt.gca(),ellipseparams)
           plt.savefig(outim[i])
           #plt.close(fig)
 
@@ -311,11 +342,16 @@ class cutout_dir():
         if not os.path.exists(outdir):
             os.mkdir(outdir)
         self.outdir = outdir
-        
-        
-        
-
         self.cutoutdir = cutoutdir
+    def get_ellipse_params(self):
+        # get
+        vfmain = Table.read(VFMAIN_PATH)
+
+        ephot = Table.read(VFEPHOT_PATH)
+        igal = vmain['VFID'] == self.vfid
+
+        # need to get xc,yc
+        self.objparams = [['RA'][igal],self.defcat.cat['DEC'][igal],self.radius_arcsec[igal]*1.2,self.BA[igal],self.PA[igal]+90]        
     def runall(self):
         self.get_halpha_names()
         try:
