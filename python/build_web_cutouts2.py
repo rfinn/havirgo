@@ -201,7 +201,7 @@ def make_png(fitsimage,outname,mask=None,ellipseparams=None):
     display_image(imdata,sigclip=True,mask=mask)
     plt.xlabel('RA (deg)',fontsize=16)
     plt.ylabel('DEC (deg)',fontsize=16)
-    if ellispeparams is not None:
+    if ellipseparams is not None:
         ax = plt.gca()
         plot_ellipse(ax,ellipseparams)
     plt.savefig(outname)        
