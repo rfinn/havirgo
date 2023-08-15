@@ -217,7 +217,7 @@ def plot_ellipse(ax,ellipseparams):
     BA = float(BA)
     PA = float(PA)
     #print('THETA inside phot wrapper',THETA, BA)
-    b = BA*self.sma
+    b = BA*r
     eps = 1 - BA
     #print(self.b,self.eps,self.sma,BA)
     t = PA
