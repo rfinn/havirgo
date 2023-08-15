@@ -193,14 +193,17 @@ def display_image(image,percentile1=.5,percentile2=99.5,stretch='asinh',mask=Non
     plt.imshow(image, norm=norm,cmap='gray_r',origin='lower')#,vmin=v1,vmax=v2)
     
 
-def make_png(fitsimage,outname,mask=None):
+def make_png(fitsimage,outname,mask=None,ellipseparams=None):
     imdata,imheader = fits.getdata(fitsimage,header=True)
     fig = plt.figure(figsize=(6,6))
     ax = plt.subplot(projection=wcs.WCS(imheader))
     plt.subplots_adjust(top=.95,right=.95,left=.2,bottom=.15)
     display_image(imdata,sigclip=True,mask=mask)
     plt.xlabel('RA (deg)',fontsize=16)
-    plt.ylabel('DEC (deg)',fontsize=16)        
+    plt.ylabel('DEC (deg)',fontsize=16)
+    if ellispeparams is not None:
+        ax = plt.gca()
+        plot_ellipse(ax,ellipseparams)
     plt.savefig(outname)        
     plt.close(fig)
 
@@ -212,12 +215,12 @@ def plot_ellipse(ax,ellipseparams):
     
     # need to reset b to be consistent with galfit ellipticity
     BA = float(BA)
-    THETA = float(THETA)
+    PA = float(PA)
     #print('THETA inside phot wrapper',THETA, BA)
     b = BA*self.sma
     eps = 1 - BA
     #print(self.b,self.eps,self.sma,BA)
-    t = THETA
+    t = PA
     if t < 0:
         theta = (180. + t)
     else:
@@ -445,6 +448,8 @@ class cutout_dir():
                    'w1','w2','w3','w4',\
                    'mask','nuv']
         self.image_keys = imnames
+        # build dictionaries to store fits and png images,
+        # setting to None if image is not available
         self.fitsimages = {i:None for i in imnames}
         self.pngimages = {i:None for i in imnames}
         keys = imnames[0:3]
@@ -480,6 +485,8 @@ class cutout_dir():
             try:
                 if i < 3:
                     make_png(self.fitsimages[f],pngfile,mask=mask)
+                elif i == (len(self.fitsimages)-2): # add ellipse to mask image
+                    make_png(self.fitsimages[f],pngfile,ellipseparams=self.ellipseparams)
                 else:
                     make_png(self.fitsimages[f],pngfile)                    
                 self.pngimages[f] = pngfile
