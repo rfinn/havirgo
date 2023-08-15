@@ -208,7 +208,7 @@ def make_png(fitsimage,outname,mask=None):
 
 def plot_ellipse(ax,ellipseparams):
 
-    xc,yc,r,BA,PA = self.ellipseparams
+    xc,yc,r,BA,PA = ellipseparams
 
     #print("just checking - adding ellipse drawing ",self.ellipseparams)
     
@@ -343,17 +343,9 @@ class cutout_dir():
             os.mkdir(outdir)
         self.outdir = outdir
         self.cutoutdir = cutoutdir
-    def get_ellipse_params(self):
-        # get
-        vfmain = Table.read(VFMAIN_PATH)
-
-        ephot = Table.read(VFEPHOT_PATH)
-        igal = vmain['VFID'] == self.vfid
-
-        # need to get xc,yc
-        self.objparams = [['RA'][igal],self.defcat.cat['DEC'][igal],self.radius_arcsec[igal]*1.2,self.BA[igal],self.PA[igal]+90]        
     def runall(self):
         self.get_halpha_names()
+        self.get_ellipse_params()
         try:
             self.get_legacy_names()
             self.legacy_flag = True
@@ -390,6 +382,16 @@ class cutout_dir():
         self.haimage = glob.glob(os.path.join(self.cutoutdir,self.gname+'*-Ha.fits'))[0]
         self.csimage = glob.glob(os.path.join(self.cutoutdir,self.gname+'*-CS.fits'))[0]
         self.maskimage = self.rimage.replace('.fits','-mask.fits')
+    def get_ellipse_params(self):
+        """ get ellipse parameters from the header of the mask image  """
+        header = fits.getheader(self.maskimage)
+        ellipseparams = []
+        keywords = ['ELLIP_XC','ELLIP_YC','ELLIP_A','ELLIP_BA','ELLIP_PA']
+        # get ellipse params
+        for k in keywords:
+            ellipseparams.append(header[k])
+        self.ellipseparams = ellipseparams
+        
     def get_legacy_names(self):
         ''' get names of legacy images  '''
         legdir = os.path.join(self.cutoutdir,'legacy')
@@ -527,7 +529,7 @@ class cutout_dir():
             mask = fits.getdata(self.maskimage)
             mask = mask > 0
             
-            display_galfit_model(self.galfit,outdir=self.outdir,mask=mask)
+            display_galfit_model(self.galfit,outdir=self.outdir,mask=mask,ellipseparams=self.ellipseparams)
 
             outim = ['galfit_image.png','galfit_model.png','galfit_residual.png']
         
@@ -726,6 +728,9 @@ class build_html_cutout():
     def build_html(self):
         self.write_header()
         self.write_navigation_links()
+        # adding this here so we can inspect the masks quickly
+        # can remove once we are done with masks
+        self.write_galfit_images()
         self.write_image_stats()
         if self.cutout.legacy_flag:
             self.write_legacy_images()
