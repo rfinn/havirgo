@@ -226,7 +226,7 @@ def plot_ellipse(ax,ellipseparams):
     else:
         theta = (t) # orientation in radians
     # EllipticalAperture gives rotation angle in radians from +x axis, CCW
-    ellipse = Ellipse((xc,yc), r, b, angle=theta,facecolor=None,ec='k')
+    ellipse = Ellipse((xc,yc), r, b, angle=theta,facecolor='None',edgecolor='k')
     ax.add_patch(ellipse)
 
     
