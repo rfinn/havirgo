@@ -964,7 +964,7 @@ class build_html_cutout():
         
     def write_morph_table(self):
         self.html.write('<h2>Morphology Parameters</h2>\n')        
-        labels=['Band','Gini','Asym','C30','Petro Con'] 
+        labels=['Band','Gini','M20','Asym','C30','Petro Con'] 
         myrow = vfha[self.vfindex]
         colnames = ['ELLIP_GINI','ELLIP_M20','ELLIP_ASYM','C30','PETRO_CON']
         colnames2 = ['ELLIP_GINI2','ELLIP_HM20','ELLIP_HASYM','HC30','HPETRO_CON']
