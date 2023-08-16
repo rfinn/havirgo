@@ -966,8 +966,8 @@ class build_html_cutout():
         self.html.write('<h2>Morphology Parameters</h2>\n')        
         labels=['Band','Gini','Asym','C30','Petro Con'] 
         myrow = vfha[self.vfindex]
-        colnames = ['ELLIP_GINI','ELLIP_ASYM','C30','PETRO_CON']
-        colnames2 = ['ELLIP_GINI2','ELLIP_HASYM','HC30','HPETRO_CON']
+        colnames = ['ELLIP_GINI','ELLIP_M20','ELLIP_ASYM','C30','PETRO_CON']
+        colnames2 = ['ELLIP_GINI2','ELLIP_HM20','ELLIP_HASYM','HC30','HPETRO_CON']
         data = ["{:.2f}".format(myrow[c][0]) for c in colnames]
         data.insert(0,'r')
         data2 = ["{:.2f}".format(myrow[c][0]) for c in colnames2]
