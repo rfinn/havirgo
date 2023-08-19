@@ -139,6 +139,7 @@ class build_html_cutout():
                 legacy_flag = False
                 legacy_jpg = None
                 print('WARNING: no legacy image for ',g)
+                print("trying to download")
                 #print('\t Skipping galaxy for now')
                 #continue
 
@@ -163,7 +164,7 @@ class build_html_cutout():
                 except:
                     legacy_flag = False
                     legacy_jpg = None
-                    print('WARNING: no legacy image for ',g)
+                    print('ERROR: no legacy image for ',g)
                     
 
             self.html.write('<tr>')
