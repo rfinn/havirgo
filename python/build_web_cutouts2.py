@@ -387,13 +387,17 @@ class cutout_dir():
         self.maskimage = self.rimage.replace('.fits','-mask.fits')
     def get_ellipse_params(self):
         """ get ellipse parameters from the header of the mask image  """
-        header = fits.getheader(self.maskimage)
-        ellipseparams = []
-        keywords = ['ELLIP_XC','ELLIP_YC','ELLIP_A','ELLIP_BA','ELLIP_PA']
-        # get ellipse params
-        for k in keywords:
-            ellipseparams.append(header[k])
-        self.ellipseparams = ellipseparams
+        try:
+            header = fits.getheader(self.maskimage)
+            ellipseparams = []
+            keywords = ['ELLIP_XC','ELLIP_YC','ELLIP_A','ELLIP_BA','ELLIP_PA']
+            # get ellipse params
+            for k in keywords:
+                ellipseparams.append(header[k])
+            self.ellipseparams = ellipseparams
+        except FileNotFoundError:
+            print("\nWARNING: mask file was not found!!! ",self.maskimage)
+            self.ellipseparams = None
         
     def get_legacy_names(self):
         ''' get names of legacy images  '''
@@ -488,7 +492,10 @@ class cutout_dir():
                 if i < 3:
                     make_png(self.fitsimages[f],pngfile,mask=mask)
                 elif i == (len(self.fitsimages)-2): # add ellipse to mask image
-                    make_png(self.fitsimages[f],pngfile,ellipseparams=self.ellipseparams)
+                    if self.ellipseparams is not None:
+                        make_png(self.fitsimages[f],pngfile,ellipseparams=self.ellipseparams)
+                    else:
+                        make_png(self.fitsimages[f],pngfile)
                 else:
                     make_png(self.fitsimages[f],pngfile)                    
                 self.pngimages[f] = pngfile
@@ -535,7 +542,8 @@ class cutout_dir():
 
             mask = fits.getdata(self.maskimage)
             mask = mask > 0
-            
+
+
             display_galfit_model(self.galfit,outdir=self.outdir,mask=mask,ellipseparams=self.ellipseparams)
 
             outim = ['galfit_image.png','galfit_model.png','galfit_residual.png']
