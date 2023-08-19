@@ -22,6 +22,7 @@ homedir = os.getenv("HOME")
 ###########################################################
 
 def check_gal_list(galnames,outdir):
+    vfindices = np.arange(len(vfmain))    
     for i,g in enumerate(galnames):
         #print(g)
         vfid = g.split('-')[0]
