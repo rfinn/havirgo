@@ -46,8 +46,12 @@ def check_gal_list(galnames,outdir):
         except:
             legacy_flag = False
             legacy_jpg = None
+            print()
+            print()            
             print('WARNING: no legacy image for ',g)
             print("trying to download again")
+            print()
+            print()
             #print('\t Skipping galaxy for now')
             #continue
 
