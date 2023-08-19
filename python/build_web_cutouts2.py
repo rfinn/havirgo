@@ -255,7 +255,7 @@ def display_galfit_model(galfile,percentile1=.5,percentile2=99.5,p1residual=5,p2
          # display central region of image
 
          # get image dimensions and center
-         xmax,ymax = image.shape
+         ymax,xmax = image.shape
          xcenter = int(xmax/2)
          ycenter = int(ymax/2)
 
@@ -280,14 +280,18 @@ def display_galfit_model(galfile,percentile1=.5,percentile2=99.5,p1residual=5,p2
             y2 = ymax
 
          # cut images to new size
-         image = image[x1:x2,y1:y2]
-         model = model[x1:x2,y1:y2]
-         residual = residual[x1:x2,y1:y2]         
+         # python is data[row,col]
+         image = image[y1:y2,x1:x2]
+         model = model[y1:y2,x1:x2]
+         residual = residual[y1:y2,x1:x2]         
          pass
       imwcs = wcs.WCS(h)
       images = [image,model,residual]
       titles = ['image','model','residual']
       if mask is not None:
+          print("\nshape of image = ",image.shape)
+          print("shape of mask = ",mask.shape)
+          print()
           im = image[~mask]
           res = residual[~mask]
           norms = [simple_norm(im,'asinh',max_percent=percentile2),
