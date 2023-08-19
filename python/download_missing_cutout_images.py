@@ -100,4 +100,4 @@ if __name__ == '__main__':
             #print('adding ',subdir)
             galnames.append(subdir)
     print('number of subdirectories = ',len(galnames))
-    check_cutouts(galnames,outdir)
+    check_gal_list(galnames,outdir)
