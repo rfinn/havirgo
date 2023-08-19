@@ -139,32 +139,6 @@ class build_html_cutout():
                 legacy_flag = False
                 legacy_jpg = None
                 print('WARNING: no legacy image for ',g)
-                print("trying to download")
-                #print('\t Skipping galaxy for now')
-                #continue
-
-                # try to rebuild website
-                # download cutouts
-                cutout_dir = g
-                current_dir = os.getcwd()
-
-                # move to cutouts data dir
-                os.chdir("/data-pool/Halpha/halphagui-output-20230818/cutouts/")
-                s = f"python ~/github/HalphaImaging/python3/generate_all_cutout_plots.py --onegal {cutout_dir}"
-                os.system(s)
-
-                # build webpage
-                s = f"python ~/github/havirgo/python/build_web_cutouts2.py --oneimage {cutout_dir}"
-                os.system(s)
-
-                os.chdir(current_dir)
-                try:
-                    legacy_jpg = glob.glob(search_path)[0]
-                    legacy_flag = True                
-                except:
-                    legacy_flag = False
-                    legacy_jpg = None
-                    print('ERROR: no legacy image for ',g)
                     
 
             self.html.write('<tr>')
