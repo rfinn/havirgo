@@ -925,13 +925,14 @@ class build_html_cutout():
 
     def write_galfit_images(self):
         ''' display galfit model and fit parameters for r-band image '''
-        self.html.write('<h2>GALFIT r-band Modeling </h2>\n')                
-        images = [self.cutout.galimage,self.cutout.galmodel,self.cutout.galresidual,\
-                  self.cutout.pngimages['mask']]
-        images = [os.path.basename(i) for i in images]        
-        labels = ['Image', 'Model', 'Residual','Mask']
-        write_table(self.html,images=images,labels=labels)
-        pass
+        if self.cutout.galimage is not None:
+            self.html.write('<h2>GALFIT r-band Modeling </h2>\n')                
+            images = [self.cutout.galimage,self.cutout.galmodel,self.cutout.galresidual,\
+                      self.cutout.pngimages['mask']]
+            images = [os.path.basename(i) for i in images]        
+            labels = ['Image', 'Model', 'Residual','Mask']
+            write_table(self.html,images=images,labels=labels)
+
     
     def write_galfit_table(self):
         ''' display galfit model and fit parameters for r-band image '''

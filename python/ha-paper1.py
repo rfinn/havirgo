@@ -32,7 +32,7 @@ class haplots(vtables):
         plt.subplots_adjust(wspace=.3,hspace=.3)
         for i in range(len(galfit_params)):
             plt.subplot(2,2,i+1)
-            plt.scatter(nsa_params[i][flag],galfit_params[i][flag],label=labels[i])
+            plt.scatter(nsa_params[i][flag],galfit_params[i][flag],label=labels[i],alpha=.5)
             if i < 2:
                 plt.gca().set_xscale('log')
                 plt.gca().set_yscale('log')                
@@ -40,6 +40,8 @@ class haplots(vtables):
             plt.ylabel("GALFIT "+labels[i],fontsize=14)
             plt.legend()
             
+    def plot_Ttype_logmstar(self):
+        """  test"""
         pass
 
 if __name__ == "__main__":
