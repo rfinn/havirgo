@@ -822,7 +822,7 @@ class build_html_cutout():
                 print(fullha['TEL'][j],telescope, fullha['DATE-OBS'][j],dateobs)
                 if fullha['TEL'][j] in telescope:
                     print("Matched telescope")
-                    if (fullha['DATE-OBS'][j] in dateobs):
+                    if (int(fullha['DATE-OBS'][j]) == int(dateobs)):
                         print("found a match!")
                         fullhaindex = j
                         break
