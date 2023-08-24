@@ -819,11 +819,11 @@ class build_html_cutout():
 
             # check if telescope matches directory
             for j in vfid_match_index:
-                print(fullha['TEL'][j],telescope, fullha['DATE-OBS'][j],dateobs)
+                #print(fullha['TEL'][j],telescope, fullha['DATE-OBS'][j],dateobs)
                 if fullha['TEL'][j] in telescope:
-                    print("Matched telescope")
+                    #print("Matched telescope")
                     if (int(fullha['DATE-OBS'][j]) == int(dateobs)):
-                        print("found a match!")
+                        #print("found a match!")
                         fullhaindex = j
                         break
         else:
@@ -840,7 +840,7 @@ class build_html_cutout():
         # the pointing name from the vfha table might not be correct
         # b/c if the galaxy was observed multiple times, only one pointing will be included
         # I should instead construct the pointing from the image names
-        pointing = myrow['POINTING'][0]
+        pointing = myrow['POINTING']
 
         
         ## get telescope name to use to split on
