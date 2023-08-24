@@ -15,7 +15,9 @@ guifailed = tab['ELLIP_XCENTROID'] == 0
 
 # get the set of images
 
-dirname = tab['POINTING'][guifailed]
+dirname = set(tab['POINTING'][guifailed])
+
+print(f"found {len(dirname)} images to rerun")
 
 outfile = 'gui_failures_fullpath.txt'
 if os.path.exists(outfile):
