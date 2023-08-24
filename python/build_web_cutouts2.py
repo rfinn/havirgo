@@ -811,7 +811,7 @@ class build_html_cutout():
         telescope,dateobs,pointing = get_params_from_name(self.cutout.cutoutdir+".fits")
 
         # find matching rows
-        vfid_match_index = np.arange(len(vfha))[fullha['VFID'] == self.cutout.vfid]
+        vfid_match_index = np.arange(len(fullha))[fullha['VFID'] == self.cutout.vfid]
         if len(vfid_match_index) > 1:
             # duplicates - need to find the correct match
 
