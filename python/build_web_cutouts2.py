@@ -993,7 +993,8 @@ class build_html_cutout():
         #myrow = vfha[self.vfindex]
         myrow = fullha[self.fullhaindex]
         colnames = ['M24','M25','M26','PETRO_MAG','GAL_MAG','ELLIP_SUM_MAG']
-        data = ["{:.2f}".format(myrow[c][0]) for c in colnames]
+        #data = ["{:.2f}".format(myrow[c][0]) for c in colnames]
+        data = ["{:.2f}".format(myrow[c]) for c in colnames]
         write_text_table(self.html,labels,data)        
 
         self.html.write('<h2>Halpha AB Magnitudes/SFR</h2>\n')        
@@ -1001,7 +1002,10 @@ class build_html_cutout():
         #myrow = vfha[self.vfindex]
         myrow = fullha[self.fullhaindex]
         colnames = ['HM16','HM17','HPETRO_MAG','SSFR_IN','SSFR_OUT']
-        data = ["{:.2f}".format(myrow[c][0]) for c in colnames]
+        try:
+            data = ["{:.2f}".format(myrow[c][0]) for c in colnames]
+        except IndexError:
+            data = ["{:.2f}".format(myrow[c]) for c in colnames]            
         write_text_table(self.html,labels,data)        
         
     def write_morph_table(self):
@@ -1012,9 +1016,15 @@ class build_html_cutout():
         myrow = fullha[self.fullhaindex]
         colnames = ['ELLIP_GINI','ELLIP_M20','ELLIP_ASYM','C30','PETRO_CON']
         colnames2 = ['ELLIP_GINI2','ELLIP_HM20','ELLIP_HASYM','HC30','HPETRO_CON']
-        data = ["{:.2f}".format(myrow[c][0]) for c in colnames]
+        try:
+            data = ["{:.2f}".format(myrow[c][0]) for c in colnames]
+        except IndexError:
+            data = ["{:.2f}".format(myrow[c]) for c in colnames]            
         data.insert(0,'r')
-        data2 = ["{:.2f}".format(myrow[c][0]) for c in colnames2]
+        try:
+            data2 = ["{:.2f}".format(myrow[c][0]) for c in colnames2]
+        except IndexError:
+            data2 = ["{:.2f}".format(myrow[c]) for c in colnames2]            
         data2.insert(0,'Halpha')
         write_text_table(self.html,labels,data,data2=data2)
     def close_html(self):
