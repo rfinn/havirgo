@@ -91,9 +91,11 @@ class haplots(vtables):
         x = self.halpha['R_FWHM']
         y = self.halpha['H_FWHM'] - x
 
-        std = np.std(y)
+
         flag = self.main['HAobsflag'] & (x > 0)
 
+        std = np.std(y[flag])
+        ave = np.mean(y[flag])
         x = x[flag]
         y = y[flag]        
         # FROM https://matplotlib.org/stable/gallery/lines_bars_and_markers/scatter_hist.html
@@ -122,10 +124,10 @@ class haplots(vtables):
 
         # plot reference lines
         plt.sca(ax)
-        plt.axhline(y=0,ls='-',color='k')
+        plt.axhline(y=ave,ls='-',color='k')
 
-        plt.axhline(y=std,ls='--',color='k')
-        plt.axhline(y=-1*std,ls='--',color='k')        
+        plt.axhline(y=ave+std,ls='--',color='k')
+        plt.axhline(y=ave-std,ls='--',color='k')        
         print(f"H FWHM - R FWHM = {np.mean(y):.2f} +/- {std:.2f}")
         plt.savefig(plotdir+"R-H-FWHM.pdf")
         plt.savefig(plotdir+"R-H-FWHM.png")        

@@ -797,19 +797,6 @@ class build_html_cutout():
     def write_image_stats(self):
         self.html.write('<h2>Image Statistics</h2>\n')        
         labels=['Telescope','Run','Pointing','R FWHM <br> (arcsec)','H&alpha; FWHM <br> (arcsec)','Filter Ratio','Filter Correction']
-        myrow = vfha[self.vfindex]
-        #print('HALPHA FILE')
-        #print(self.vfindex)
-        #print(myrow)
-        colnames = ['POINTING','R_FWHM','H_FWHM','FILTER_RATIO','FILT_COR']
-
-        # the pointing name from the vfha table might not be correct
-        # b/c if the galaxy was observed multiple times, only one pointing will be included
-        # I should instead construct the pointing from the image names
-        pointing = myrow['POINTING'][0]
-
-        # get telescope name to use to split on
-        #print('I think the cutout directory name is ',self.cutout.cutoutdir)
         if 'BOK' in self.cutout.cutoutdir:
             tel = 'BOK'
         elif 'HDI' in self.cutout.cutoutdir:
@@ -818,19 +805,51 @@ class build_html_cutout():
             tel = 'INT'
         elif 'MOS' in self.cutout.cutoutdir:
             tel = 'MOS'
-        t = self.cutout.cutoutdir.split(tel)
-        
-        matchstring =  f"{tel}{t[1]}"
 
-        # check in coadd list for matching file name
-        coadd_list = open('../virgo-coadds-fullpath.txt')
+
+        # add code to match to the correct line in the full halpha table
+        telescope,dateobs,pointing = get_params_from_name(self.cutout.cutoutdir+".fits")
+
+        # find matching rows
+        vfid_match_index = np.arange(len(vfha))[fullha['VFID'] == self.cutout.vfid]
+        if len(vfid_match_index) > 1:
+            # duplicates - need to find the correct match
+
+            # check if telescope matches directory
+            for i in vfid_match_index:
+                if (fullha['TEL'][i] == telescope) & (fullha['DATE-OBS'] == dateobs):
+                    fullhaindex = i
+                    break
+        else:
+            fullhaindex = vfid_match_index[0]
+        self.fullhaindex = fullhaindex            
+        myrow = fullha[fullhaindex]
+        #print('HALPHA FILE')
+        #print(self.vfindex)
+        #print(myrow)
+        colnames = ['POINTING','R_FWHM','H_FWHM','FILTER_RATIO','FILT_COR']
+
+
         
-        for line in coadd_list:
-            if matchstring in line:
-                pointing = line.rstrip()
-                pointing = os.path.basename(pointing).replace("-r.fits","").replace('-r-shifted.fits','').replace('-R.fits','')
-                #print("found matching coadd")
-                break
+        # the pointing name from the vfha table might not be correct
+        # b/c if the galaxy was observed multiple times, only one pointing will be included
+        # I should instead construct the pointing from the image names
+        pointing = myrow['POINTING'][0]
+
+        
+        ## get telescope name to use to split on
+        ##print('I think the cutout directory name is ',self.cutout.cutoutdir)
+        #t = self.cutout.cutoutdir.split(tel)        
+        #matchstring =  f"{tel}{t[1]}"
+        ## check in coadd list for matching file name
+        #coadd_list = open('../virgo-coadds-fullpath.txt')
+        #
+        #for line in coadd_list:
+        #    if matchstring in line:
+        #        pointing = line.rstrip()
+        #        pointing = os.path.basename(pointing).replace("-r.fits","").replace('-r-shifted.fits','').replace('-R.fits','')
+        #        #print("found matching coadd")
+        #        break
             
         data = [f'<a href="http://facultyweb.siena.edu/~rfinn/virgo/coadds/{pointing}/{pointing}.html">{pointing}</a>', \
                 "{:.2f}".format(myrow['R_FWHM'][0]),\
@@ -965,22 +984,26 @@ class build_html_cutout():
     def write_mag_table(self):
         self.html.write('<h2>R-band AB Magnitudes</h2>\n')        
         labels=['mag24','mag25', 'mag26','mag_petro','mag_galfit','mag_photutil'] 
-        myrow = vfha[self.vfindex]
+        #myrow = vfha[self.vfindex]
+        myrow = fullha[self.fullhaindex]
         colnames = ['M24','M25','M26','PETRO_MAG','GAL_MAG','ELLIP_SUM_MAG']
         data = ["{:.2f}".format(myrow[c][0]) for c in colnames]
         write_text_table(self.html,labels,data)        
 
         self.html.write('<h2>Halpha AB Magnitudes/SFR</h2>\n')        
         labels=['mag16','mag17','mag_petro','SSFR_IN','SSFR_OUT'] 
-        myrow = vfha[self.vfindex]
+        #myrow = vfha[self.vfindex]
+        myrow = fullha[self.fullhaindex]
         colnames = ['HM16','HM17','HPETRO_MAG','SSFR_IN','SSFR_OUT']
         data = ["{:.2f}".format(myrow[c][0]) for c in colnames]
         write_text_table(self.html,labels,data)        
         
     def write_morph_table(self):
         self.html.write('<h2>Morphology Parameters</h2>\n')        
-        labels=['Band','Gini','M20','Asym','C30','Petro Con'] 
-        myrow = vfha[self.vfindex]
+        labels=['Band','Gini','M20','Asym','C30','Petro Con']
+        
+        #myrow = vfha[self.vfindex]
+        myrow = fullha[self.fullhaindex]
         colnames = ['ELLIP_GINI','ELLIP_M20','ELLIP_ASYM','C30','PETRO_CON']
         colnames2 = ['ELLIP_GINI2','ELLIP_HM20','ELLIP_HASYM','HC30','HPETRO_CON']
         data = ["{:.2f}".format(myrow[c][0]) for c in colnames]
@@ -1008,7 +1031,8 @@ if __name__ == '__main__':
 
     # get tables, define as a global variable
     vfmain = fits.getdata(homedir+'/research/Virgo/tables-north/v2/vf_v2_main.fits')
-    vfha = fits.getdata(homedir+'/research/Virgo/tables-north/v2/vf_v2_halpha.fits')    
+    vfha = fits.getdata(homedir+'/research/Virgo/tables-north/v2/vf_v2_halpha.fits')
+    fullha = fits.getdata('../halphagui-output-combined-2023-Aug-24.fits')        
 
     
     if args.cutoutdir is not None:
