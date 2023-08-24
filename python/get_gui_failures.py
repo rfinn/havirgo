@@ -3,6 +3,7 @@
 #from astropy.io import fits
 from astropy.table import Table
 import os
+import sys
 
 # read in combined table
 tabname = sys.argv[1]
