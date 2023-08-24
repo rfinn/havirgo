@@ -820,10 +820,12 @@ class build_html_cutout():
             # check if telescope matches directory
             for j in vfid_match_index:
                 print(fullha['TEL'][j],telescope, fullha['DATE-OBS'][j],dateobs)
-                if (fullha['TEL'][j] == telescope) & (fullha['DATE-OBS'][j] == dateobs):
-                    print("found a match!")
-                    fullhaindex = j
-                    break
+                if fullha['TEL'][j] in telescope:
+                    print("Matched telescope")
+                    if (fullha['DATE-OBS'][j] in dateobs):
+                        print("found a match!")
+                        fullhaindex = j
+                        break
         else:
             fullhaindex = vfid_match_index[0]
         self.fullhaindex = fullhaindex            
