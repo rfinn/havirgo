@@ -819,6 +819,7 @@ class build_html_cutout():
 
             # check if telescope matches directory
             for j in vfid_match_index:
+                print(fullha['TEL'][j],telescope, fullha['DATE-OBS'][j],dateobs)
                 if (fullha['TEL'][j] == telescope) & (fullha['DATE-OBS'][j] == dateobs):
                     fullhaindex = j
                     break
