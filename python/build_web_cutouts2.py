@@ -1015,8 +1015,8 @@ class build_html_cutout():
         #myrow = vfha[self.vfindex]
         myrow = fullha[self.fullhaindex]
         colnames = ['ELLIP_GINI','ELLIP_M20','ELLIP_ASYM','C30','PETRO_CON']
-        colnames2 = ['ELLIP_GINI2','ELLIP_HM20','ELLIP_HASYM','HC30','HPETRO_CON']
-        try:
+        colnames2 = ['ELLIP_HGINI','ELLIP_HM20','ELLIP_HASYM','HC30','HPETRO_CON']
+        try: # this is required to work with fullha instead of vfha
             data = ["{:.2f}".format(myrow[c][0]) for c in colnames]
         except IndexError:
             data = ["{:.2f}".format(myrow[c]) for c in colnames]            
