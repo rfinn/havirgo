@@ -821,6 +821,7 @@ class build_html_cutout():
             for j in vfid_match_index:
                 print(fullha['TEL'][j],telescope, fullha['DATE-OBS'][j],dateobs)
                 if (fullha['TEL'][j] == telescope) & (fullha['DATE-OBS'][j] == dateobs):
+                    print("found a match!")
                     fullhaindex = j
                     break
         else:
