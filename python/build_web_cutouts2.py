@@ -813,12 +813,14 @@ class build_html_cutout():
         # find matching rows
         vfid_match_index = np.arange(len(fullha))[fullha['VFID'] == self.cutout.vfid]
         if len(vfid_match_index) > 1:
+            print("found duplicate",telescope,dateobs)
+            print("directory name = ",self.cutout.cutoutdir)
             # duplicates - need to find the correct match
 
             # check if telescope matches directory
-            for i in vfid_match_index:
-                if (fullha['TEL'][i] == telescope) & (fullha['DATE-OBS'] == dateobs):
-                    fullhaindex = i
+            for j in vfid_match_index:
+                if (fullha['TEL'][j] == telescope) & (fullha['DATE-OBS'][j] == dateobs):
+                    fullhaindex = j
                     break
         else:
             fullhaindex = vfid_match_index[0]
