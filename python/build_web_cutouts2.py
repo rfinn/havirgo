@@ -850,12 +850,18 @@ class build_html_cutout():
         #        pointing = os.path.basename(pointing).replace("-r.fits","").replace('-r-shifted.fits','').replace('-R.fits','')
         #        #print("found matching coadd")
         #        break
-            
+
+        #data = [f'<a href="http://facultyweb.siena.edu/~rfinn/virgo/coadds/{pointing}/{pointing}.html">{pointing}</a>', \
+        #        "{:.2f}".format(myrow['R_FWHM'][0]),\
+        #        "{:.2f}".format(myrow['H_FWHM'][0]),\
+        #        "{:.4f}".format(myrow['FILTER_RATIO'][0]),\
+        #        "{:.2f}".format(myrow['FILT_COR'][0])]
         data = [f'<a href="http://facultyweb.siena.edu/~rfinn/virgo/coadds/{pointing}/{pointing}.html">{pointing}</a>', \
-                "{:.2f}".format(myrow['R_FWHM'][0]),\
-                "{:.2f}".format(myrow['H_FWHM'][0]),\
-                "{:.4f}".format(myrow['FILTER_RATIO'][0]),\
-                "{:.2f}".format(myrow['FILT_COR'][0])]
+                "{:.2f}".format(myrow['R_FWHM']),\
+                "{:.2f}".format(myrow['H_FWHM']),\
+                "{:.4f}".format(myrow['FILTER_RATIO']),\
+                "{:.2f}".format(myrow['FILT_COR'])]
+
         #print('self.run = ',self.run)
         data.insert(0,self.run)
         data.insert(0,self.telescope)
