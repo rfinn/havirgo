@@ -7,7 +7,7 @@ import glob
 infile = open('virgo-coadds-fullpath.txt')
 filenames = []
 for line in infile:
-    filenames.append(line.strip)
+    filenames.append(line.strip())
 
 print(filenames[0])
 
