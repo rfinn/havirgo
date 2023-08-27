@@ -12,6 +12,7 @@ for line in infile:
 print(filenames[0])
 
 for f in filenames:
+    print(f)
     prefix = os.path.basename(f).replace("-r-shifted.fits","").replace("-r.fits","").replace("-R.fits","")
     matchfile = glob.glob(prefix+"*")
     if len(matchfile) < 1:
