@@ -1,7 +1,0 @@
-#!/usr/bin/env
-
-import os
-from astropy.table import Table
-
-# read in virgo-coadds-fullpath.txt
-
