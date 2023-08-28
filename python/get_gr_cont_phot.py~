@@ -1,0 +1,23 @@
+#!/usr/bin/env python
+"""
+GOAL:
+measure photometry of the continuum subtracted images that are created using the g-r color image
+
+
+PROCEDURE:
+* this will run in each cutout directory
+* can be run in parallel
+
+
+"""
+
+
+# get R and CS-gr image
+
+# setup output table
+
+# run ephot using photwrapper.py
+
+# measure radii
+
+
