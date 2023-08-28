@@ -205,7 +205,7 @@ class haplots(vtables):
         plt.subplots_adjust(wspace=.3,hspace=.3)
 
         xvars = ['ELLIP_GINI','ELLIP_M20','C30','ELLIP_ASYM']
-        yvars = ['ELLIP_GINI2','ELLIP_HM20','HC30','ELLIP_HASYM']        
+        yvars = ['ELLIP_HGINI','ELLIP_HM20','HC30','ELLIP_HASYM']        
 
         cvars = [self.halpha['ELLIP_ASYM'],self.halpha['ELLIP_ASYM'],self.magphys['logMstar'],self.magphys['logMstar']]
         labels = ['ELLIP_ASYM','ELLIP_ASYM','logMstar','logMstar']        
@@ -230,7 +230,96 @@ class haplots(vtables):
             plt.legend()
             allax.append(plt.gca())
         plt.colorbar(label='magphys log sSFR',ax=allax,fraction=.08)
+    def plot_qc_qmorph_smorph_r(self):
+        """
+        plot r-band quantitative morphology parameters
 
+        C30 vs Gini
+
+        Gini vs M20 - color code by asym
+
+        C30 vs GAL_N
+
+        PETRO_CON vs GAL_N
+        """
+        sflag = self.halpha['SMORPH_XCENTROID'] > 0
+        plt.figure(figsize=(10,10))
+        plt.subplots_adjust(wspace=.3,hspace=.3)
+
+        xvars = ['ELLIP_GINI','ELLIP_M20','C30','ELLIP_ASYM']
+        yvars = ['SMORPH_GINI','SMORPH_M20','SMORPH_C','SMORPH_A']        
+
+        cvars = [self.halpha['ELLIP_ASYM'],self.halpha['ELLIP_ASYM'],self.magphys['logMstar'],self.magphys['logMstar']]
+        labels = ['ELLIP_ASYM','ELLIP_ASYM','logMstar','logMstar']        
+        flag = self.sampleflag & sflag
+        vmins = [.1,.1,8.5,8.5]
+        vmaxs = [.8,.8,10.5,10.5]
+        allax = []
+        for i in range(len(xvars)):
+            plt.subplot(2,2,i+1)
+            plt.scatter(self.halpha[xvars[i]][flag],self.halpha[yvars[i]][flag],c=self.magphys['logsSFR'][flag],alpha=.6,vmin=-12,vmax=-9)
+            #if i < 2:
+            #    plt.gca().set_xscale('log')
+            #    plt.gca().set_yscale('log')                
+            plt.xlabel(xvars[i],fontsize=14)
+            plt.ylabel(yvars[i],fontsize=14)
+            x1,x2 = plt.xlim()
+            xline = np.linspace(x1,x2,100)
+            
+            if i == 2:
+                plt.plot(xline,5*xline,'k--')
+            else:
+                plt.plot(xline,xline,'k--')
+            plt.legend()
+            allax.append(plt.gca())
+        plt.colorbar(label='magphys log sSFR',ax=allax,fraction=.08)
+
+    def plot_qc_qmorph_smorph_ha(self):
+        """
+        plot r-band quantitative morphology parameters
+
+        C30 vs Gini
+
+        Gini vs M20 - color code by asym
+
+        C30 vs GAL_N
+
+        PETRO_CON vs GAL_N
+        """
+        sflag = (self.halpha['SMORPH_XCENTROID'] > 0) & (self.halpha['SMORPH_HXCENTROID'] > 0) \
+            & (self.halpha['SMORPH_HM20'] > -2)& (self.halpha['ELLIP_HASYM'] > -2)& (self.halpha['ELLIP_HASYM'] < 2)
+        print("Number with good statmorph flag = ",np.sum(sflag))
+        plt.figure(figsize=(10,10))
+        plt.subplots_adjust(wspace=.3,hspace=.3)
+
+        xvars = ['ELLIP_HGINI','ELLIP_HM20','HC30','ELLIP_HASYM']
+        yvars = ['SMORPH_HGINI','SMORPH_HM20','SMORPH_HC','SMORPH_HA']        
+
+        cvars = [self.halpha['ELLIP_ASYM'],self.halpha['ELLIP_ASYM'],self.magphys['logMstar'],self.magphys['logMstar']]
+        labels = ['ELLIP_ASYM','ELLIP_ASYM','logMstar','logMstar']        
+        flag = self.sampleflag & sflag
+        vmins = [.1,.1,8.5,8.5]
+        vmaxs = [.8,.8,10.5,10.5]
+        allax = []
+        for i in range(len(xvars)):
+            plt.subplot(2,2,i+1)
+            plt.scatter(self.halpha[xvars[i]][flag],self.halpha[yvars[i]][flag],c=self.magphys['logsSFR'][flag],alpha=.6,vmin=-12,vmax=-9)
+            #if i < 2:
+            #    plt.gca().set_xscale('log')
+            #    plt.gca().set_yscale('log')                
+            plt.xlabel(xvars[i],fontsize=14)
+            plt.ylabel(yvars[i],fontsize=14)
+            x1,x2 = plt.xlim()
+            xline = np.linspace(x1,x2,100)
+            
+            if i == 2:
+                plt.plot(xline,5*xline,'k--')
+            else:
+                plt.plot(xline,xline,'k--')
+            plt.legend()
+            allax.append(plt.gca())
+        plt.colorbar(label='magphys log sSFR',ax=allax,fraction=.08)
+        
     def plot_delta_gini_ssfr(self):
         plt.figure(figsize=(8,6))
 
