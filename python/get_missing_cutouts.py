@@ -71,6 +71,7 @@ if __name__ == '__main__':
 
             # run runone_cutout_web.py but without syncing
             #os.system(f"python ~/github/havirgo/runone_cutout_web.py {g} nosync")
+            print(f"will run: python ~/github/havirgo/runone_cutout_web.py {g} nosync")
 
 # sync files to faculty web when done
 # sync to web
