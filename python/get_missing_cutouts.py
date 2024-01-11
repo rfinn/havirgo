@@ -70,9 +70,9 @@ if __name__ == '__main__':
             print('WARNING: no legacy image for ',g)
             nmissing += 1
             # run runone_cutout_web.py but without syncing
-            #os.system(f"python ~/github/havirgo/python/runone_cutout_web.py {g} nosync")
-            print(f"run: python ~/github/havirgo/python/runone_cutout_web.py {g} nosync")
-            break
+            os.system(f"python ~/github/havirgo/python/runone_cutout_web.py {g} nosync")
+            #print(f"run: python ~/github/havirgo/python/runone_cutout_web.py {g} nosync")
+            #break
 
             
 print(f"\nnumber of galaxies with missing legacy images = {nmissing}\n")
