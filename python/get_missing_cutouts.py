@@ -32,7 +32,7 @@ homedir = os.getenv("HOME")
 # wrap
 
 if __name__ == '__main__':
-
+    nmissing = 0
     # location of cutout directory on draco
     outdir = '/data-pool/Halpha/html_dev/cutouts/'    
 
@@ -68,10 +68,10 @@ if __name__ == '__main__':
             legacy_flag = False
             legacy_jpg = None
             print('WARNING: no legacy image for ',g)
-
+            nmissing += 1
             # run runone_cutout_web.py but without syncing
             #os.system(f"python ~/github/havirgo/runone_cutout_web.py {g} nosync")
-            print(f"will run: python ~/github/havirgo/runone_cutout_web.py {g} nosync")
+            #print(f"will run: python ~/github/havirgo/runone_cutout_web.py {g} nosync")
 
 # sync files to faculty web when done
 # sync to web
