@@ -73,6 +73,8 @@ if __name__ == '__main__':
             #os.system(f"python ~/github/havirgo/runone_cutout_web.py {g} nosync")
             #print(f"will run: python ~/github/havirgo/runone_cutout_web.py {g} nosync")
 
+            
+print(f"\nnumber of galaxies with missing legacy images = {nmissing}\n")
 # sync files to faculty web when done
 # sync to web
 syncfiles=False
