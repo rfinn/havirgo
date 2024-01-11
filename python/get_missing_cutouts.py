@@ -13,7 +13,7 @@ part is having to go back and get images for the cutouts which failed.
 This script will streamline the process in one program.
 
 USAGE:
-* run from html-dev/cutouts directory
+* run from halphagui-output-20240104/cutouts directory
 
 NOTES:
 * using John Moustakas's code as a reference (https://github.com/moustakas/legacyhalos/blob/main/py/legacyhalos/virgofilaments.py#L1131-L1202)
@@ -71,7 +71,7 @@ if __name__ == '__main__':
             nmissing += 1
             # run runone_cutout_web.py but without syncing
             #os.system(f"python ~/github/havirgo/python/runone_cutout_web.py {g} nosync")
-            print(f"run: python ~/github/havirgo/runone_cutout_web.py {g} nosync")
+            print(f"run: python ~/github/havirgo/python/runone_cutout_web.py {g} nosync")
             break
 
             
