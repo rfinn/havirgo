@@ -70,7 +70,7 @@ if __name__ == '__main__':
             print('WARNING: no legacy image for ',g)
             nmissing += 1
             # run runone_cutout_web.py but without syncing
-            os.system(f"python ~/github/havirgo/runone_cutout_web.py {g} nosync")
+            os.system(f"python ~/github/havirgo/python/runone_cutout_web.py {g} nosync")
             #print(f"will run: python ~/github/havirgo/runone_cutout_web.py {g} nosync")
 
             
