@@ -69,6 +69,7 @@ Corr quadratic fit           :    0.0000/0.0192
 """
 import sys
 import os
+import numpy as np
 from astropy.io import fits
 from astropy import stats, convolution
 from astropy import wcs
