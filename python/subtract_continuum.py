@@ -343,8 +343,9 @@ if __name__ == '__main__':
 
     # get legacy images that are reprojected to the halpha image
     
-    print("\npath to legacy images = ",os.path.join(dirname,'legacy',vfid+'*r-ha.fits'))
-    rfiles = glob.glob(os.path.join(dirname,'legacy',vfid+'*r-ha.fits'))
+    legacy_path = os.path.join(dirname,'legacy',vfid+'*r-ha.fits'))
+    rfiles = glob.glob(legacy_path)
+    print(rfiles)
     if len(rfiles) < 1:
         print("problem getting r-ha.fits legacy image",len(rfiles))
         sys.exit()
