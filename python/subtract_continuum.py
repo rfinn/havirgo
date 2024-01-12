@@ -374,3 +374,6 @@ if __name__ == '__main__':
 
     # call the main function to subtract the continuum
     subtract_continuum(Rfile, Hfile, gfile, rfile,mask=mask,overwrite=False)
+
+    # move back to the top directory
+    os.chdir(topdir)
