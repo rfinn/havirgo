@@ -151,7 +151,7 @@ def subtract_continuum(Rfile, Hfile, gfile, rfile, mask=None,overwrite=False):
 
 
     RETURN:
-    nothing, but save the CS subtracted image that uses the g-r color
+    nothing, but save the CS subtracted image that uses the g-r color in the current directory
     
     """
     outname = Hfile.replace('Ha.fits','CS-gr.fits')
@@ -233,8 +233,10 @@ def subtract_continuum(Rfile, Hfile, gfile, rfile, mask=None,overwrite=False):
     data_r_to_Ha = np.copy(data_r)
     # smooth the r-band image
     data_r_to_Ha = convolution.convolve_fft(data_r, convolution.Box2DKernel(5), allow_huge=True, nan_treatment='interpolate')
+    
     # DONE: TODO - change ZP from 30 to value in image header
     # usemask is true where the g-r image == np.nan
+    
     # so I don't understand what this line is doing
     data_r_to_Ha[usemask] = 10**(-0.4*(mag_r_to_Ha[usemask]-rZP))
 
@@ -337,13 +339,14 @@ if __name__ == '__main__':
     t = dirname.split('-')
     prefix = t[0]+'-'+t[1]
     vfid = t[0]
+    
     # define the file names
-    Rfile = os.path.join(dirname,dirname+'-R.fits') # r-band image taken with same telescope as halpha
-    Hfile = os.path.join(dirname,dirname+'-Ha.fits')  # halpha image
+    Rfile = dirname+'-R.fits' # r-band image taken with same telescope as halpha
+    Hfile = dirname+'-Ha.fits'  # halpha image
 
     # get legacy images that are reprojected to the halpha image
-    
-    legacy_path = os.path.join(dirname,'legacy',vfid+'*r-ha.fits')
+    # these are in the legacy subdirectory
+    legacy_path = os.path.join('legacy',vfid+'*r-ha.fits')
     rfiles = glob.glob(legacy_path)
     print(rfiles)
     if len(rfiles) < 1:
@@ -353,7 +356,7 @@ if __name__ == '__main__':
         rfile = rfiles[0] # legacy r-band image
         
     # legacy g-band image, shifted to match halpha footprint and pixel scale
-    gfiles = glob.glob(os.path.join(dirname,'legacy',prefix+'*g-ha.fits'))
+    gfiles = glob.glob(os.path.join('legacy',prefix+'*g-ha.fits'))
     if len(gfiles) < 1:
         print("problem getting g-ha.fits legacy image")
         sys.exit()
