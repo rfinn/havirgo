@@ -205,7 +205,7 @@ def subtract_continuum(Rfile, Hfile, gfile, rfile, mask=None,overwrite=False):
     stat_r = stats.sigma_clipped_stats(rhdu[0].data,mask=mask)
     print('Subtracting {0:3.2f} from r-band image'.format(stat_r[1]))
     # do I save the r-band image with new sky subtraction???
-    data_r = rhd[0].data - stat_r[1]
+    data_r = rhdu[0].data - stat_r[1]
 
     # sky subtracted r-band image
     skysub_r_name = Rfile.replace('-R.fits','-R-sky.fits')
@@ -216,7 +216,7 @@ def subtract_continuum(Rfile, Hfile, gfile, rfile, mask=None,overwrite=False):
     # TODONE - subtract sky from Halpha image    
     stat_h = stats.sigma_clipped_stats(hhdu[0].data,mask=mask)
     print('Subtracting {0:3.2f} from halpha image'.format(stat_h[1]))
-    data_h = hhdu[0].data - stat_g[1]
+    data_h = hhdu[0].data - stat_h[1]
 
     # Generate the r band mag image and the r band calibrated to Halpha wave
     # This works only for positive flux pixels. Take this into account
