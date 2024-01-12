@@ -342,6 +342,7 @@ if __name__ == '__main__':
     Hfile = os.path.join(dirname,dirname+'-Ha.fits')  # halpha image
 
     # get legacy images that are reprojected to the halpha image
+    print("\npath to legacy images = ",os.path.join(dirname,'legacy',prefix+'*r-ha.fits'))
     rfiles = glob.glob(os.path.join(dirname,'legacy',prefix+'*r-ha.fits'))
     if len(rfiles) < 1:
         print("problem getting r-ha.fits legacy image")
