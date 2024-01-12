@@ -336,14 +336,15 @@ if __name__ == '__main__':
     # get prefix from the directory name
     t = dirname.split('-')
     prefix = t[0]+'-'+t[1]
-    
+    vfid = t[0]
     # define the file names
     Rfile = os.path.join(dirname,dirname+'-R.fits') # r-band image taken with same telescope as halpha
     Hfile = os.path.join(dirname,dirname+'-Ha.fits')  # halpha image
 
     # get legacy images that are reprojected to the halpha image
-    print("\npath to legacy images = ",os.path.join(dirname,'legacy',prefix+'*r-ha.fits'))
-    rfiles = glob.glob(os.path.join(dirname,'legacy',prefix+'*r-ha.fits'))
+    
+    print("\npath to legacy images = ",os.path.join(vfid,'legacy',prefix+'*r-ha.fits'))
+    rfiles = glob.glob(os.path.join(dirname,'legacy',vfid+'*r-ha.fits'))
     if len(rfiles) < 1:
         print("problem getting r-ha.fits legacy image")
         sys.exit()
