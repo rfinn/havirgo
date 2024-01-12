@@ -343,7 +343,7 @@ if __name__ == '__main__':
 
     # get legacy images that are reprojected to the halpha image
     
-    legacy_path = os.path.join(dirname,'legacy',vfid+'*r-ha.fits'))
+    legacy_path = os.path.join(dirname,'legacy',vfid+'*r-ha.fits')
     rfiles = glob.glob(legacy_path)
     print(rfiles)
     if len(rfiles) < 1:
