@@ -346,7 +346,7 @@ if __name__ == '__main__':
     print("\npath to legacy images = ",os.path.join(dirname,'legacy',vfid+'*r-ha.fits'))
     rfiles = glob.glob(os.path.join(dirname,'legacy',vfid+'*r-ha.fits'))
     if len(rfiles) < 1:
-        print("problem getting r-ha.fits legacy image")
+        print("problem getting r-ha.fits legacy image",len(rfiles))
         sys.exit()
     else:
         rfile = rfiles[0] # legacy r-band image
