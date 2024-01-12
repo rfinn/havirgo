@@ -356,7 +356,7 @@ if __name__ == '__main__':
         rfile = rfiles[0] # legacy r-band image
         
     # legacy g-band image, shifted to match halpha footprint and pixel scale
-    gfiles = glob.glob(os.path.join('legacy',prefix+'*g-ha.fits'))
+    gfiles = glob.glob(os.path.join('legacy',vfid+'*g-ha.fits'))
     if len(gfiles) < 1:
         print("problem getting g-ha.fits legacy image")
         sys.exit()
