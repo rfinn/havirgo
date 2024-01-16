@@ -284,7 +284,7 @@ def subtract_continuum(Rfile, Hfile, gfile, rfile, mask=None,overwrite=False):
     # DONE: TODO - change output image name
     hdu = fits.PrimaryHDU(clam_NB, header=hhdu[0].header)
     hdu.writeto(fileroot+'_cont_new.fits', overwrite=True)
-    hdu.close()
+    #hdu.close()
     
     #Calculate clipped statistic
     #stat is a tuple of mean, median, sigma
