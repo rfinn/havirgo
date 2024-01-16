@@ -280,10 +280,10 @@ def subtract_continuum(Rfile, Hfile, gfile, rfile, mask=None,overwrite=False):
     # DONE: TODO - change output image name
     # this is the new net NB image
     hdu = fits.PrimaryHDU(flam_NB, header=hhdu[0].header)
-    hdu.writeto(fileroot+'_net_new.fits', overwrite=True) #NB image in F_lambda units, before
+    hdu.writeto(fileroot+'-net-new.fits', overwrite=True) #NB image in F_lambda units, before
     # DONE: TODO - change output image name
     hdu = fits.PrimaryHDU(clam_NB, header=hhdu[0].header)
-    hdu.writeto(fileroot+'_cont_new.fits', overwrite=True)
+    hdu.writeto(fileroot+'-cont-new.fits', overwrite=True)
     #hdu.close()
     
     #Calculate clipped statistic
@@ -299,9 +299,9 @@ def subtract_continuum(Rfile, Hfile, gfile, rfile, mask=None,overwrite=False):
     # DONE: TODO - change output image name
     # this is the continuum-subtracted image
     hdu = fits.PrimaryHDU(flam_net, header=hhdu[0].header)
-    hdu.writeto(fileroot+'_net_flux.fits', overwrite=True)
+    hdu.writeto(fileroot+'-net-flux.fits', overwrite=True)
     #hdu.writeto(outname, overwrite=True)    
-    hdu.close()
+    #hdu.close()
 
     # convert image to surface brightness units
     # DONE: TODO - change pixel scale
@@ -309,8 +309,8 @@ def subtract_continuum(Rfile, Hfile, gfile, rfile, mask=None,overwrite=False):
     
     # DONE: TODO - change output image name
     hdu = fits.PrimaryHDU(sblam_net, header=hhdu[0].header)
-    hdu.writeto(fileroot+'_net_sb.fits', overwrite=True)
-    hdu.close()
+    hdu.writeto(fileroot+'-net-sb.fits', overwrite=True)
+    #hdu.close()
 
     print('Smoothing net image')
 
@@ -318,8 +318,8 @@ def subtract_continuum(Rfile, Hfile, gfile, rfile, mask=None,overwrite=False):
 
     hdu = fits.PrimaryHDU(flam_net_smooth, header=hhdu[0].header)
     # DONE: TODO - change output image name
-    hdu.writeto(fileroot+'_net_smooth.fits', overwrite=True)
-    hdu.close()
+    hdu.writeto(fileroot+'-net-smooth.fits', overwrite=True)
+    #hdu.close()
     stat_sm = stats.sigma_clipped_stats(flam_net_smooth,mask=mask)
     # TODO - add this to image header
 
