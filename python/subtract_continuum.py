@@ -122,7 +122,7 @@ def get_gr(gfile,rfile,mask=None):
     
     # get noise in the image    
     #stat is a tuple of mean, median, sigma
-    print('Computing median values for g and r images')
+    print('\nIn get_gr \nComputing median values for g and r images')
     stat_r = stats.sigma_clipped_stats(data_r,mask=mask)
     print('Subtracting {0:3.2f} from r-band image'.format(stat_r[1]))
 
@@ -144,7 +144,8 @@ def get_gr(gfile,rfile,mask=None):
     
     # save gr color image
     hdu = fits.PrimaryHDU(gr_col, header=r[0].header)
-    outimage = rfile.replace('r.fits','gr.fits')
+    outimage = rfile.replace('r-ha.fits','gr.fits')
+    print(f"name for g-r image is {outimage}")
     print(f"writing g-r color image to {outimage}")
     hdu.writeto(outimage, overwrite=True)
     #hdu.close()
