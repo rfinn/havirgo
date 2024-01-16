@@ -257,7 +257,7 @@ def subtract_continuum(Rfile, Hfile, gfile, rfile, mask=None,overwrite=False):
     #Go to cgs units
     fnu_NB  = 3.631E3*data_NB*1E-12
     # DONE: TODO - change the filter EWs - need a dictionary for each Halpha filter
-    flam_NB = 2.99792458E-5*fnu_NB/(filter_lambda_c_AA(telescope)**2) *1E18
+    flam_NB = 2.99792458E-5*fnu_NB/(filter_lambda_c_AA[telescope]**2) *1E18
 
     # continuum image - but why are we using the smoothed image?
     cnu_NB  = 3.631E3*data_r_to_Ha*1E-12
