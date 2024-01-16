@@ -128,10 +128,10 @@ def get_gr(gfile,rfile,mask=None):
 
     # this is not going to mask out the galaxy, so the sky values will likely be skewed
     # I am going to assume that the legacy images don't need another round of sky subtraction???
-    data_r -= stat_r[1]
+    #data_r -= stat_r[1]
     stat_g = stats.sigma_clipped_stats(data_g,mask=mask)
     print('Subtracting {0:3.2f} from g-band image'.format(stat_g[1]))
-    data_g -= stat_g[1]
+    #data_g -= stat_g[1]
 
     # create a mask, where SNR > 10    
     usemask = (data_r>10*stat_r[2])    
@@ -139,12 +139,15 @@ def get_gr(gfile,rfile,mask=None):
     print('Smoothing images for color calculation')
     gr_col = convolution.convolve_fft(gr_col, convolution.Box2DKernel(20), allow_huge=True, nan_treatment='interpolate')
 
+    # set the masked pixel values to nan
     gr_col[np.logical_not(usemask)] = np.nan
+    
     # save gr color image
     hdu = fits.PrimaryHDU(gr_col, header=r[0].header)
     outimage = rfile.replace('r.fits','gr.fits')
+    print(f"writing g-r color image to {outimage}")
     hdu.writeto(outimage, overwrite=True)
-    hdu.close()
+    #hdu.close()
     return gr_col
 
 def subtract_continuum(Rfile, Hfile, gfile, rfile, mask=None,overwrite=False):
@@ -169,6 +172,7 @@ def subtract_continuum(Rfile, Hfile, gfile, rfile, mask=None,overwrite=False):
         return
 
     outimage = rfile.replace('r.fits','gr.fits')
+    print(f"g-r image = {outimage}")
     if os.path.exists(outimage):
         print("found g-r image.  not remaking this")
         hdu = fits.open(outimage)
@@ -237,6 +241,7 @@ def subtract_continuum(Rfile, Hfile, gfile, rfile, mask=None,overwrite=False):
     mag_r_to_Ha = mag_r + filter_transformation(telescope,rfilter, gr_col)
 
 
+    # QFM: what happens to mag_r_to_Ha - this is the array that has the correct filter transformation, I think
     
     #Back to calibrated flux units
     data_r_to_Ha = np.copy(data_r) # this is the sky-subtracted r-band data
