@@ -224,7 +224,7 @@ def subtract_continuum(Rfile, Hfile, gfile, rfile, mask=None,overwrite=False):
     # TODONE - subtract sky from Halpha image    
     stat_h = stats.sigma_clipped_stats(hhdu[0].data,mask=mask)
     print('Subtracting {0:3.2f} from halpha image'.format(stat_h[1]))
-    data_h = hhdu[0].data - stat_h[1]
+    data_NB = hhdu[0].data - stat_h[1]
 
     # Generate the r band mag image and the r band calibrated to Halpha wave
     # This works only for positive flux pixels. Take this into account
