@@ -261,10 +261,10 @@ def subtract_continuum(Rfile, Hfile, gfile, rfile, mask=None,overwrite=False):
 
     # continuum image - but why are we using the smoothed image?
     cnu_NB  = 3.631E3*data_r_to_Ha*1E-12
-    clam_NB = 2.99792458E-5*cnu_NB/(filter_lambda_c_AA(telescope)**2) *1E18 # change central wavelength
+    clam_NB = 2.99792458E-5*cnu_NB/(filter_lambda_c_AA[telescope]**2) *1E18 # change central wavelength
 
     # DONE: TODO - change width of the filter
-    flam_net = filter_width_AA(telescope)*(flam_NB-clam_NB) #106 is the width of the filter
+    flam_net = filter_width_AA[telescope]*(flam_NB-clam_NB) #106 is the width of the filter
 
 
     # TODO - I would like to save a version in AB mag for compatibility with my photometry programs
