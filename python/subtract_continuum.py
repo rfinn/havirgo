@@ -69,6 +69,7 @@ Corr quadratic fit           :    0.0000/0.0192
 """
 import sys
 import os
+import numpy as np
 from astropy.io import fits
 from astropy import stats, convolution
 from astropy import wcs
@@ -85,7 +86,12 @@ filter_lambda_c_AA = {'BOK':6620.52,'HDI':6620.52,'INT':6568,'MOS':6620.52,'INT6
 
 def filter_transformation(telescope,rfilter, gr_col):
     
-    """use Matteo's linear fits to transform r to Halpha """
+    """
+    use Matteo's linear fits to transform r to Halpha 
+
+    I need to get more info on what these are - are they in mag or flux?
+    """
+
     
     if (telescope == 'BOK') | ((telescope == 'HDI') and (rfilter == 'r')):
         #Ha4_KPSr = -0.1804 * (gr_col) + 0.0158
@@ -96,6 +102,9 @@ def filter_transformation(telescope,rfilter, gr_col):
     elif (telescope == 'MOS') | ((telescope == 'HDI') and (rfilter == 'R')):
         #Ha4_KPHr = -0.0465 * (gr_col) + 0.0012
         ha_r = -0.0465 * (gr_col) + 0.0012
+    else:
+        print(f"HEY - DID NOT FIND A MATCH FOR TELESOPE {telescope} AND FILTER {rfilter}")
+    return ha_r
             
 def get_gr(gfile,rfile,mask=None):
     
@@ -151,7 +160,7 @@ def subtract_continuum(Rfile, Hfile, gfile, rfile, mask=None,overwrite=False):
 
 
     RETURN:
-    nothing, but save the CS subtracted image that uses the g-r color
+    nothing, but save the CS subtracted image that uses the g-r color in the current directory
     
     """
     outname = Hfile.replace('Ha.fits','CS-gr.fits')
@@ -167,7 +176,7 @@ def subtract_continuum(Rfile, Hfile, gfile, rfile, mask=None,overwrite=False):
         hdu.close()
     else:
         gr_col = get_gr(gfile,rfile,mask=mask)
-    usemask = gr_col == np.nan
+    usemask = gr_col == np.nan # these are bad values in the g-r color
     fileroot = Rfile.replace('-R.fits','')
 
     # these are the legacy g and r images that we will use to calculate
@@ -204,7 +213,7 @@ def subtract_continuum(Rfile, Hfile, gfile, rfile, mask=None,overwrite=False):
     stat_r = stats.sigma_clipped_stats(rhdu[0].data,mask=mask)
     print('Subtracting {0:3.2f} from r-band image'.format(stat_r[1]))
     # do I save the r-band image with new sky subtraction???
-    data_r = rhd[0].data - stat_r[1]
+    data_r = rhdu[0].data - stat_r[1]
 
     # sky subtracted r-band image
     skysub_r_name = Rfile.replace('-R.fits','-R-sky.fits')
@@ -215,7 +224,7 @@ def subtract_continuum(Rfile, Hfile, gfile, rfile, mask=None,overwrite=False):
     # TODONE - subtract sky from Halpha image    
     stat_h = stats.sigma_clipped_stats(hhdu[0].data,mask=mask)
     print('Subtracting {0:3.2f} from halpha image'.format(stat_h[1]))
-    data_h = hhdu[0].data - stat_g[1]
+    data_NB = hhdu[0].data - stat_h[1]
 
     # Generate the r band mag image and the r band calibrated to Halpha wave
     # This works only for positive flux pixels. Take this into account
@@ -230,12 +239,14 @@ def subtract_continuum(Rfile, Hfile, gfile, rfile, mask=None,overwrite=False):
 
     
     #Back to calibrated flux units
-    data_r_to_Ha = np.copy(data_r)
+    data_r_to_Ha = np.copy(data_r) # this is the sky-subtracted r-band data
     # smooth the r-band image
     data_r_to_Ha = convolution.convolve_fft(data_r, convolution.Box2DKernel(5), allow_huge=True, nan_treatment='interpolate')
+    
     # DONE: TODO - change ZP from 30 to value in image header
     # usemask is true where the g-r image == np.nan
-    # so I don't understand what this line is doing
+    
+    # so I don't understand what this line is doing - converting to flux?
     data_r_to_Ha[usemask] = 10**(-0.4*(mag_r_to_Ha[usemask]-rZP))
 
     # QFM (question for Matteo)
@@ -246,14 +257,14 @@ def subtract_continuum(Rfile, Hfile, gfile, rfile, mask=None,overwrite=False):
     #Go to cgs units
     fnu_NB  = 3.631E3*data_NB*1E-12
     # DONE: TODO - change the filter EWs - need a dictionary for each Halpha filter
-    flam_NB = 2.99792458E-5*fnu_NB/(filter_lambda_c_AA(telescope)**2) *1E18
+    flam_NB = 2.99792458E-5*fnu_NB/(filter_lambda_c_AA[telescope]**2) *1E18
 
     # continuum image - but why are we using the smoothed image?
     cnu_NB  = 3.631E3*data_r_to_Ha*1E-12
-    clam_NB = 2.99792458E-5*cnu_NB/(filter_lambda_c_AA(telescope)**2) *1E18 # change central wavelength
+    clam_NB = 2.99792458E-5*cnu_NB/(filter_lambda_c_AA[telescope]**2) *1E18 # change central wavelength
 
     # DONE: TODO - change width of the filter
-    flam_net = filter_width_AA(telescope)*(flam_NB-clam_NB) #106 is the width of the filter
+    flam_net = filter_width_AA[telescope]*(flam_NB-clam_NB) #106 is the width of the filter
 
 
     # TODO - I would like to save a version in AB mag for compatibility with my photometry programs
@@ -269,11 +280,11 @@ def subtract_continuum(Rfile, Hfile, gfile, rfile, mask=None,overwrite=False):
     # DONE: TODO - change output image name
     # this is the new net NB image
     hdu = fits.PrimaryHDU(flam_NB, header=hhdu[0].header)
-    hdu.writeto(fileroot+'_net_new.fits', overwrite=True) #NB image in F_lambda units, before
+    hdu.writeto(fileroot+'-net-new.fits', overwrite=True) #NB image in F_lambda units, before
     # DONE: TODO - change output image name
     hdu = fits.PrimaryHDU(clam_NB, header=hhdu[0].header)
-    hdu.writeto(fileroot+'_cont_new.fits', overwrite=True)
-    hdu.close()
+    hdu.writeto(fileroot+'-cont-new.fits', overwrite=True)
+    #hdu.close()
     
     #Calculate clipped statistic
     #stat is a tuple of mean, median, sigma
@@ -288,9 +299,9 @@ def subtract_continuum(Rfile, Hfile, gfile, rfile, mask=None,overwrite=False):
     # DONE: TODO - change output image name
     # this is the continuum-subtracted image
     hdu = fits.PrimaryHDU(flam_net, header=hhdu[0].header)
-    hdu.writeto(fileroot+'_net_flux.fits', overwrite=True)
+    hdu.writeto(fileroot+'-net-flux.fits', overwrite=True)
     #hdu.writeto(outname, overwrite=True)    
-    hdu.close()
+    #hdu.close()
 
     # convert image to surface brightness units
     # DONE: TODO - change pixel scale
@@ -298,8 +309,8 @@ def subtract_continuum(Rfile, Hfile, gfile, rfile, mask=None,overwrite=False):
     
     # DONE: TODO - change output image name
     hdu = fits.PrimaryHDU(sblam_net, header=hhdu[0].header)
-    hdu.writeto(fileroot+'_net_sb.fits', overwrite=True)
-    hdu.close()
+    hdu.writeto(fileroot+'-net-sb.fits', overwrite=True)
+    #hdu.close()
 
     print('Smoothing net image')
 
@@ -307,8 +318,8 @@ def subtract_continuum(Rfile, Hfile, gfile, rfile, mask=None,overwrite=False):
 
     hdu = fits.PrimaryHDU(flam_net_smooth, header=hhdu[0].header)
     # DONE: TODO - change output image name
-    hdu.writeto(fileroot+'_net_smooth.fits', overwrite=True)
-    hdu.close()
+    hdu.writeto(fileroot+'-net-smooth.fits', overwrite=True)
+    #hdu.close()
     stat_sm = stats.sigma_clipped_stats(flam_net_smooth,mask=mask)
     # TODO - add this to image header
 
@@ -336,21 +347,25 @@ if __name__ == '__main__':
     # get prefix from the directory name
     t = dirname.split('-')
     prefix = t[0]+'-'+t[1]
+    vfid = t[0]
     
     # define the file names
-    Rfile = os.path.join(dirname,dirname+'-R.fits') # r-band image taken with same telescope as halpha
-    Hfile = os.path.join(dirname,dirname+'-Ha.fits')  # halpha image
+    Rfile = dirname+'-R.fits' # r-band image taken with same telescope as halpha
+    Hfile = dirname+'-Ha.fits'  # halpha image
 
     # get legacy images that are reprojected to the halpha image
-    rfiles = glob.glob(os.path.join(dirname,'legacy',prefix+'*r-ha.fits'))
+    # these are in the legacy subdirectory
+    legacy_path = os.path.join('legacy',vfid+'*r-ha.fits')
+    rfiles = glob.glob(legacy_path)
+    print(rfiles)
     if len(rfiles) < 1:
-        print("problem getting r-ha.fits legacy image")
+        print("problem getting r-ha.fits legacy image",len(rfiles))
         sys.exit()
     else:
         rfile = rfiles[0] # legacy r-band image
         
     # legacy g-band image, shifted to match halpha footprint and pixel scale
-    gfiles = glob.glob(os.path.join(dirname,'legacy',prefix+'*g-ha.fits'))
+    gfiles = glob.glob(os.path.join('legacy',vfid+'*g-ha.fits'))
     if len(gfiles) < 1:
         print("problem getting g-ha.fits legacy image")
         sys.exit()
@@ -368,3 +383,6 @@ if __name__ == '__main__':
 
     # call the main function to subtract the continuum
     subtract_continuum(Rfile, Hfile, gfile, rfile,mask=mask,overwrite=False)
+
+    # move back to the top directory
+    os.chdir(topdir)

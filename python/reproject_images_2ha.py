@@ -1,4 +1,4 @@
-#!/usr/bin/env
+#!/usr/bin/env python
 
 """
 GOAL:
@@ -20,7 +20,7 @@ ls -d VFID* > virgo-cutouts.txt
 
 Then call parallel:
 
-parallel --eta  ~/github/havirgo/python/reproject_images_2ha.py :::: virgo-cutouts.txt 
+parallel --eta  python ~/github/havirgo/python/reproject_images_2ha.py :::: virgo-cutouts.txt 
 
 """
 import sys

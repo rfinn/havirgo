@@ -17,7 +17,7 @@ This script will streamline the process in one program.
 
 NOTE: 
 
-I thought I already had a program to so this, but I can't find it.
+I thought I already had a program to do this, but I can't find it.
 
 USAGE:
 Run from the cutouts directory, like: /data-pool/Halpha/halphagui-output-20230814/cutouts/
@@ -38,6 +38,11 @@ import os
 startdir = os.getcwd()
 cutout_dir = sys.argv[1]
 
+if len(sys.argv) > 2:
+    syncfiles=False
+else:
+    syncfiles=True
+
 # download cutouts
 s = f"python ~/github/HalphaImaging/python3/generate_all_cutout_plots.py --onegal {cutout_dir}"
 os.system(s)
@@ -52,11 +57,12 @@ os.chdir('/data-pool/Halpha/html_dev/cutouts/')
 os.system("python ~/github/havirgo/python/build_cutout_index.py")
 
 # sync to web
-print()
-print("syncing to facultyweb - enter Siena password when prompted...")
-print()
-os.chdir("/data-pool/Halpha/html_dev/")
-os.system("rsync -avz cutouts facultyweb.siena.edu:public_html/virgo/. ")
+if syncfiles:
+    print()
+    print("syncing to facultyweb - enter Siena password when prompted...")
+    print()
+    os.chdir("/data-pool/Halpha/html_dev/")
+    os.system("rsync -avz cutouts facultyweb.siena.edu:public_html/virgo/. ")
 
 # return to original directory
 os.chdir(startdir)

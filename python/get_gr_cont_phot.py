@@ -8,6 +8,16 @@ PROCEDURE:
 * this will run in each cutout directory
 * can be run in parallel
 
+USAGE:
+* this takes the directory name as input, like
+
+python ~/github/havirgo/python/get_gr_cont_phot.py VFID6352-NGC5806-BOK-20210418-VFID6406
+
+
+* to run in parallel
+
+parallel --eta  python ~/github/havirgo/python/get_gr_cont_phot.py :::: virgo-cutouts.txt 
+
 
 """
 import sys

@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-'''
+"""
 GOAL:
 * create index web page that points to html pages for all cutouts 
 
@@ -10,7 +10,7 @@ USAGE:
 NOTES:
 * using John Moustakas's code as a reference (https://github.com/moustakas/legacyhalos/blob/main/py/legacyhalos/virgofilaments.py#L1131-L1202)
 
-'''
+"""
 
 import os
 import numpy as np
