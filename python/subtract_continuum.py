@@ -171,7 +171,7 @@ def subtract_continuum(Rfile, Hfile, gfile, rfile, mask=None,overwrite=False):
         print("continuum-subtracted image exists - not redoing it")
         return
 
-    outimage = rfile.replace('r.fits','gr.fits')
+    outimage = rfile.replace('r-ha.fits','gr.fits')
     print(f"g-r image = {outimage}")
     if os.path.exists(outimage):
         print("found g-r image.  not remaking this")
