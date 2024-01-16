@@ -86,7 +86,12 @@ filter_lambda_c_AA = {'BOK':6620.52,'HDI':6620.52,'INT':6568,'MOS':6620.52,'INT6
 
 def filter_transformation(telescope,rfilter, gr_col):
     
-    """use Matteo's linear fits to transform r to Halpha """
+    """
+    use Matteo's linear fits to transform r to Halpha 
+
+    I need to get more info on what these are - are they in mag or flux?
+    """
+
     
     if (telescope == 'BOK') | ((telescope == 'HDI') and (rfilter == 'r')):
         #Ha4_KPSr = -0.1804 * (gr_col) + 0.0158
@@ -97,6 +102,9 @@ def filter_transformation(telescope,rfilter, gr_col):
     elif (telescope == 'MOS') | ((telescope == 'HDI') and (rfilter == 'R')):
         #Ha4_KPHr = -0.0465 * (gr_col) + 0.0012
         ha_r = -0.0465 * (gr_col) + 0.0012
+    else:
+        print(f"HEY - DID NOT FIND A MATCH FOR TELESOPE {telescope} AND FILTER {rfilter}")
+    return ha_r
             
 def get_gr(gfile,rfile,mask=None):
     
@@ -168,7 +176,7 @@ def subtract_continuum(Rfile, Hfile, gfile, rfile, mask=None,overwrite=False):
         hdu.close()
     else:
         gr_col = get_gr(gfile,rfile,mask=mask)
-    usemask = gr_col == np.nan
+    usemask = gr_col == np.nan # these are bad values in the g-r color
     fileroot = Rfile.replace('-R.fits','')
 
     # these are the legacy g and r images that we will use to calculate
@@ -231,14 +239,14 @@ def subtract_continuum(Rfile, Hfile, gfile, rfile, mask=None,overwrite=False):
 
     
     #Back to calibrated flux units
-    data_r_to_Ha = np.copy(data_r)
+    data_r_to_Ha = np.copy(data_r) # this is the sky-subtracted r-band data
     # smooth the r-band image
     data_r_to_Ha = convolution.convolve_fft(data_r, convolution.Box2DKernel(5), allow_huge=True, nan_treatment='interpolate')
     
     # DONE: TODO - change ZP from 30 to value in image header
     # usemask is true where the g-r image == np.nan
     
-    # so I don't understand what this line is doing
+    # so I don't understand what this line is doing - converting to flux?
     data_r_to_Ha[usemask] = 10**(-0.4*(mag_r_to_Ha[usemask]-rZP))
 
     # QFM (question for Matteo)
