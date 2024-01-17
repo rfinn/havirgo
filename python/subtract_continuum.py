@@ -262,6 +262,8 @@ def subtract_continuum(Rfile, Hfile, gfile, rfile, mask=None,overwrite=False):
     # TODONE - change ZP - get this from image header
     mag_r = -2.5*np.log10(data_r) + rZP
 
+    mag_r_to_Ha = mag_r + hZP - rZP
+
     # Transform the mag_r image to the observed Halpha filter
     # TODONE - change the color conversion - need to use different conversion for each Halpha/r combo
     # 
@@ -283,7 +285,9 @@ def subtract_continuum(Rfile, Hfile, gfile, rfile, mask=None,overwrite=False):
 
     # QFM: don't we have to scale the r-band flux by the default ratio,
     # which would be 10**((hZP-rZP)/2.5)
-    mag_r_to_Ha = mag_r + filter_transformation(telescope,rfilter, gr_col)
+
+    # The r-band mag has to be scaled to the same ZP as the halpha image
+    mag_r_to_Ha = mag_r_to_Ha + filter_transformation(telescope,rfilter, gr_col)
 
 
     # QFM: what happens to mag_r_to_Ha -
@@ -314,7 +318,18 @@ def subtract_continuum(Rfile, Hfile, gfile, rfile, mask=None,overwrite=False):
     # QFM: which photometric ZP should I use here?
     # still the rZP I think - b/c it did a color transformation
     # but did not scale it, right?
-    data_r_to_Ha[usemask] = 10**(-0.4*(mag_r_to_Ha[usemask]-rZP))
+
+    # QFM: I think that in the following line, I think the
+    # default values should be adjusted by this amount
+
+
+    # this is from matteo's code
+    #data_r_to_Ha[usemask] = 10**(-0.4*(mag_r_to_Ha[usemask]-rZP))
+
+    # I am adding the default scale values
+    data_r_to_Ha[usemask] = 10**(-0.4*(mag_r_to_Ha[usemask]-rZP))    
+
+    
 
     # QFM (question for Matteo)
     # in the above eqn, why are we mixing smoothed and unsmoothed images?
