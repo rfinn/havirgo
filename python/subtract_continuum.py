@@ -102,6 +102,7 @@ def filter_transformation(telescope,rfilter, gr_col):
 
     
     if (telescope == 'BOK') | ((telescope == 'HDI') and (rfilter == 'r')):
+        
         #Ha4_KPSr = -0.1804 * (gr_col) + 0.0158
         ha_r = -0.1804*gr_col + 0.0158
     elif telescope == 'INT':
@@ -270,6 +271,18 @@ def subtract_continuum(Rfile, Hfile, gfile, rfile, mask=None,overwrite=False):
     #
     # this doesn't seem right.
     # seems like it should be the mag r scaled but some default value
+
+    # QFM: anything that is nan in the g-r color image
+    # is now nan in mag_r_to_Ha.
+    # should we use the usemask flag to alter the values for the good pixels only
+    # and use the default ratio for the remaining pixels?
+    # I adjusted the code below when creating data_r_to_Ha to scale by filter ratio
+    
+    # QFM: these filter transformations are derived for panstarrs colors
+    # is this a problem that we are using the legacy g-r color instead?
+
+    # QFM: don't we have to scale the r-band flux by the default ratio,
+    # which would be 10**((hZP-rZP)/2.5)
     mag_r_to_Ha = mag_r + filter_transformation(telescope,rfilter, gr_col)
 
 
@@ -282,10 +295,17 @@ def subtract_continuum(Rfile, Hfile, gfile, rfile, mask=None,overwrite=False):
     #Back to calibrated flux units
     
     data_r_to_Ha = np.copy(data_r) # this is the sky-subtracted r-band data
+
+    # scale the r-band flux by the difference in mag between r and Ha images
+    r2NB_scale_factor = 10**((hZP-rZP)/2.5)
+    data_r_to_Ha = data_r_to_Ha*r2NB_scale_factor
     
     # smooth the r-band image before subtracting from halpha
     # QFM : why are we doing this?  I usually do a straight image subtraction
-    data_r_to_Ha = convolution.convolve_fft(data_r, convolution.Box2DKernel(5), allow_huge=True, nan_treatment='interpolate')
+    
+    # QFM: in your code, the following line feeds in data_r rather than data_r_to_Ha
+    # I changed it to data_r_to_Ha.  Is this wrong?
+    data_r_to_Ha = convolution.convolve_fft(data_r_to_Ha, convolution.Box2DKernel(5), allow_huge=True, nan_treatment='interpolate')
     
     # TODONE - change ZP from 30 to value in image header
     # usemask is true where the g-r image == np.nan
