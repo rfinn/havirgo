@@ -322,6 +322,8 @@ def subtract_continuum(Rfile, Hfile, gfile, rfile, mask=None,overwrite=False):
     # QFM - is this just (data_NB - data_r_to_Ha)?
     NB_ABmag = (data_NB - data_r_to_Ha)
     hdu = fits.PrimaryHDU(NB_ABmag, header=hhdu[0].header)
+
+    # outname is *CS-gr.fits
     hdu.writeto(outname, overwrite=True) #NB image in F_lambda units, before
 
 
@@ -371,6 +373,7 @@ def subtract_continuum(Rfile, Hfile, gfile, rfile, mask=None,overwrite=False):
     # DONE: TODO - change output image name
     hdu.writeto(fileroot+'-net-smooth.fits', overwrite=True)
     #hdu.close()
+    
     stat_sm = stats.sigma_clipped_stats(flam_net_smooth,mask=mask)
     # TODO - add this to image header
 
