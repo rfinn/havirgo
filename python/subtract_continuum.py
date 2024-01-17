@@ -77,9 +77,17 @@ from astropy import wcs
 import glob
 from reproject import reproject_interp
 
+import warnings
+warnings.filterwarnings('ignore')
+
+
+######################################################################
+###  FILTER DEFINITIONS
+######################################################################
 # Halpha filter width in angstrom
 filter_width_AA = {'BOK':80.48,'HDI':80.48,'INT':95,'MOS':80.48,'INT6657':80}
 
+# central wavelength in angstroms
 filter_lambda_c_AA = {'BOK':6620.52,'HDI':6620.52,'INT':6568,'MOS':6620.52,'INT6657':6657}
 
 
@@ -134,17 +142,21 @@ def get_gr(gfile,rfile,mask=None):
     #data_g -= stat_g[1]
 
     # create a mask, where SNR > 10    
-    usemask = (data_r>10*stat_r[2])    
+    usemask = (data_r>10*stat_r[2])
+
+    # calculate the g-r color 
     gr_col = -2.5*np.log10(data_g/data_r)
+
+    
     print('Smoothing images for color calculation')
     gr_col = convolution.convolve_fft(gr_col, convolution.Box2DKernel(20), allow_huge=True, nan_treatment='interpolate')
 
-    # set the masked pixel values to nan
+    # set the pixel with SNR < 10 to nan - don't use these for color correction
     gr_col[np.logical_not(usemask)] = np.nan
     
     # save gr color image
     hdu = fits.PrimaryHDU(gr_col, header=r[0].header)
-    outimage = rfile.replace('r-ha.fits','gr.fits')
+    outimage = rfile.replace('r-ha.fits','gr-ha-smooth.fits')
     #print(f"name for g-r image is {outimage}")
     print(f"writing g-r color image to {outimage}")
     hdu.writeto(outimage, overwrite=True)
@@ -172,7 +184,7 @@ def subtract_continuum(Rfile, Hfile, gfile, rfile, mask=None,overwrite=False):
         print("continuum-subtracted image exists - not redoing it")
         return
 
-    outimage = rfile.replace('r-ha.fits','gr.fits')
+    outimage = rfile.replace('r-ha.fits','gr-ha-smooth.fits')
     print(f"g-r image = {outimage}")
     if os.path.exists(outimage):
         print("found g-r image.  not remaking this")
@@ -181,20 +193,28 @@ def subtract_continuum(Rfile, Hfile, gfile, rfile, mask=None,overwrite=False):
         hdu.close()
     else:
         gr_col = get_gr(gfile,rfile,mask=mask)
-    usemask = gr_col == np.nan # these are bad values in the g-r color
+
+    # usemask should be all the values in the color image than are
+    # not equal to np.nan
+    usemask = gr_col != np.nan # these are the good values in the g-r color
+
+    # this should be the text describing the galaxy
+    # like : VFID0569-NGC5989-INT-20190530-p002 
     fileroot = Rfile.replace('-R.fits','')
 
-    # these are the legacy g and r images that we will use to calculate
-    # the color-dependent filter ratio
+    # read in *our* r-band and halpha images
     hhdu = fits.open(Hfile)
     rhdu = fits.open(Rfile)
+
+    # get photometric ZP for each image
     rZP = rhdu[0].header['PHOTZP']
     hZP = hhdu[0].header['PHOTZP']
+    
     # get filter names
     rfilter = rhdu[0].header['FILTER']
     hfilter = hhdu[0].header['FILTER']    
 
-    # TODO - get the pixel scale in the halpha image
+    # TODONE - get the pixel scale in the halpha image
     # use the WCS function
     wcs_NB = wcs.WCS(Hfile)
     pscale_NB = wcs.utils.proj_plane_pixel_scales(wcs_NB)*3600.
@@ -231,6 +251,10 @@ def subtract_continuum(Rfile, Hfile, gfile, rfile, mask=None,overwrite=False):
     print('Subtracting {0:3.2f} from halpha image'.format(stat_h[1]))
     data_NB = hhdu[0].data - stat_h[1]
 
+
+    ##
+    # this comments are from matteo's program
+    ##
     # Generate the r band mag image and the r band calibrated to Halpha wave
     # This works only for positive flux pixels. Take this into account
 
@@ -239,38 +263,59 @@ def subtract_continuum(Rfile, Hfile, gfile, rfile, mask=None,overwrite=False):
 
     # Transform the mag_r image to the observed Halpha filter
     # TODONE - change the color conversion - need to use different conversion for each Halpha/r combo
+    # 
+    # BUT: for pixels which have a nan in the g-r image
+    # (r-band SNR in legacy image < 10)
+    # then mag r to Ha is just mag r
+    #
+    # this doesn't seem right.
+    # seems like it should be the mag r scaled but some default value
     mag_r_to_Ha = mag_r + filter_transformation(telescope,rfilter, gr_col)
 
 
-    # QFM: what happens to mag_r_to_Ha - this is the array that has the correct filter transformation, I think
-    
+    # QFM: what happens to mag_r_to_Ha -
+    # this is the array that has the correct filter transformation, I think
+
+    ##
+    # the following is the orginal comment from matteo's code
+    ##
     #Back to calibrated flux units
+    
     data_r_to_Ha = np.copy(data_r) # this is the sky-subtracted r-band data
-    # smooth the r-band image
+    
+    # smooth the r-band image before subtracting from halpha
+    # QFM : why are we doing this?  I usually do a straight image subtraction
     data_r_to_Ha = convolution.convolve_fft(data_r, convolution.Box2DKernel(5), allow_huge=True, nan_treatment='interpolate')
     
-    # DONE: TODO - change ZP from 30 to value in image header
+    # TODONE - change ZP from 30 to value in image header
     # usemask is true where the g-r image == np.nan
     
     # so I don't understand what this line is doing - converting to flux?
+    # QFM: which photometric ZP should I use here?
+    # still the rZP I think - b/c it did a color transformation
+    # but did not scale it, right?
     data_r_to_Ha[usemask] = 10**(-0.4*(mag_r_to_Ha[usemask]-rZP))
 
     # QFM (question for Matteo)
     # in the above eqn, why are we mixing smoothed and unsmoothed images?
     # or are we only using the smoothed values for where the pixels are masked?
-
+    # Rose's answer: I had previously thought that usemask was bad values
+    # but it's actually good.  we are using a color transformation that is smoothed
     
-    #Go to cgs units
+    # Matteo Comment: Go to cgs units
     fnu_NB  = 3.631E3*data_NB*1E-12
-    # DONE: TODO - change the filter EWs - need a dictionary for each Halpha filter
+    # TODONE - change the filter EWs - need a dictionary for each Halpha filter
     flam_NB = 2.99792458E-5*fnu_NB/(filter_lambda_c_AA[telescope]**2) *1E18
 
     # continuum image - but why are we using the smoothed image?
+    # Rose's answer: same as above.  we smoothed the g-r image so that we apply
+    # a smoother color correction
     cnu_NB  = 3.631E3*data_r_to_Ha*1E-12
     clam_NB = 2.99792458E-5*cnu_NB/(filter_lambda_c_AA[telescope]**2) *1E18 # change central wavelength
 
-    # DONE: TODO - change width of the filter
-    flam_net = filter_width_AA[telescope]*(flam_NB-clam_NB) #106 is the width of the filter
+    # TODONE - change width of the filter
+    # QFM : in his code, there is a multiplicative factor of 1.03 on clam_NB
+    flam_net = filter_width_AA[telescope]*(flam_NB-clam_NB) # matteo comment: 106 is the width of the filter
 
 
     # TODO - I would like to save a version in AB mag for compatibility with my photometry programs
