@@ -233,8 +233,11 @@ def subtract_continuum(Rfile, Hfile, gfile, rfile, mask=None,overwrite=False):
 
     print('Generate NET image')
 
-    # TODONE - subtract sky from r-band image
+    # TODO - revisit this and examine the masking.
+    # the mask we are currently using does not mask the central galaxy
 
+    
+    # TODONE - subtract sky from r-band image
     print('Computing median values for r and halpha images')
     stat_r = stats.sigma_clipped_stats(rhdu[0].data,mask=mask)
     print('Subtracting {0:3.2f} from r-band image'.format(stat_r[1]))
@@ -261,6 +264,9 @@ def subtract_continuum(Rfile, Hfile, gfile, rfile, mask=None,overwrite=False):
 
     # TODONE - change ZP - get this from image header
     mag_r = -2.5*np.log10(data_r) + rZP
+
+    # I am trying to convert the r-band mag to the halpha mag here
+    # but CS image still does not look right
 
     mag_r_to_Ha = mag_r + hZP - rZP
 
