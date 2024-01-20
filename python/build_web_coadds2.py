@@ -20,10 +20,10 @@ NOTES:
 
 
 '''
-# DONE TODO - use radius from main table for cutout size - maybe 2.5x bigger than boxes shown on full image
-# DONE TODO - show cutout from CS-ZP if available
-# DINE TODO - add legacy jpg image to cutouts
-# DONE TODO - add r and Halpha to cutouts
+# DONE TODONE - use radius from main table for cutout size - maybe 2.5x bigger than boxes shown on full image
+# DONE TODONE - show cutout from CS-ZP if available
+# DINE TODONE - add legacy jpg image to cutouts
+# DONE TODONE - add r and Halpha to cutouts
 # TODO - check color correction for 90prime filters with Matteo - color term persists
 # eg https://facultyweb.siena.edu/~rfinn/virgo/coadds/VF-135.196+45.266-BOK-20210315-VFID1728/VF-135.196+45.266-BOK-20210315-VFID1728.html
 # TODO - figure out why scale between BOK jpg and r-band/halpha images is wrong - must have wrong pixel scale for bok

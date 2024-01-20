@@ -388,6 +388,7 @@ class cutout_dir():
         self.rimage = t[0]
         self.haimage = glob.glob(os.path.join(self.cutoutdir,self.gname+'*-Ha.fits'))[0]
         self.csimage = glob.glob(os.path.join(self.cutoutdir,self.gname+'*-CS.fits'))[0]
+        self.csgrimage = glob.glob(os.path.join(self.cutoutdir,self.gname+'*-CS-gr.fits'))[0]        
         self.maskimage = self.rimage.replace('.fits','-mask.fits')
     def get_ellipse_params(self):
         """ get ellipse parameters from the header of the mask image  """
@@ -454,7 +455,7 @@ class cutout_dir():
     def make_png_plots(self):
         # fitsimages and pngimages should be dictionaries
         # so I am not relying on where they are in the list
-        imnames = ['r','ha','cs','legacy_g','legacy_r','legacy_z',\
+        imnames = ['r','ha','cs','csgr','legacy_g','legacy_r','legacy_z',\
                    'w1','w2','w3','w4',\
                    'mask','nuv']
         self.image_keys = imnames
@@ -462,19 +463,19 @@ class cutout_dir():
         # setting to None if image is not available
         self.fitsimages = {i:None for i in imnames}
         self.pngimages = {i:None for i in imnames}
-        keys = imnames[0:3]
-        imlist = [self.rimage,self.haimage,self.csimage]
+        keys = imnames[0:4]
+        imlist = [self.rimage,self.haimage,self.csimage,self.csgrimage]
         for i,k in enumerate(keys):
             self.fitsimages[k] = imlist[i]
         
         if self.legacy_flag:
-            keys = imnames[3:6]
+            keys = imnames[4:7]
             imlist = [self.legacy_g,self.legacy_r,self.legacy_z]
             for i,k in enumerate(keys):
                 self.fitsimages[k] = imlist[i]
             
         if self.wise_flag:
-            keys = imnames[6:10]            
+            keys = imnames[7:11]            
             imlist = [self.w1,self.w2,self.w3,self.w4]
             for i,k in enumerate(keys):
                 self.fitsimages[k] = imlist[i]
@@ -493,7 +494,7 @@ class cutout_dir():
             except TypeError:
                 continue
             try:
-                if i < 3:
+                if i < 4:
                     make_png(self.fitsimages[f],pngfile,mask=mask)
                 elif i == (len(self.fitsimages)-2): # add ellipse to mask image
                     if self.ellipseparams is not None:
@@ -510,10 +511,14 @@ class cutout_dir():
                 print('WARNING: problem making png for ',self.fitsimages[f])
 
 
-    def make_cs_png(self):
-        csdata,csheader = fits.getdata(self.csimage,header=True)
-        imx,imy,keepflag = get_galaxies_fov(self.csimage,vfmain['RA'],vfmain['DEC'])
-
+    def make_cs_png(self,gr=False):
+        if gr:
+            csdata,csheader = fits.getdata(self.csgrimage,header=True)
+            imx,imy,keepflag = get_galaxies_fov(self.csimage,vfmain['RA'],vfmain['DEC'])
+        else:
+            csdata,csheader = fits.getdata(self.csimage,header=True)
+            imx,imy,keepflag = get_galaxies_fov(self.csimage,vfmain['RA'],vfmain['DEC'])
+            
         mask = fits.getdata(self.maskimage)
         mask = mask > 0
         #galsize=60/(abs(csheader['CD1_1'])*3600)        

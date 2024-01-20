@@ -22,8 +22,14 @@ parallel --eta  python ~/github/havirgo/python/get_gr_cont_phot.py :::: virgo-cu
 """
 import sys
 import os
-import date
+from datetime import date
+import numpy as np
+
 from astropy.cosmology import WMAP9 as cosmo
+from astropy.table import Table, Column
+import astropy.units as u
+from astropy.io import fits
+from astropy.wcs import WCS
 
 homedir = os.getenv("HOME")
 sys.path.append(homedir+"/github/halphagui/")
@@ -33,10 +39,33 @@ from halphamain import create_output_table
 from photwrapper import ellipse
 from fit_profile import profile, dualprofile, rprofile, haprofile, ratio_error
 
+def get_params_from_name(image_name):
+    t = os.path.basename(image_name).split('-')
+    #print(t)
+    if len(t) == 5:
+        telescope = t[2]
+        dateobs = t[3]
+        pointing = t[4]
+    elif len(t) == 6: # meant to catch negative declinations
+        telescope = t[3]
+        dateobs = t[4]
+        pointing = t[5]
+    else:
+        print("ruh roh - trouble getting info from ",image_name, len(t))
+        print(t)
+    return telescope,dateobs,pointing
+
 
 class output_table():
-    def __init__(self,ngal,ids=None,prefix=None):
+    def __init__(self,ngal,ids=None,prefix=None,pixelscale=None,rwcs=None):
+        """
+        ngal: not sure what this is or how I was planning to retrofit this to get the values for the new cs images
+        from comments above, I was planning to run on each galaxy separately, so ngal should be one
+        """
         self.ngalaxies = ngal
+        # we are only writing output for one galaxy with this program,
+        # so everything goes in row zero
+        self.igal = 0
         if ids is None:
             ids = np.ones(1)
         c1 = Column(ids, name='VFID', description='VFID')
@@ -49,32 +78,55 @@ class output_table():
             self.output_table = 'data-'+user+'-'+str_date_today+'.fits'
         else:
             self.output_table = prefix+'-'+user+'-'+str_date_today+'.fits'
-        
+        self.pixelscale = pixelscale
+        self.rwcs = rwcs
+        self.prefix = prefix
     def add_ellipse(self):
         #####################################################################
         # ellipse output
         # xcentroid, ycentroid, eps, theta, gini, sky_centroid, area, background_mean, source_sum, source_sum_err
         #####################################################################
+        #e0 = Column(np.zeros(self.ngalaxies,'bool'), name='BADGAL',description='bad galaxy flag - maybe partial coverage')
         e1 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_XCENTROID', unit='pixel',description='xcentroid from ellipse')
         e2 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_YCENTROID', unit='pixel',description='ycentroid from ellipse')
         e3 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_EPS',description='axis ratio from ellipse')
         e4 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_THETA', unit=u.degree,description='position angle from ellipse')
         e5 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_GINI',description='gini coeff from ellipse')
-        e6 = Column(np.zeros(self.ngalaxies), name='ELLIP_GINI2',description='gini coeff method 2')
-        e5 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_M20',description='M20 for r image')
-        e6 = Column(np.zeros(self.ngalaxies), name='ELLIP_HM20',description='M20 for Halpha image ')
-        e7 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_AREA',description='area from ellipse')
-        e8 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_SUM', unit = u.erg/u.s/u.cm**2,description='total flux from ellipse')
-        e9 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_SUM_MAG', unit = u.mag,description='mag from ellipse')
-        e10 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_ASYM',description='asym from ellipse')
-        e11 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_ASYM_ERR')
-        e12 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_HSUM', unit=u.erg/u.s/u.cm**2,description='HA flux from ellipse')
-        e13 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_HSUM_MAG', unit=u.mag,description='HA mag from ellipse')
-        e14 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_HASYM',description='HA asymmetry from ellipse')
-        e15 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_HASYM_ERR')
-        e16 = Column(np.zeros(self.ngalaxies,'f'), name='R_SKYNOISE',description='R skynoise in erg/s/cm^2/arcsec^2')
-        e17 = Column(np.zeros(self.ngalaxies,'f'), name='H_SKYNOISE',description='HA skynoise in erg/s/cm^2/arcsec^2')
-        self.table.add_columns([e1,e2,e3,e4,e5,e6, e7,e8, e9, e10, e11, e12, e13,e14,e15,e16,e17])
+        e6 = Column(np.zeros(self.ngalaxies), name='ELLIP_HGINI',description='gini coeff method 2')
+        e7 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_M20',description='M20 for r image')
+        e8 = Column(np.zeros(self.ngalaxies), name='ELLIP_HM20',description='M20 for Halpha image ')
+        e9 = Column(np.zeros(self.ngalaxies,'e'), name='ELLIP_UNMASKED_AREA',description='unmasked source area from photutils')
+        e9b = Column(np.zeros(self.ngalaxies,'e'), name='ELLIP_TOTAL_AREA',description='total source area from photutils')
+        e10 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_SUM', unit = u.erg/u.s/u.cm**2,description='total flux from ellipse')
+        e11 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_SUM_MAG', unit = u.mag,description='mag from ellipse')
+        e12 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_ASYM',description='asym from ellipse')
+        e13 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_ASYM_ERR')
+        e14 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_HSUM', unit=u.erg/u.s/u.cm**2,description='HA flux from ellipse')
+        e15 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_HSUM_MAG', unit=u.mag,description='HA mag from ellipse')
+        e16 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_HASYM',description='HA asymmetry from ellipse')
+        e17 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_HASYM_ERR')
+        e18 = Column(np.zeros(self.ngalaxies,'e'), name='R_SKYNOISE',description='R skynoise in erg/s/cm^2/arcsec^2')
+        e19 = Column(np.zeros(self.ngalaxies,'e'), name='H_SKYNOISE',description='HA skynoise in erg/s/cm^2/arcsec^2')
+        e20 = Column(np.zeros(self.ngalaxies,'e'), name='R_SKY',description='R sky level in ADU')
+        e21 = Column(np.zeros(self.ngalaxies,'e'), name='H_SKY',description='HA sky level in ADU')
+
+        # photutils radii
+        e22 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_R30',description='photutils R flux frac 30')
+        e23 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_R50',description='photutils R flux frac 50')
+        e24 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_R90',description='photutils R flux frac 90')
+        
+        e25 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_HR30',description='photutils Halpha flux frac 30')
+        e26 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_HR50',description='photutils Halpha flux frac 50')
+        e27 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_HR90',description='photutils Halpha flux frac 90')        
+
+        
+        self.table.add_columns([e1,e2,e3,e4,e5,e6,e7,e8, e9, e9b,e10, e11, e12, e13,e14,e15,e16,e17,e18,e19,e20,e21,e22,e23,e24,e25,e26,e27])
+
+    def add_pointing_params(self):
+        c13 = Column(np.zeros(self.ngalaxies,dtype='|S40'),name='POINTING', description='string specifying year and pointing')
+        c14 = Column(np.zeros(self.ngalaxies,dtype='|S3'),name='TEL', description='telescope/instrument')
+        c15 = Column(np.zeros(self.ngalaxies,dtype='i'),name='DATE-OBS', description='string specifying date of observation')                        
+        self.table.add_columns([c13,c14,c15])
     def add_photutils(self):
         #####################################################################
         # profile fitting using photutils geometry
@@ -82,6 +134,35 @@ class output_table():
         #
         # r-band parameters
         #
+        self.fields_r = ['R24','R25','R26','R_F25','R24V','R25V','R_F50','R_F75','M24','M25','M26', 'F_30R24','F_R24','C30',\
+                    'PETRO_R','PETRO_FLUX','PETRO_R50','PETRO_R90','PETRO_CON','PETRO_MAG']
+        self.units_r = [u.arcsec,u.arcsec,u.arcsec,u.arcsec,u.arcsec,\
+                   u.arcsec,u.arcsec,u.arcsec,\
+                   u.mag, u.mag, u.mag, \
+                   u.erg/u.s/u.cm**2,u.erg/u.s/u.cm**2,'',\
+                   u.arcsec,u.erg/u.s/u.cm**2,u.arcsec, u.arcsec,'',u.mag
+                   ]
+        self.descriptions= ['isophotal radius at 24mag/sqarc AB',\
+                            'isophotal radius at 25mag/sqarc AB',\
+                            'isophotal radius at 26mag/sqarc AB',\
+                            'radius that encloses 25% of total flux',\
+                            'isophotal radius at 24mag/sqarc Vega',\
+                            'isophotal radius at 24mag/sqarc Vega',\
+                            'radius that encloses 50% of total flux',\
+                            'radius that encloses 75% of total flux',\
+                            'isophotal mag within R24',\
+                            'isophotal mag within R25',\
+                            'isophotal mag within R26',\
+                            'flux within 30% of R24',\
+                            'flux within R24',\
+                            'C30 = flux w/in 0.3 r24 / flux w/in r24',\
+                            'petrosian radius: where sb is 0.2 times mean sb',\
+                            'flux enclosed within 2xpetro radius',\
+                            'radius enclosing 50% of petrosian flux',\
+                            'radius enclosing 90% of petrosian flux',\
+                            '90% petro radius / 50% petro radius',\
+                            'magnitude of petrosian flux']
+        
         i=0
         for f,unit in zip(self.fields_r,self.units_r):
             if unit == None:
@@ -97,6 +178,39 @@ class output_table():
         #
         # Halpha parameters
         #
+
+        self.fields_ha = ['R16','R17',\
+                  'R_F25','R_F50','R_F75',\
+                  'M16','M17', \
+                  'F_30R24','F_R24','C30',\
+                  'R_F95R24','F_TOT',\
+                  'PETRO_R','PETRO_FLUX','PETRO_R50','PETRO_R90','PETRO_CON','PETRO_MAG'
+                  ]
+        self.units_ha = [u.arcsec,u.arcsec,\
+                 u.arcsec,u.arcsec, u.arcsec, \
+                 u.mag, u.mag, \
+                 u.erg/u.s/u.cm**2,u.erg/u.s/u.cm**2, '',\
+                 u.arcsec,u.erg/u.s/u.cm**2,\
+                 u.arcsec,u.erg/u.s/u.cm**2,u.arcsec, u.arcsec,'',u.mag]
+        self.descriptions_ha= ['HA isophotal radius at 16erg/s/cm^2',\
+                            'HA isophotal radius at 17erg/s/cm^2',\
+                            'HA radius that encloses 25% of total flux',\
+                            'HA radius that encloses 50% of total flux',\
+                            'HA radius that encloses 75% of total flux',\
+                            'HA isophotal radius at 16erg/s/cm^s',\
+                            'HA isophotal radius at 17erg/s/cm^2',\
+                            'HA flux within 30% of R-band R24',\
+                            'HA flux within R-band R24',\
+                            'HA C30 = flux w/in 0.3 R-band r24 / flux w/in R-band r24',\
+                            'HA flux within 30% of R-band R24',\
+                            'HA total flux',\
+                            'petrosian radius: where sb is 0.2 times mean sb',\
+                            'flux enclosed within 2xpetro radius',\
+                            'radius enclosing 50% of petrosian flux',\
+                            'radius enclosing 90% of petrosian flux',\
+                            '90% petro radius / 50% petro radius',\
+                            'magnitude of petrosian flux']
+        
         i=0
         for f,unit in zip(self.fields_ha,self.units_ha):
             if unit == None:
@@ -135,29 +249,87 @@ class output_table():
         
         self.table.add_column(Column(np.zeros(self.ngalaxies,dtype='U50'), name='COMMENT'))
         #print(self.table)
+
+    def add_statmorph(self):
+        #####################################################################
+        # statmorph output
+        #####################################################################
+
+        # rband area
+        e1 = Column(np.zeros(self.ngalaxies,'f'), name='SMORPH_XCENTROID', unit='pixel',description='xcentroid from ellipse')
+        e2 = Column(np.zeros(self.ngalaxies,'f'), name='SMORPH_YCENTROID', unit='pixel',description='ycentroid from ellipse')
+        e3 = Column(np.zeros(self.ngalaxies,'f'), name='SMORPH_RPETRO_CIRC', unit='arcsec',description='rpetro circ')
+        e4 = Column(np.zeros(self.ngalaxies,'f'), name='SMORPH_RPETRO_ELLIP', unit='arcsec',description='rpetro ellip')
+        e5 = Column(np.zeros(self.ngalaxies,'f'), name='SMORPH_RHALF_ELLIP', unit='arcsec',description='rhalf ellip')
+        e6 = Column(np.zeros(self.ngalaxies,'f'), name='SMORPH_R20', unit='arcsec',description='R20')
+        e7 = Column(np.zeros(self.ngalaxies,'f'), name='SMORPH_R80', unit='arcsec',description='R80')
+        e8 = Column(np.zeros(self.ngalaxies,'f'), name='SMORPH_GINI',description='statmorph gini')
+        e8b = Column(np.zeros(self.ngalaxies,'f'), name='SMORPH_M20',description='statmorph M20')        
+        e9 = Column(np.zeros(self.ngalaxies,'f'), name='SMORPH_F_GM20',description='statmorph F(G,M20)')
+        e10 = Column(np.zeros(self.ngalaxies,'f'), name='SMORPH_S_GM20',description='statmorph S(G,M20)')
+        e11 = Column(np.zeros(self.ngalaxies,'f'), name='SMORPH_C',description='statmorph concentration')
+        e12 = Column(np.zeros(self.ngalaxies,'f'), name='SMORPH_A',description='statmorph asymmetry')
+        e13 = Column(np.zeros(self.ngalaxies,'f'), name='SMORPH_S',description='statmorph smoothness')
+        e14 = Column(np.zeros(self.ngalaxies,'bool'), name='SMORPH_FLAG',description='statmorph flag')                 
+
+        ## Halpha parameters
+        h1 = Column(np.zeros(self.ngalaxies,'f'), name='SMORPH_HXCENTROID', unit='pixel',description='xcentroid from ellipse')
+        h2 = Column(np.zeros(self.ngalaxies,'f'), name='SMORPH_HYCENTROID', unit='pixel',description='ycentroid from ellipse')
+        h3 = Column(np.zeros(self.ngalaxies,'f'), name='SMORPH_HRPETRO_CIRC', unit='arcsec',description='rpetro circ')
+        h4 = Column(np.zeros(self.ngalaxies,'f'), name='SMORPH_HRPETRO_ELLIP', unit='arcsec',description='rpetro ellip')
+        h5 = Column(np.zeros(self.ngalaxies,'f'), name='SMORPH_HRHALF_ELLIP', unit='arcsec',description='rhalf ellip')
+        h6 = Column(np.zeros(self.ngalaxies,'f'), name='SMORPH_HR20', unit='arcsec',description='R20')
+        h7 = Column(np.zeros(self.ngalaxies,'f'), name='SMORPH_HR80', unit='arcsec',description='R80')
+        h8 = Column(np.zeros(self.ngalaxies,'f'), name='SMORPH_HGINI',description='statmorph gini')
+        h8b = Column(np.zeros(self.ngalaxies,'f'), name='SMORPH_HM20',description='statmorph M20')        
+        h9 = Column(np.zeros(self.ngalaxies,'f'), name='SMORPH_HF_GM20',description='statmorph F(G,M20)')
+        h10 = Column(np.zeros(self.ngalaxies,'f'), name='SMORPH_HS_GM20',description='statmorph S(G,M20)')
+        h11 = Column(np.zeros(self.ngalaxies,'f'), name='SMORPH_HC',description='statmorph concentration')
+        h12 = Column(np.zeros(self.ngalaxies,'f'), name='SMORPH_HA',description='statmorph asymmetry')
+        h13 = Column(np.zeros(self.ngalaxies,'f'), name='SMORPH_HS',description='statmorph smoothness')
+        h14 = Column(np.zeros(self.ngalaxies,'bool'), name='SMORPH_HFLAG',description='statmorph flag')                 
+        
+        
+        self.table.add_columns([e1,e2,e3,e4,e5,e6,e7,e8,e8b, e9, e10, e11, e12, e13,e14,\
+                                h1,h2,h3,h4,h5,h6,h7,h8,h8b, h9, h10, h11, h12, h13,h14])
+
+    def add_flags(self):
+        '''
+        these are common comments that the user will be able to select
+        '''
+        names = ['CONTSUB_FLAG','MERGER_FLAG','SCATLIGHT_FLAG','ASYMR_FLAG','ASYMHA_FLAG','OVERSTAR_FLAG','OVERGAL_FLAG','PARTIAL_FLAG','EDGEON_FLAG','NUC_HA']
+        descriptions =  ['Cont Sub Prob','merger/tidal','scattered light','asymmetric R-band', 'asymmetric Ha','foreground star', 'foreground gal','galaxy is edge-on','galaxy is only partially covered by mosaic','nuclear ha emission']
+        for i,n in enumerate(names):
+            #print(n)
+            c = Column(np.zeros(self.ngalaxies,'bool'),name=n,description=descriptions[i])
+            self.table.add_column(c)
         
         
     def write_fits_table(self):
         if self.prefix is not None:
             # this is not working when running gui - need to feed in the r-band image name
-            telescope,dateobs,p = get_params_from_name(self.prefix)
+            # feed in current working directory name to get params
+            gal_id = os.path.basename(os.getcwd())
+            telescope,dateobs,p = get_params_from_name(gal_id)
             for i in range(len(self.table)):
-                self.table['POINTING'][i] = self.prefix
+                self.table['POINTING'][i] = gal_id
                 self.table['TEL'][i] = telescope
                 self.table['DATE-OBS'] = dateobs
         self.table.write(self.output_table, format='fits', overwrite=True)
 
     def write_ellipse_output(self,e):
         ### SAVE DATA TO TABLE
-        fields = ['XCENTROID','YCENTROID','EPS','THETA','GINI','GINI2',\
-                  'M20','HM20',
-                  'AREA',\
+        self.e = e
+        fields = ['XCENTROID','YCENTROID','EPS','THETA','GINI','HGINI',\
+                  'M20','HM20',\
+                  'UNMASKED_AREA','TOTAL_AREA',\
                   'SUM','SUM_MAG','ASYM','ASYM_ERR',\
                   'HSUM','HSUM_MAG','HASYM','HASYM_ERR']#,'SUM_ERR']
         values = [e.xcenter, e.ycenter,e.eps, np.degrees(e.theta), \
-                  e.gini,e.gini2,\
-                  e.M20_1,e.M20_2,\                  
+                  e.cat.gini[e.objectIndex],e.cat2.gini[e.objectIndex],\
+                  e.M20_1,e.M20_2,\
                   e.cat[e.objectIndex].area.value*self.pixelscale*self.pixelscale,\
+                  e.masked_pixel_area*self.pixelscale*self.pixelscale,\
                   e.source_sum_erg, e.source_sum_mag,e.asym, e.asym_err, \
                   e.source_sum2_erg,e.source_sum2_mag,e.asym2,e.asym2_err]
         for i,f in enumerate(fields):
@@ -171,10 +343,13 @@ class output_table():
         for i,f in enumerate(fields):
             print(values[i])
             self.table[colname] = values[i]
-        wcs = WCS(self.cutout_name_r)
-        ra,dec = wcs.wcs_pix2world(e.xcenter,e.ycenter,0)
-        self.table['ELLIP_RA'][self.igal]=ra
-        self.table['ELLIP_DEC'][self.igal]=dec
+        if self.rwcs is not None:
+            e1 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_RA', unit=u.deg,description='R-band center RA from photutil centroid')
+            e2 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_DEC', unit=u.deg,description='R-band center DEC from photutil centroid')
+            self.table.add_columns([e1,e2])
+            ra,dec = rwcs.wcs_pix2world(e.xcenter,e.ycenter,0)
+            self.table['ELLIP_RA'][self.igal]=ra
+            self.table['ELLIP_DEC'][self.igal]=dec
 
         # write out phot table
         colnames = ['area',
@@ -211,27 +386,175 @@ class output_table():
 
 
         # calculate fractional radii, but these are circular, and in pixels
-        r30 = e.cat.fluxfrac_radius(0.3)*self.pixelscale*u.arcsec/u.pixel
-        r50 = e.cat.fluxfrac_radius(0.5)*self.pixelscale*u.arcsec/u.pixel
-        r90 = e.cat.fluxfrac_radius(0.9)*self.pixelscale*u.arcsec/u.pixel
+        r30 = e.cat.fluxfrac_radius(0.3)*pixelscale*u.arcsec/u.pixel
+        r50 = e.cat.fluxfrac_radius(0.5)*pixelscale*u.arcsec/u.pixel
+        r90 = e.cat.fluxfrac_radius(0.9)*pixelscale*u.arcsec/u.pixel
 
         e.cat.add_extra_property('PHOT_R30',r30)
         e.cat.add_extra_property('PHOT_R50',r50)
         e.cat.add_extra_property('PHOT_R90',r90)
 
+        r30 = e.cat2.fluxfrac_radius(0.3)*pixelscale*u.arcsec/u.pixel
+        r50 = e.cat2.fluxfrac_radius(0.5)*pixelscale*u.arcsec/u.pixel
+        r90 = e.cat2.fluxfrac_radius(0.9)*pixelscale*u.arcsec/u.pixel
+
+        e.cat2.add_extra_property('PHOT_R30',r30)
+        e.cat2.add_extra_property('PHOT_R50',r50)
+        e.cat2.add_extra_property('PHOT_R90',r90)
+        
+
+        # write these out to the main table
+        fields = ['R30','R50','R90',\
+                  'HR30','HR50','HR90']
+        
+        values = [e.cat.PHOT_R30[e.objectIndex].value,\
+                  e.cat.PHOT_R50[e.objectIndex].value,\
+                  e.cat.PHOT_R90[e.objectIndex].value,\
+                  e.cat2.PHOT_R30[e.objectIndex].value,\
+                  e.cat2.PHOT_R50[e.objectIndex].value,\
+                  e.cat2.PHOT_R90[e.objectIndex].value]
+        for i,f in enumerate(fields):
+            colname = 'ELLIP_'+f
+            #print(colname,values[i])
+            try:
+                self.table[colname][self.igal]=float('%.4e'%(values[i].value))
+            except KeyError:
+                print("KeyError: ",colname)
+                print("\ntable column names: \n",self.table.colnames)
+                sys.exit()
+            except TypeError:
+                print("TypeError: ",colname, values[i])
+                print("sorry for the shit show...")
+                print("\ntable column names: \n",self.table.colnames)
+                sys.exit()
+            except AttributeError:
+                self.table[colname][self.igal]=float('%.4e'%(values[i]))
+            except:
+                print("problem writing table element",colname,values[i])
+        self.write_fits_table()            
+        if e.statmorph_flag:
+            self.write_statmorph()
+            self.write_fits_table()
+        
         #c1 = Column(data=np.array(r30[e.objectIndex]),name='PHOTR30',unit='arcsec',description='photutils fluxfrac_radius')
         #c2 = Column(data=np.array(r50[e.objectIndex]),name='PHOTR50',unit='arcsec',description='photutils fluxfrac_radius')
         #c3 = Column(data=r90[e.objectIndex],name='PHOTR90',unit='arcsec',description='photutils fluxfrac_radius')
         #qtable.add_columns([c1,c2,c3])
 
-        qtable = e.cat[e.objectIndex].to_table(colnames)
+        ## RF - getting an error on this part, so skipping for now...
+
+        #qtable = e.cat[e.objectIndex].to_table(colnames)
+        #print(qtable)
+        #phot_table_name = self.prefix+'-CS-gr-photuil_tab.fits'
+        #print("phot_table_name = ",phot_table_name)
+        #qtable.write(phot_table_name,format='fits',overwrite=True)
+
+    def write_sky(self):
+        e18 = Column(np.zeros(self.ngalaxies,'e'), name='R_SKYNOISE',description='R skynoise in 1E-17 erg/s/cm^2/arcsec^2')
+        e19 = Column(np.zeros(self.ngalaxies,'e'), name='H_SKYNOISE',description='HA skynoise in 1E-17  erg/s/cm^2/arcsec^2')
+        e20 = Column(np.zeros(self.ngalaxies,'e'), name='R_SKY',description='R sky level in ADU')
+        e21 = Column(np.zeros(self.ngalaxies,'e'), name='H_SKY',description='HA sky level in ADU')
+        fields = ['R_SKYNOISE','H_SKYNOISE',\
+                  'R_SKY','H_SKY']
         
-        phot_table_name = self.prefix+'-CS-gr-photuil_tab.fits')
+        values = [self.e.im1_skynoise/1.e-17,\
+                  self.e.im2_skynoise/1.e-17,\
+                  self.e.sky,\
+                  self.e.sky2]
+        print("\nIn write_sky, skynoise = ",self.e.im1_skynoise/1.e-17,self.e.im2_skynoise/1.e-17)
+        for i,colname in enumerate(fields):
+            try:
+                self.table[colname][self.igal]=float('%.4e'%(values[i]))
+            except KeyError:
+                print("KeyError: ",colname)
+                print("\ntable column names: \n",self.table.colnames)
+                sys.exit()
+            except TypeError:
+                print("TypeError: ",colname, values[i])
+                print("sorry for the shit show...")
+                print("\ntable column names: \n",self.table.colnames)
+                sys.exit()
+
+    def write_statmorph(self):
+        #########################################################
+        ## ADD STATMORPH PARAMETERS
+        #########################################################
+
         
-        qtable.write(phot_table_name,format='fits',overwrite=True)
+        # write these out to the main table
+        fields = ['XCENTROID','YCENTROID',\
+                  'RPETRO_CIRC','RPETRO_ELLIP','RHALF_ELLIP',\
+                  'R20','R80',\
+                  'GINI','M20','F_GM20','S_GM20',\
+                  'C','A','S','FLAG']
+        
+        values = [self.e.morph.xc_centroid,\
+                  self.e.morph.yc_centroid,\
+                  self.e.morph.rpetro_circ*self.pixelscale,\
+                  self.e.morph.rpetro_ellip*self.pixelscale,\
+                  self.e.morph.rhalf_ellip*self.pixelscale,\
+                  self.e.morph.r20*self.pixelscale,\
+                  self.e.morph.r80*self.pixelscale,\
+                  self.e.morph.gini,\
+                  self.e.morph.m20,\
+                  self.e.morph.gini_m20_bulge,\
+                  self.e.morph.gini_m20_merger,\
+                  self.e.morph.concentration,\
+                  self.e.morph.asymmetry,\
+                  self.e.morph.smoothness,\
+                  self.e.morph.flag]
+                  
+        for i,f in enumerate(fields):
+            colname = 'SMORPH_'+f
+            #print(colname)
+            try:
+                self.table[colname][self.igal]=float('%.4e'%(values[i]))
+            except KeyError:
+                print("KeyError: ",colname)
+                print("\ntable column names: \n",self.table.colnames)
+                sys.exit()
+            except TypeError:
+                print("TypeError: ",colname, values[i])
+                print("sorry for the shit show...")
+                print("\ntable column names: \n",self.table.colnames)
+                sys.exit()
+
+        ## Add Halpha values
+        values = [self.e.morph2.xc_centroid,\
+                  self.e.morph2.yc_centroid,\
+                  self.e.morph2.rpetro_circ*self.pixelscale,\
+                  self.e.morph2.rpetro_ellip*self.pixelscale,\
+                  self.e.morph2.rhalf_ellip*self.pixelscale,\
+                  self.e.morph2.r20*self.pixelscale,\
+                  self.e.morph2.r80*self.pixelscale,\
+                  self.e.morph2.gini,\
+                  self.e.morph2.m20,\
+                  self.e.morph2.gini_m20_bulge,\
+                  self.e.morph2.gini_m20_merger,\
+                  self.e.morph2.concentration,
+                  self.e.morph2.asymmetry,
+                  self.e.morph2.smoothness,\
+                  self.e.morph2.flag]
+                  
+        for i,f in enumerate(fields):
+            colname = 'SMORPH_H'+f
+            #print(colname)
+            try:
+                self.table[colname][self.igal]=float('%.4e'%(values[i]))
+            except KeyError:
+                print("KeyError: ",colname)
+                print("\ntable column names: \n",self.table.colnames)
+                sys.exit()
+            except TypeError:
+                print("TypeError: ",colname, values[i])
+                print("sorry for the shit show...")
+                print("\ntable column names: \n",self.table.colnames)
+                sys.exit()
+        
 
     def write_rprofile_fits(self,igal,pfit,prefix=None): # MVC - model
         """ set the prefix='H' for halpha """
+        self.rfit = pfit
         fields = ['R24','R25','R26','R24V','R25V',\
                   'R_F25','R_F50','R_F75',\
                   'M24','M25','M26',\
@@ -253,8 +576,10 @@ class output_table():
             self.table[colname][igal]=float('%.2e'%(values[i][0]))
             self.table[colname+'_ERR'][igal]=float('%.2e'%(values[i][1]))
             
-    def write_hprofile_fits(self,igal,pfit,gzdist):
+    def write_hprofile_fits(self,igal,pfit,gzdist,prefix=None):
         """pass in the profile fit and array of galaxy redshift (flow corrected) """
+
+        self.hafit = pfit
         fields = ['R16','R17','R_F25','R_F50','R_F75','M16','M17','F_30R24','F_R24','C30','R_F95R24','F_TOT',\
                   'PETRO_R','PETRO_FLUX','PETRO_R50','PETRO_R90','PETRO_CON','PETRO_MAG']
         d = pfit
@@ -277,8 +602,11 @@ class output_table():
         # SFR conversion from Kennicutt and Evans (2012)
         # log (dM/dt/Msun/yr) = log(Lx) - logCx
         logCx = 41.27
-        print(len(self.hafit.total_flux),len(gzdist[igal]))
-        L = self.hafit.total_flux*(4.*np.pi*cosmo.luminosity_distance(gzdist[igal]).cgs.value**2)
+        #print(len(self.hafit.total_flux),len(gzdist[igal]))
+        #print("hafit.total_flux = ",self.hafit.total_flux)
+        #print("gzdist = ",gzdist)
+        #print("luminosity distance = ",cosmo.luminosity_distance(gzdist[0]:.1f))
+        L = self.hafit.total_flux*(4.*np.pi*cosmo.luminosity_distance(gzdist[0]).cgs.value**2)
         #print(L)
         detect_flag = L > 0
         self.sfr = np.zeros(len(L),'d')
@@ -322,12 +650,16 @@ class galaxy():
 
     def get_redshift(self):
         # get redshift
-        maintab = home+"/research/Virgo/tables-north/v2/vf_v2_main.fits"
+
+        maintab = homedir+"/research/Virgo/tables-north/v2/vf_v2_main.fits"
         # read in vf_main
         mtab = Table.read(maintab)
         # get redshift
-        galindex = mtab['VFID'] == self.vfid
-        self.gzdist = mtab['vr'][galindex]/3.e5
+        galindex = np.arange(len(mtab))[mtab['VFID'] == self.vfid]
+        
+        #print(f"in galaxy class, VFID = {self.vfid},galindex = {galindex}")
+        #print(f"\t vr = {mtab['vr'][galindex]}")
+        self.zdist = mtab['vr'][galindex].value/3.e5
 
     
 def fit_profiles(cutout_name_r,cutout_name_ha,prefix=None):
@@ -369,18 +701,52 @@ if __name__ == '__main__':
 
     maskfile = subdirname+'-R-mask.fits'
 
+    # run ephot using photwrapper.py
+    # the psfs are need by statmorph - ignoring for now...
+    rheader = fits.getheader(rfile)
+    rwcs =  WCS(rheader)
+    filter_ratio = rheader['FLTRATIO']
+    
+
+    try:
+        pixelscale = np.abs(float(rheader['PIXSCAL1'])) # convert deg/pix to arcsec/pixel                        
+    except KeyError:
+        try:
+            pixelscale = np.abs(float(rheader['CD1_1']))*3600. # convert deg/pix to arcsec/pixel
+        except KeyError:
+            pixelscale = np.abs(float(rheader['PC1_1']))*3600. # Siena pipeline from astronometry.net
+    
     
     # setup output table
-    prefix = "halpha-csgr-"    
-    otab = create_output_table(prefix=prefix,virgo=False,nogui=True)
+    prefix = "halpha-csgr"    
+    #otab = create_output_table(prefix=prefix,virgo=False,nogui=True)
+    ids = [subdirname.split('-')[0]]
+    otab = output_table(1, ids=ids,prefix=prefix,pixelscale=pixelscale,rwcs=rwcs)#,virgo=False,nogui=True)    
     # add columns for photutils ephot
     otab.add_ellipse()
     # add columns for my measured radii
     otab.add_photutils()
+    otab.add_statmorph()
+    otab.add_pointing_params()
+
+    # TODO - get filter for each image
+    ##
+    # get the halpha filter name
+    ##
+    if 'INT' in hfile:
+        # figure out which INT filter we are using
+        hheader = fits.getheader(hfile)
+        hfilter = hheader['FILTER']
+        if 'Ha6657' in hfilter:
+            hfilter = 'intha6657'
+        else:
+            hfilter = 'inthalpha'
+        
+    else: # includes BOK, HDI, MOSAIC
+        hfilter = '4'
+
     
-    # run ephot using photwrapper.py
-    # the psfs are need by statmorph - ignoring for now...
-    e = ellipse(rfile, image2=hfile, mask = maskfile, image_frame = None,image2_filter='ha4', filter_ratio=self.filter_ratio,psf=None,psf_ha=None)
+    e = ellipse(rfile, image2=hfile, mask = maskfile, image_frame = None,image2_filter='4', filter_ratio=filter_ratio,psf=None,psf_ha=None)
     e.run_for_gui()
 
     otab.write_ellipse_output(e)
@@ -388,7 +754,7 @@ if __name__ == '__main__':
     
     # measure radii
     rfit, hfit = fit_profiles(rfile,hfile)
-
+    dirname = os.path.basename(os.getcwd())
     vfid = dirname.split('-')[0]
     g = galaxy(vfid)
     g.get_redshift()
@@ -396,8 +762,9 @@ if __name__ == '__main__':
     igal = 0 # only doing one galaxy at a time, so set igal to zero...
     otab.write_rprofile_fits(igal,rfit)
 
+    #print(f"g.zdist = {g.zdist}")
     otab.write_hprofile_fits(igal,hfit,np.array(g.zdist))
-
+    otab.write_sky()
     otab.write_fits_table()            
 
 
