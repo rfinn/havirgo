@@ -149,7 +149,7 @@ def get_gr(gfile,rfile,mask=None):
     #data_g -= stat_g[1]
 
     # create a mask, where SNR > 10    
-    usemask = (data_r>10*stat_r[2])
+    usemask = (data_r>5*stat_r[2])
 
     # calculate the g-r color 
     gr_col = -2.5*np.log10(data_g/data_r)

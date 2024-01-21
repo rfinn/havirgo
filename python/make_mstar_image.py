@@ -1,0 +1,301 @@
+#!/usr/bin/env python
+
+"""
+The goal is to use the reprojected legacy images  to make a stellar mass image.
+
+log(M/L) = a_r + b_r x (g-r)
+
+we already have a g-r image in the legacy subdirectory
+
+need to convert r-band image to absolute magnitude - this is just a ZP offset
+
+
+m = 22.5 - 2.5*log10(flux)
+
+m - M = 5 log10(d_pc) - 5
+
+to get distance, we use the hubble law and recession velocity:
+
+
+
+    def taylor_mstar(self):
+        # calc stellar mass
+        logMstarTaylor=1.15+0.70*(self.a100sdss['gmi_corr']) -0.4*(self.a100sdss['absMag_i_corr'])
+        ###
+        # NSA abs mags are for H0=100, need to correct for our assumed cosmology
+        # so need to add 5*np.log10(h), where h = cosmo.H(0)/100.
+        #logMstarTaylor = logMstarTaylor - 0.4*(5*np.log10(cosmo.H(0).value/100.))
+        # not doing this b/c absMag_i_corr already has distance corrected for H0
+
+        # -0.68 + .7*gmi_cor + (Mi-4.56)/-2.5
+        # add taylor_mstar column to a100sdss
+        # only set values for galaxies with photflag == 1
+
+Absolute magnitude of the sun:
+https://iopscience.iop.org/article/10.3847/1538-4365/aabfdf
+
+Filter   Abs_Vega  Abs_AB
+-------------------------
+SDSS_r    4.53     4.65
+DES_r     4.45     4.61
+PS_r      4.53     4.64
+
+"""
+import os
+import glob
+import sys
+import numpy as np
+
+from astropy.io import fits
+from astropy.table import Table
+from astropy.cosmology import WMAP9 as cosmo
+from astropy import stats, convolution
+
+
+######################################################################
+###  CONSTANTS
+######################################################################
+
+# coefficients for (g-r) to M/L ratio conversion
+# Roediger & Courteau 2015, with Marigo TPAGB
+ar = -0.647
+br = 1.497
+
+######################################################################
+###  FILTER DEFINITIONS
+######################################################################
+# Halpha filter width in angstrom
+filter_width_AA = {'BOK':80.48,'HDI':80.48,'INT':95,'MOS':80.48,'INT6657':80}
+
+# central wavelength in angstroms
+filter_lambda_c_AA = {'BOK':6620.52,'HDI':6620.52,'INT':6568,'MOS':6620.52,'INT6657':6657}
+
+######################################################################
+###  FUNCTIONS
+######################################################################
+
+def get_params_from_cutout_directory_name(dirname):
+    t = os.path.basename(dirname).split('-')
+    pointing = t[-1]
+    dateobs = t[-2]
+    telescope = t[-3]
+    vfid = t[0]
+    vfid_ned = os.path.basename(dirname).split('-'+telescope)[0]
+    print(telescope,dateobs,pointing,vfid_ned)
+    return telescope,dateobs,pointing,vfid_ned
+
+######################################################################
+###  GALAXY CLASS
+######################################################################
+
+class galaxy():
+
+    def __init__(self,dirname,vr,vcosmic):
+        self.dirname = dirname
+        self.vfid = dirname.split('-')[0]
+
+        self.d_vr = cosmo.luminosity_distance(vr/3.e5) # dist in Mpc from recession velocity in km/s
+        self.d_vcosmic = cosmo.luminosity_distance(vcosmic/3.e5) # dist in Mpc from flow-corrected recession vel in km/s
+        
+        self.telescope,self.dateobs,pointing,self.vfid_ned = \
+            get_params_from_cutout_directory_name(dirname)
+    def construct_filenames(self):
+        """ build filename of relevant images """
+        
+        # reprojected legacy r-band image
+        legacy_images = glob.glob(os.path.join('legacy/*r-ha.fits'))
+        self.legacy_r = legacy_images[0]
+        
+        # reprojected legacy g-r image
+        legacy_images = glob.glob(os.path.join('legacy/*gr-ha-smooth.fits'))
+        self.legacy_gr = legacy_images[0]
+        
+        # our r-band image
+        self.R = self.dirname+'-R.fits'
+        # our gr-CS image (halpha image using color-based subtraction)
+
+        self.ha = self.dirname+'-CS-gr.fits'
+        pass
+    
+    def get_mstar_image(self):
+        """ create mstar image from rband and g-r image and vr  """
+
+        rhdu = fits.open(self.legacy_r)
+        rsmooth = convolution.convolve_fft(rhdu[0].data, convolution.Box2DKernel(20), allow_huge=True, nan_treatment='interpolate')
+
+        # g-r image is in magnitudes already
+        grhdu = fits.open(self.legacy_gr)
+        mag_gr = grhdu[0].data
+        
+        # convert to absolute magnitude
+        Mr_vr = 22.5 -2.5*np.log10(rsmooth) - 5*np.log10(self.d_vr.to('pc').value) + 5
+        Mr_vcosmic = 22.5 -2.5*np.log10(rsmooth) - 5*np.log10(self.d_vcosmic.to('pc').value) + 5        
+
+
+ 
+        self.logMstar_vr = ar + br*mag_gr + (Mr_vr - 4.61)/(-2.5)
+        self.logMstar_vcosmic = ar + br*mag_gr + (Mr_vcosmic - 4.61)/(-2.5)
+
+        # save mstar images
+        outimage = self.dirname+'-logmstar-vr.fits'
+        hdu = fits.PrimaryHDU(self.logMstar_vr, header=rhdu[0].header)
+        hdu.writeto(outimage, overwrite=True) #sky-subtracted r-band image - use this for photometry
+
+        outimage = self.dirname+'-logmstar-vcosmic.fits'
+        hdu = fits.PrimaryHDU(self.logMstar_vcosmic, header=rhdu[0].header)
+        hdu.writeto(outimage, overwrite=True) #sky-subtracted r-band image - use this for photometry
+
+        rhdu.close()
+        grhdu.close()
+        
+        
+        pass
+
+    def get_sfr_image(self):
+        """ read in gr-CS image and convert to SFR"""
+
+        # read in continuum-subtracted image
+        hahdu = fits.open(self.ha)
+        self.haheader = hahdu[0].header
+        hZP = hahdu[0].header['PHOTZP']
+
+
+        # see notes in the overleaf document
+        # https://www.overleaf.com/project/5ede62d7c2853b0001731d73
+
+        # combination of conversion from AB to cgs, and then to SFR
+        a = 10.**(-0.4*hZP - 60.710)
+
+        # conversion from fnu to flambda to flux
+        dlambda = filter_width_AA[self.telescope]
+        clambda = filter_lambda_c_AA[self.telescope]
+        b = 3.e18*dlambda/clambda**2
+
+        # convert flux to lumininosity
+        c_vr = 4*np.pi*self.d_vr.cgs.value**2
+        c_vcosmic = 4*np.pi*self.d_vcosmic.cgs.value**2
+        # from halphagui
+        
+        self.sfr_vr = hahdu[0].data*a*b*c_vr
+
+        self.sfr_vcosmic = hahdu[0].data*a*b*c_vcosmic
+
+
+        # write out images
+        outimage = self.dirname+'-sfr-vr.fits'
+        hdu = fits.PrimaryHDU(self.sfr_vr, header=hahdu[0].header)
+        hdu.writeto(outimage, overwrite=True) 
+        
+        outimage = self.dirname+'-sfr-vcosmic.fits'
+        hdu = fits.PrimaryHDU(self.sfr_vcosmic, header=hahdu[0].header)
+        hdu.writeto(outimage, overwrite=True) 
+        hahdu.close()        
+        pass
+
+    def get_ssfr_image(self):
+        """ divide SFR image by mstar image  """
+
+        self.logssfr = np.log10(self.sfr_vr) - self.logMstar_vr
+
+        outimage = self.dirname+'-ssfr.fits'
+        hdu = fits.PrimaryHDU(self.logssfr, header=self.haheader)
+        hdu.writeto(outimage, overwrite=True) 
+
+    def save_figure(self):
+        # save figure
+        from matplotlib import pyplot as plt
+        from scipy.stats import scoreatpercentile
+        from astropy.visualization import simple_norm
+        from astropy.wcs import WCS
+        from PIL import Image
+        
+        legacy_jpg = glob.glob('legacy/*.jpg')[0]
+        print("legacy jpg = ",legacy_jpg)
+        jpeg_data = Image.open(legacy_jpg)
+
+
+        imwcs = WCS(self.haheader)
+        
+        
+        plt.figure(figsize=(12,4))
+        plt.subplots_adjust(wspace=0.3,left=.05)
+
+        images = [jpeg_data,self.logMstar_vr,self.sfr_vr,self.logssfr]
+        titles = ["Legacy","logMstar","SFR",'logsSFR']
+        percentile1 = .5
+        percentile2 = 99.5
+        stretch=['','linear','asinh','linear']
+        for i,cs in enumerate(images):
+
+            if i == 0:
+
+                plt.subplot(1,4,i+1,projection=imwcs)
+                plt.imshow(cs,origin='lower')#,vmin=v1,vmax=v2)
+                xsize,ysize = cs.size
+                center = xsize//2
+                delta = xsize//4
+                xmin = center - delta
+                xmax = center + delta
+                
+                plt.axis([xmin,xmax,xmin,xmax])                
+            else:
+                plt.subplot(1,4,i+1)#,projection=imwcs)                
+                norm = simple_norm(cs, stretch=stretch[i],max_percent=percentile2,min_percent=percentile1)
+
+                plt.imshow(cs, norm=norm,origin='lower')#,vmin=v1,vmax=v2)
+                xsize,ysize = cs.shape
+                center = xsize//2
+                delta = xsize//4
+                xmin = center - delta
+                xmax = center + delta
+
+                plt.axis([xmin,xmax,xmin,xmax])                
+                #plt.imshow(cs)#,vmin=-0.015,vmax=.1)#,cmap='gray_r')
+                
+                plt.colorbar(fraction=.045)
+            plt.title(titles[i],fontsize=16)
+            
+            # this next block zooms into center half of the image
+
+            
+
+            plt.xticks([],[])
+            plt.yticks([],[])
+
+        plt.savefig(self.dirname+'-mstar-sfr-ssfr.png')        
+        pass
+        
+if __name__ == '__main__':
+    dirname = sys.argv[1]
+    topdir = os.getcwd()
+
+    os.chdir(dirname)
+    # get VFID from dirname
+    vfid = os.path.basename(dirname).split('-')[0]
+    # get nedname from dirname
+    # this is complicated b/c some ned names are crazy, like MCG+10-23-067
+
+    homedir = os.getenv("HOME")
+    tabledir = homedir+'/research/Virgo/tables-north/v2/'
+    # read in vf main table
+    vfmain = Table.read(tabledir+'vf_v2_main.fits')
+    
+    # get row index for this galaxy
+    galindex = np.arange(len(vfmain))[vfmain['VFID'] == vfid]
+    
+    # get vr from vf_v2_main.fits
+    vr = vfmain['vr'][galindex]
+    
+    # get vcosmic from vf_vf_env.fits
+    vfenv = Table.read(tabledir+'vf_v2_environment.fits')
+    vcosmic = vfenv['Vcosmic'][galindex]
+    
+    # initiate instance of galaxy class
+    g = galaxy(dirname,vr, vcosmic)
+    g.construct_filenames()
+    g.get_mstar_image()
+    g.get_sfr_image()
+    g.get_ssfr_image()
+    g.save_figure()
+    os.chdir(topdir)
+
