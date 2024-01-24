@@ -201,7 +201,7 @@ class galaxy():
         hdu = fits.PrimaryHDU(self.logssfr, header=self.haheader)
         hdu.writeto(outimage, overwrite=True) 
 
-    def save_figure(self):
+    def save_figure(self,zoom=True):
         # save figure
         from matplotlib import pyplot as plt
         from scipy.stats import scoreatpercentile
@@ -230,26 +230,28 @@ class galaxy():
             if i == 0:
 
                 plt.subplot(1,4,i+1,projection=imwcs)
-                plt.imshow(cs,origin='lower')#,vmin=v1,vmax=v2)
-                xsize,ysize = cs.size
-                center = xsize//2
-                delta = xsize//4
-                xmin = center - delta
-                xmax = center + delta
+                plt.imshow(cs,origin='lower',interpolation='nearest')#,vmin=v1,vmax=v2)
+                if zoom:
+                    xsize,ysize = cs.size
+                    center = xsize//2
+                    delta = xsize//4
+                    xmin = center - delta
+                    xmax = center + delta
                 
-                plt.axis([xmin,xmax,xmin,xmax])                
+                    plt.axis([xmin,xmax,xmin,xmax])                
             else:
                 plt.subplot(1,4,i+1)#,projection=imwcs)                
                 norm = simple_norm(cs, stretch=stretch[i],max_percent=percentile2,min_percent=percentile1)
 
                 plt.imshow(cs, norm=norm,origin='lower')#,vmin=v1,vmax=v2)
-                xsize,ysize = cs.shape
-                center = xsize//2
-                delta = xsize//4
-                xmin = center - delta
-                xmax = center + delta
+                if zoom:
+                    xsize,ysize = cs.shape
+                    center = xsize//2
+                    delta = xsize//4
+                    xmin = center - delta
+                    xmax = center + delta
 
-                plt.axis([xmin,xmax,xmin,xmax])                
+                    plt.axis([xmin,xmax,xmin,xmax])                
                 #plt.imshow(cs)#,vmin=-0.015,vmax=.1)#,cmap='gray_r')
                 
                 plt.colorbar(fraction=.045)
@@ -268,6 +270,11 @@ class galaxy():
 if __name__ == '__main__':
     dirname = sys.argv[1]
     topdir = os.getcwd()
+
+    if len(sys.argv) > 2:
+        zoomflag=False
+    else:
+        zoomflag = True
 
     os.chdir(dirname)
     # get VFID from dirname
@@ -296,6 +303,6 @@ if __name__ == '__main__':
     g.get_mstar_image()
     g.get_sfr_image()
     g.get_ssfr_image()
-    g.save_figure()
+    g.save_figure(zoom=zoomflag)
     os.chdir(topdir)
 

@@ -460,6 +460,12 @@ if __name__ == '__main__':
     # this makes the program easy to run with gnu parallel
     dirname = sys.argv[1]
 
+    # check to see if additional scale factor for continuum is provided
+    if len(sys.argv) > 2:
+        contscale = float(sys.argv[2])
+    else:
+        contscale = 1.
+
     # get current directory
     topdir = os.getcwd()
 
@@ -591,7 +597,7 @@ if __name__ == '__main__':
     stat_r = stats.sigma_clipped_stats(rhdu[0].data,mask=mask)
     #print('Subtracting {0:3.2f} from r-band image'.format(stat_r[1]))
     # do I save the r-band image with new sky subtraction???
-    data_r = rhdu[0].data #- stat_r[1]
+    data_r = rhdu[0].data - stat_r[1]
     data_r_to_Ha = data_r * rscale
 
     # sky subtracted r-band image
@@ -604,7 +610,7 @@ if __name__ == '__main__':
     # not subtracting sky for now - can try after we get CS to work
     stat_h = stats.sigma_clipped_stats(hhdu[0].data,mask=mask)
     #print('Subtracting {0:3.2f} from halpha image'.format(stat_h[1]))
-    data_NB = hhdu[0].data #- stat_h[1]
+    data_NB = hhdu[0].data - stat_h[1]
 
 
     ##
@@ -732,12 +738,12 @@ if __name__ == '__main__':
     # can adjust factor of 1.03 to scale the continuum
     # in vestige, they check the star subtraction and then adjust the factor to make the stars go away
     # even with same telescope/filter, this factor can vary
-    flam_net = filter_width_AA[telescope]*(flam_NB-clam_NB) # matteo comment: 106 is the width of the filter
+    flam_net = filter_width_AA[telescope]*(flam_NB-contscale*clam_NB) # matteo comment: 106 is the width of the filter
 
 
     # TODO - I would like to save a version in AB mag for compatibility with my photometry programs
     # QFM - is this just (data_NB - data_r_to_Ha)?
-    NB_ABmag = (data_NB - data_r_to_Ha)
+    NB_ABmag = (data_NB - contscale*data_r_to_Ha)
     # this should still be good to use the Halpha ZP
     hdu = fits.PrimaryHDU(NB_ABmag, header=hhdu[0].header)
 
