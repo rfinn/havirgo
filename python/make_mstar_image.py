@@ -115,6 +115,16 @@ class galaxy():
         # our gr-CS image (halpha image using color-based subtraction)
 
         self.ha = self.dirname+'-CS-gr.fits'
+
+        # define the mask file
+        maskfile = self.R.replace('-R.fits','-R-mask.fits')
+        if not os.path.exists(maskfile):
+            print("WARNING: no mask found")
+            self.mask = None
+        else:
+            mask = fits.getdata(maskfile)
+            self.mask = mask > 0
+        
         pass
     
     def get_mstar_image(self):
@@ -226,7 +236,6 @@ class galaxy():
         percentile2 = 99.5
         stretch=['','linear','asinh','linear']
         for i,cs in enumerate(images):
-
             if i == 0:
 
                 plt.subplot(1,4,i+1,projection=imwcs)
@@ -240,10 +249,15 @@ class galaxy():
                 
                     plt.axis([xmin,xmax,xmin,xmax])                
             else:
+                if self.mask is not None:
+                    cs = np.ma.masked_where(self.mask,cs)
+
                 plt.subplot(1,4,i+1)#,projection=imwcs)                
                 norm = simple_norm(cs, stretch=stretch[i],max_percent=percentile2,min_percent=percentile1)
-
-                plt.imshow(cs, norm=norm,origin='lower')#,vmin=v1,vmax=v2)
+                if i == 2:
+                    plt.imshow(cs, norm=norm,origin='lower',vmin=-1.2e-5,vmax=1e-4)
+                else:
+                    plt.imshow(cs, norm=norm,origin='lower')#,vmin=v1,vmax=v2)
                 if zoom:
                     xsize,ysize = cs.shape
                     center = xsize//2

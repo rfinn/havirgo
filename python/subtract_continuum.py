@@ -149,12 +149,13 @@ def get_gr(gfile,rfile,mask=None):
     #data_g -= stat_g[1]
 
     # create a mask, where SNR > 10    
-    usemask = (data_r>5*stat_r[2])
+    usemask = (data_g>3*stat_g[2])
 
     # calculate the g-r color 
     gr_col = -2.5*np.log10(data_g/data_r)
 
-    
+    # TODO - should add masking here - we don't want stars to be in our g-r image, right?
+    gr_col[mask] = np.nan
     print('Smoothing images for color calculation')
     gr_col = convolution.convolve_fft(gr_col, convolution.Box2DKernel(20), allow_huge=True, nan_treatment='interpolate')
 
@@ -170,288 +171,291 @@ def get_gr(gfile,rfile,mask=None):
     #hdu.close()
     return gr_col
 
-def subtract_continuum(Rfile, Hfile, gfile, rfile, mask=None,overwrite=False,testing=False):
-    """
-    reproject infile to reffile image
+# def subtract_continuum(Rfile, Hfile, gfile, rfile, mask=None,overwrite=False,testing=False):
+#     """
+#     reproject infile to reffile image
 
-    PARAMS:
-    Rfile : r-band image taken with halpha, to be used for continuum
-    Hfile : halpha image filename
-    gfile : g-band filename to be used for calculating g-r color (legacy image)
-    rfile : r-band filename to be used for calculating g-r color (legacy image)
-    outname: output name 
+#     PARAMS:
+#     Rfile : r-band image taken with halpha, to be used for continuum
+#     Hfile : halpha image filename
+#     gfile : g-band filename to be used for calculating g-r color (legacy image)
+#     rfile : r-band filename to be used for calculating g-r color (legacy image)
+#     outname: output name 
 
 
-    RETURN:
-    nothing, but save the CS subtracted image that uses the g-r color in the current directory
+#     RETURN:
+#     nothing, but save the CS subtracted image that uses the g-r color in the current directory
     
-    """
-    outname = Hfile.replace('Ha.fits','CS-gr.fits')
-    if os.path.exists(outname) & (not overwrite):
-        print("continuum-subtracted image exists - not redoing it")
-        return
+#     """
+#     outname = Hfile.replace('Ha.fits','CS-gr.fits')
+#     if os.path.exists(outname) & (not overwrite):
+#         print("continuum-subtracted image exists - not redoing it")
+#         return
 
-    outimage = rfile.replace('r-ha.fits','gr-ha-smooth.fits')
-    print(f"g-r image = {outimage}")
-    if os.path.exists(outimage):
-        print("found g-r image.  not remaking this")
-        hdu = fits.open(outimage)
-        gr_col = hdu[0].data
-        hdu.close()
-    else:
-        gr_col = get_gr(gfile,rfile,mask=mask)
+#     outimage = rfile.replace('r-ha.fits','gr-ha-smooth.fits')
+#     print(f"g-r image = {outimage}")
+#     if os.path.exists(outimage):
+#         print("found g-r image.  not remaking this")
+#         hdu = fits.open(outimage)
+#         gr_col = hdu[0].data
+#         hdu.close()
+#     else:
+#         gr_col = get_gr(gfile,rfile,mask=mask)
 
-    # usemask should be all the values in the color image than are
-    # not equal to np.nan
-    usemask = ~np.isnan(gr_col) # these are the good values in the g-r color
-
-    
-    # this should be the text describing the galaxy
-    # like : VFID0569-NGC5989-INT-20190530-p002 
-    fileroot = Rfile.replace('-R.fits','')
-
-    # read in *our* r-band and halpha images
-    hhdu = fits.open(Hfile)
-    rhdu = fits.open(Rfile)
-
-    # get photometric ZP for each image
-    rZP = rhdu[0].header['PHOTZP']
-    hZP = hhdu[0].header['PHOTZP']
-    
-    # get filter names
-    rfilter = rhdu[0].header['FILTER']
-    hfilter = hhdu[0].header['FILTER']    
-
-    # TODONE - get the pixel scale in the halpha image
-    # use the WCS function
-    wcs_NB = wcs.WCS(Hfile)
-    pscale_NB = wcs.utils.proj_plane_pixel_scales(wcs_NB)*3600.
-    
-    # get the telescope name from the directory/filename
-    tels = ['BOK','INT','HDI','MOS']
-    for t in tels:
-        if t in dirname:
-            telescope = t
-            print('telescope = ',t,dirname)
-            break
-    ##
-    # The following is from Matteo Fossati
-    ##
-
-    print('Generate NET image')
-
-    # TODO - revisit this and examine the masking.
-    # the mask we are currently using does not mask the central galaxy
+#     # usemask should be all the values in the color image than are
+#     # not equal to np.nan
+#     usemask = ~np.isnan(gr_col) # these are the good values in the g-r color
 
     
-    # TODONE - subtract sky from r-band image
-    print('Computing median values for r and halpha images')
-    stat_r = stats.sigma_clipped_stats(rhdu[0].data,mask=mask)
-    #print('Subtracting {0:3.2f} from r-band image'.format(stat_r[1]))
-    # do I save the r-band image with new sky subtraction???
-    data_r = rhdu[0].data #- stat_r[1]
+#     # this should be the text describing the galaxy
+#     # like : VFID0569-NGC5989-INT-20190530-p002 
+#     fileroot = Rfile.replace('-R.fits','')
 
-    # sky subtracted r-band image
-    skysub_r_name = Rfile.replace('-R.fits','-R-sky.fits')
-    hdu = fits.PrimaryHDU(data_r, header=rhdu[0].header)
-    hdu.writeto(skysub_r_name, overwrite=True) #sky-subtracted r-band image - use this for photometry
+#     # read in *our* r-band and halpha images
+#     hhdu = fits.open(Hfile)
+#     rhdu = fits.open(Rfile)
+
+#     # get photometric ZP for each image
+#     rZP = rhdu[0].header['PHOTZP']
+#     hZP = hhdu[0].header['PHOTZP']
+    
+#     # get filter names
+#     rfilter = rhdu[0].header['FILTER']
+#     hfilter = hhdu[0].header['FILTER']    
+
+#     # TODONE - get the pixel scale in the halpha image
+#     # use the WCS function
+#     wcs_NB = wcs.WCS(Hfile)
+#     pscale_NB = wcs.utils.proj_plane_pixel_scales(wcs_NB)*3600.
+    
+#     # get the telescope name from the directory/filename
+#     tels = ['BOK','INT','HDI','MOS']
+#     for t in tels:
+#         if t in dirname:
+#             telescope = t
+#             print('telescope = ',t,dirname)
+#             break
+#     ##
+#     # The following is from Matteo Fossati
+#     ##
+
+#     print('Generate NET image')
+
+#     # TODO - revisit this and examine the masking.
+#     # the mask we are currently using does not mask the central galaxy
 
     
-    # TODONE - subtract sky from Halpha image
-    # not subtracting sky for now - can try after we get CS to work
-    stat_h = stats.sigma_clipped_stats(hhdu[0].data,mask=mask)
-    #print('Subtracting {0:3.2f} from halpha image'.format(stat_h[1]))
-    data_NB = hhdu[0].data #- stat_h[1]
+#     # TODONE - subtract sky from r-band image
+#     print('Computing median values for r and halpha images')
+#     stat_r = stats.sigma_clipped_stats(rhdu[0].data,mask=mask)
+#     #print('Subtracting {0:3.2f} from r-band image'.format(stat_r[1]))
+#     # do I save the r-band image with new sky subtraction???
+#     data_r = rhdu[0].data #- stat_r[1]
 
-
-    ##
-    # this comments are from matteo's program
-    ##
-    # Generate the r band mag image and the r band calibrated to Halpha wave
-    # This works only for positive flux pixels. Take this into account
-
-    # TODONE - change ZP - get this from image header
-    # but this will only work for positive flux values - should be ok b/c it's before cont sub
-
-    # this creates nans where counts are negative
-    mag_r = -2.5*np.log10(data_r) + rZP
-    mag_NB = -2.5*np.log10(data_r) + hZP    
-
-    # I think we should instead just stay in counts, and scale the counts in both to ZP of 30
-    # now calc fluxes using the same ZP
-    data_r_ZP30 = 10.**(-0.4*(mag_r-30))
-    data_NB_ZP30 = 10.**(-0.4*(mag_NB-30))    
-
-    # Transform the mag_r image to the observed Halpha filter
-    #
-    # TODONE - change the color conversion -
-    # need to use different conversion for each Halpha/r combo
-    # 
-    # BUT: for pixels which have a nan in the g-r image
-    # (r-band SNR in legacy image < 10)
-    # then mag r to Ha is just mag r
-    #
-    # this doesn't seem right.
-    # seems like it should be the mag r scaled but some default value
+#     # sky subtracted r-band image
+#     skysub_r_name = Rfile.replace('-R.fits','-R-sky.fits')
+#     hdu = fits.PrimaryHDU(data_r, header=rhdu[0].header)
+#     hdu.writeto(skysub_r_name, overwrite=True) #sky-subtracted r-band image - use this for photometry
 
     
-    # QFM: these filter transformations are derived for panstarrs colors
-    # is this a problem that we are using the legacy g-r color instead?
+#     # TODONE - subtract sky from Halpha image
+#     # not subtracting sky for now - can try after we get CS to work
+#     stat_h = stats.sigma_clipped_stats(hhdu[0].data,mask=mask)
+#     #print('Subtracting {0:3.2f} from halpha image'.format(stat_h[1]))
+#     data_NB = hhdu[0].data #- stat_h[1]
 
 
-    # The r-band mag has to be scaled to the same ZP as the halpha image
+#     ##
+#     # this comments are from matteo's program
+#     ##
+#     # Generate the r band mag image and the r band calibrated to Halpha wave
+#     # This works only for positive flux pixels. Take this into account
 
+#     # TODONE - change ZP - get this from image header
+#     # but this will only work for positive flux values - should be ok b/c it's before cont sub
 
-    # mag_r in AB mags
-    # g-r color is in AB mags
-    # mag_r_to_Ha and mag_r should be very similar - check this
-    mag_r_to_Ha = mag_r + filter_transformation(telescope,rfilter, gr_col)
+#     # this creates nans where counts are negative
+#     mag_r = -2.5*np.log10(data_r) + rZP
+#     mag_NB = -2.5*np.log10(data_r) + hZP    
 
-    # QFM: what happens to mag_r_to_Ha -
-    # this is the array that has the correct filter transformation, I think
+#     # I think we should instead just stay in counts, and scale the counts in both to ZP of 30
+#     # now calc fluxes using the same ZP
+#     data_r_ZP30 = 10.**(-0.4*(mag_r-30))
+#     data_NB_ZP30 = 10.**(-0.4*(mag_NB-30))    
 
-    ##
-    # the following is the orginal comment from matteo's code
-    ##
-    #Back to calibrated flux units
+#     # Transform the mag_r image to the observed Halpha filter
+#     #
+#     # TODONE - change the color conversion -
+#     # need to use different conversion for each Halpha/r combo
+#     # 
+#     # BUT: for pixels which have a nan in the g-r image
+#     # (r-band SNR in legacy image < 10)
+#     # then mag r to Ha is just mag r
+#     #
+#     # this doesn't seem right.
+#     # seems like it should be the mag r scaled but some default value
 
-    # RF - changing this - will see if I'm doing this correctly
-    #data_r_to_Ha = np.copy(data_r) # this is the sky-subtracted r-band data
-    data_r_to_Ha = data_r_ZP30
-
-    # smooth the r-band image before subtracting from halpha
-    # QFM : why are we doing this?  I usually do a straight image subtraction
     
-    # QFM: in your code, the following line feeds in data_r rather than data_r_to_Ha
-    # I changed it to data_r_to_Ha.  Is this wrong?
-    # can change smoothing to change to 1-2 psf size
-    data_r_to_Ha = convolution.convolve_fft(data_r_to_Ha, convolution.Box2DKernel(5), allow_huge=True, nan_treatment='interpolate')
+#     # QFM: these filter transformations are derived for panstarrs colors
+#     # is this a problem that we are using the legacy g-r color instead?
+
+
+#     # The r-band mag has to be scaled to the same ZP as the halpha image
+
+
+#     # mag_r in AB mags
+#     # g-r color is in AB mags
+#     # mag_r_to_Ha and mag_r should be very similar - check this
+#     mag_r_to_Ha = mag_r + filter_transformation(telescope,rfilter, gr_col)
+
+#     # QFM: what happens to mag_r_to_Ha -
+#     # this is the array that has the correct filter transformation, I think
+
+#     ##
+#     # the following is the orginal comment from matteo's code
+#     ##
+#     #Back to calibrated flux units
+
+#     # RF - changing this - will see if I'm doing this correctly
+#     #data_r_to_Ha = np.copy(data_r) # this is the sky-subtracted r-band data
+#     data_r_to_Ha = data_r_ZP30
+
+#     # smooth the r-band image before subtracting from halpha
+#     # QFM : why are we doing this?  I usually do a straight image subtraction
+    
+#     # QFM: in your code, the following line feeds in data_r rather than data_r_to_Ha
+#     # I changed it to data_r_to_Ha.  Is this wrong?
+#     # can change smoothing to change to 1-2 psf size
+#     data_r_to_Ha = convolution.convolve_fft(data_r_to_Ha, convolution.Box2DKernel(5), allow_huge=True, nan_treatment='interpolate')
     
     
-    # so I don't understand what this line is doing - converting to flux?
-    # QFM: which photometric ZP should I use here?
-    # still the rZP I think - b/c it did a color transformation
-    # but did not scale it, right?
+#     # so I don't understand what this line is doing - converting to flux?
+#     # QFM: which photometric ZP should I use here?
+#     # still the rZP I think - b/c it did a color transformation
+#     # but did not scale it, right?
 
-    # QFM: I think that in the following line, I think the
-    # default values should be adjusted by this amount
+#     # QFM: I think that in the following line, I think the
+#     # default values should be adjusted by this amount
 
 
-    # this is from matteo's code
-    # data_r_to_Ha[usemask] = 10**(-0.4*(mag_r_to_Ha[usemask]-30))
+#     # this is from matteo's code
+#     # data_r_to_Ha[usemask] = 10**(-0.4*(mag_r_to_Ha[usemask]-30))
 
-    data_r_to_Ha[usemask] = 10**(-0.4*(mag_r_to_Ha[usemask]-30))    
+#     data_r_to_Ha[usemask] = 10**(-0.4*(mag_r_to_Ha[usemask]-30))    
 
-    # save output to check that color adjustment is working ok
-    hdu = fits.PrimaryHDU(10**(-0.4*(mag_r_to_Ha-rZP)), header=rhdu[0].header)
-    gr_r_name = Rfile.replace('-R.fits','-R-gr-trans.fits')    
-    hdu.writeto(gr_r_name, overwrite=True) #sky-subtracted r-band image - use this for photomet
+#     # save output to check that color adjustment is working ok
+#     hdu = fits.PrimaryHDU(10**(-0.4*(mag_r_to_Ha-rZP)), header=rhdu[0].header)
+#     gr_r_name = Rfile.replace('-R.fits','-R-gr-trans.fits')    
+#     hdu.writeto(gr_r_name, overwrite=True) #sky-subtracted r-band image - use this for photomet
     
 
-    # QFM (question for Matteo)
-    # in the above eqn, why are we mixing smoothed and unsmoothed images?
-    # or are we only using the smoothed values for where the pixels are masked?
-    # Rose's answer: I had previously thought that usemask was bad values
-    # but it's actually good.  we are using a color transformation that is smoothed
+#     # QFM (question for Matteo)
+#     # in the above eqn, why are we mixing smoothed and unsmoothed images?
+#     # or are we only using the smoothed values for where the pixels are masked?
+#     # Rose's answer: I had previously thought that usemask was bad values
+#     # but it's actually good.  we are using a color transformation that is smoothed
     
-    # Matteo Comment: Go to cgs units
-    # TODO: check this conversion - need to adjust for my ZP, these are calculated for ZP=30
-    # can choose a ZP to convert to cgs to convert from mag/pix to erg/cm^2/s/Hz
-    # can use ZP=48.6 to be consistent with
+#     # Matteo Comment: Go to cgs units
+#     # TODO: check this conversion - need to adjust for my ZP, these are calculated for ZP=30
+#     # can choose a ZP to convert to cgs to convert from mag/pix to erg/cm^2/s/Hz
+#     # can use ZP=48.6 to be consistent with
 
-    # apply ZP to NB to get to mag_NB
-    # then convert to data_NB = 10**(-0.4*(mag_r_to_Ha[usemask]-this should be ZP that you choose
-    # - leave it at 30 to be consistent with matteo's numbers below
-    # 10^(-0.4*48.6) to get factor that is now 1E-12
+#     # apply ZP to NB to get to mag_NB
+#     # then convert to data_NB = 10**(-0.4*(mag_r_to_Ha[usemask]-this should be ZP that you choose
+#     # - leave it at 30 to be consistent with matteo's numbers below
+#     # 10^(-0.4*48.6) to get factor that is now 1E-12
     
-    fnu_NB  = 3.631E3*data_NB_ZP30*1E-12 # now in units of fnu
-    # TODONE - change the filter EWs - need a dictionary for each Halpha filter
-    # factor of 1E18 to avoid large # in image - image is in units of 1E18
-    flam_NB = 2.99792458E-5*fnu_NB/(filter_lambda_c_AA[telescope]**2) *1E18
+#     fnu_NB  = 3.631E3*data_NB_ZP30*1E-12 # now in units of fnu
+#     # TODONE - change the filter EWs - need a dictionary for each Halpha filter
+#     # factor of 1E18 to avoid large # in image - image is in units of 1E18
+#     flam_NB = 2.99792458E-5*fnu_NB/(filter_lambda_c_AA[telescope]**2) *1E18
 
-    # continuum image - but why are we using the smoothed image?
-    # Rose's answer: same as above.  we smoothed the g-r image so that we apply
-    # a smoother color correction
-    cnu_NB  = 3.631E3*data_r_to_Ha*1E-12
-    clam_NB = 2.99792458E-5*cnu_NB/(filter_lambda_c_AA[telescope]**2) *1E18 # change central wavelength
+#     # continuum image - but why are we using the smoothed image?
+#     # Rose's answer: same as above.  we smoothed the g-r image so that we apply
+#     # a smoother color correction
+#     cnu_NB  = 3.631E3*data_r_to_Ha*1E-12
+#     clam_NB = 2.99792458E-5*cnu_NB/(filter_lambda_c_AA[telescope]**2) *1E18 # change central wavelength
 
-    # TODONE - change width of the filter
-    # QFM : in his code, there is a multiplicative factor of 1.03 on clam_NB
-    # need to multiply by width of filter to convert from flux/A to flux
-    # image is  the average flux within the filter
-    # can adjust factor of 1.03 to scale the continuum
-    # in vestige, they check the star subtraction and then adjust the factor to make the stars go away
-    # even with same telescope/filter, this factor can vary
-    flam_net = filter_width_AA[telescope]*(flam_NB-clam_NB) # matteo comment: 106 is the width of the filter
-
-
-    # TODO - I would like to save a version in AB mag for compatibility with my photometry programs
-    # QFM - is this just (data_NB - data_r_to_Ha)?
-    NB_ABmag = (data_NB_ZP30 - data_r_to_Ha)
-    hdu = fits.PrimaryHDU(NB_ABmag, header=hhdu[0].header)
-
-    # outname is *CS-gr.fits
-    hdu.writeto(outname, overwrite=True) #NB image in F_lambda units, before
+#     # TODONE - change width of the filter
+#     # QFM : in his code, there is a multiplicative factor of 1.03 on clam_NB
+#     # need to multiply by width of filter to convert from flux/A to flux
+#     # image is  the average flux within the filter
+#     # can adjust factor of 1.03 to scale the continuum
+#     # in vestige, they check the star subtraction and then adjust the factor to make the stars go away
+#     # even with same telescope/filter, this factor can vary
+#     flam_net = filter_width_AA[telescope]*(flam_NB-clam_NB) # matteo comment: 106 is the width of the filter
 
 
-    # The rest are different version of the CS image that matteo saves
-    # don't know if I need all of this...
+#     # TODO - I would like to save a version in AB mag for compatibility with my photometry programs
+#     # QFM - is this just (data_NB - data_r_to_Ha)?
+#     NB_ABmag = (data_NB_ZP30 - data_r_to_Ha)
+
+#     # add continuum scale factor to the NB image header
+
+#     hdu = fits.PrimaryHDU(NB_ABmag, header=hhdu[0].header)
+
+#     # outname is *CS-gr.fits
+#     hdu.writeto(outname, overwrite=True) #NB image in F_lambda units, before
+
+
+#     # The rest are different version of the CS image that matteo saves
+#     # don't know if I need all of this...
     
-    # DONE: TODO - change output image name
-    # this is the new net NB image
-    hdu = fits.PrimaryHDU(flam_NB, header=hhdu[0].header)
-    hdu.writeto(fileroot+'-net-new.fits', overwrite=True) #NB image in F_lambda units, before
-    # DONE: TODO - change output image name
-    hdu = fits.PrimaryHDU(clam_NB, header=hhdu[0].header)
-    hdu.writeto(fileroot+'-cont-new.fits', overwrite=True)
-    #hdu.close()
+#     # DONE: TODO - change output image name
+#     # this is the new net NB image
+#     hdu = fits.PrimaryHDU(flam_NB, header=hhdu[0].header)
+#     hdu.writeto(fileroot+'-net-new.fits', overwrite=True) #NB image in F_lambda units, before
+#     # DONE: TODO - change output image name
+#     hdu = fits.PrimaryHDU(clam_NB, header=hhdu[0].header)
+#     hdu.writeto(fileroot+'-cont-new.fits', overwrite=True)
+#     #hdu.close()
     
-    #Calculate clipped statistic
-    #stat is a tuple of mean, median, sigma
-    stat = stats.sigma_clipped_stats(flam_net,mask=mask)
+#     #Calculate clipped statistic
+#     #stat is a tuple of mean, median, sigma
+#     stat = stats.sigma_clipped_stats(flam_net,mask=mask)
 
-    # RF - I implemented the sky subtraction of each cutout image in halphagui
-    # would rather keep it there b/c it masks out the central galaxy
-    #flam_net -= stat[1]
+#     # RF - I implemented the sky subtraction of each cutout image in halphagui
+#     # would rather keep it there b/c it masks out the central galaxy
+#     #flam_net -= stat[1]
 
-    print('Unbinned SB limit 1sigma {0:3.1f} e-18'.format(stat[2]/(pscale_NB[0]**2)))
+#     print('Unbinned SB limit 1sigma {0:3.1f} e-18'.format(stat[2]/(pscale_NB[0]**2)))
 
-    # DONE: TODO - change output image name
-    # this is the continuum-subtracted image
-    hdu = fits.PrimaryHDU(flam_net, header=hhdu[0].header)
-    hdu.writeto(fileroot+'-net-flux.fits', overwrite=True)
-    #hdu.writeto(outname, overwrite=True)    
-    #hdu.close()
+#     # DONE: TODO - change output image name
+#     # this is the continuum-subtracted image
+#     hdu = fits.PrimaryHDU(flam_net, header=hhdu[0].header)
+#     hdu.writeto(fileroot+'-net-flux.fits', overwrite=True)
+#     #hdu.writeto(outname, overwrite=True)    
+#     #hdu.close()
 
-    # convert image to surface brightness units
-    # DONE: TODO - change pixel scale
-    sblam_net = flam_net/(pscale_NB[0]**2)
+#     # convert image to surface brightness units
+#     # DONE: TODO - change pixel scale
+#     sblam_net = flam_net/(pscale_NB[0]**2)
     
-    # DONE: TODO - change output image name
-    hdu = fits.PrimaryHDU(sblam_net, header=hhdu[0].header)
-    hdu.writeto(fileroot+'-net-sb.fits', overwrite=True)
-    #hdu.close()
+#     # DONE: TODO - change output image name
+#     hdu = fits.PrimaryHDU(sblam_net, header=hhdu[0].header)
+#     hdu.writeto(fileroot+'-net-sb.fits', overwrite=True)
+#     #hdu.close()
 
-    print('Smoothing net image')
+#     print('Smoothing net image')
 
-    flam_net_smooth = convolution.convolve_fft(flam_net, convolution.Box2DKernel(15), allow_huge=True, nan_treatment='interpolate')
+#     flam_net_smooth = convolution.convolve_fft(flam_net, convolution.Box2DKernel(15), allow_huge=True, nan_treatment='interpolate')
 
-    hdu = fits.PrimaryHDU(flam_net_smooth, header=hhdu[0].header)
-    # DONE: TODO - change output image name
-    hdu.writeto(fileroot+'-net-smooth.fits', overwrite=True)
-    #hdu.close()
+#     hdu = fits.PrimaryHDU(flam_net_smooth, header=hhdu[0].header)
+#     # DONE: TODO - change output image name
+#     hdu.writeto(fileroot+'-net-smooth.fits', overwrite=True)
+#     #hdu.close()
     
-    stat_sm = stats.sigma_clipped_stats(flam_net_smooth,mask=mask)
-    # TODO - add this to image header
+#     stat_sm = stats.sigma_clipped_stats(flam_net_smooth,mask=mask)
+#     # TODO - add this to image header
 
-    print('Smoothed {1}x{1} SB limit 1sigma {0:3.1f} e-18'.format(stat_sm[2]/(pscale_NB[0]**2), 15))
+#     print('Smoothed {1}x{1} SB limit 1sigma {0:3.1f} e-18'.format(stat_sm[2]/(pscale_NB[0]**2), 15))
 
-    # close hdu files
-    hhdu.close()
-    rhdu.close()
+#     # close hdu files
+#     hhdu.close()
+#     rhdu.close()
 
-    imlist = [mag_r_to_Ha]
-    return imlist
+#     imlist = [mag_r_to_Ha]
+#     return imlist
  
 
 if __name__ == '__main__':
@@ -537,7 +541,7 @@ if __name__ == '__main__':
 
     outimage = rfile.replace('r-ha.fits','gr-ha-smooth.fits')
     print(f"g-r image = {outimage}")
-    if os.path.exists(outimage):
+    if os.path.exists(outimage) & (not overwrite):
         print("found g-r image.  not remaking this")
         hdu = fits.open(outimage)
         gr_col = hdu[0].data
@@ -745,6 +749,7 @@ if __name__ == '__main__':
     # QFM - is this just (data_NB - data_r_to_Ha)?
     NB_ABmag = (data_NB - contscale*data_r_to_Ha)
     # this should still be good to use the Halpha ZP
+    hhdu[0].header['CONSCALE']=(float(f'{contscale:.3f}'),'Continuum scale factor')    
     hdu = fits.PrimaryHDU(NB_ABmag, header=hhdu[0].header)
 
     # outname is *CS-gr.fits
@@ -756,6 +761,9 @@ if __name__ == '__main__':
     
     # DONE: TODO - change output image name
     # this is the new net NB image
+
+    # add new field to header to track continuum scale factor
+
     hdu = fits.PrimaryHDU(flam_NB, header=hhdu[0].header)
     hdu.writeto(fileroot+'-net-new.fits', overwrite=True) #NB image in F_lambda units, before
     # DONE: TODO - change output image name
