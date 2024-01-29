@@ -664,11 +664,11 @@ class galaxy():
     
 def fit_profiles(cutout_name_r,cutout_name_ha,prefix=None):
     if prefix is None:
-        rphot_table = cutout_name_r.split('.fits')[0]+'-phot.fits'
-        haphot_table = cutout_name_ha.split('.fits')[0]+'-phot.fits'
+        rphot_table = cutout_name_r.split('.fits')[0]+'_phot.fits'
+        haphot_table = cutout_name_ha.split('.fits')[0]+'_phot.fits'
     else:
-        rphot_table = cutout_name_r.split('.fits')[0]+'-'+prefix+'-phot.fits'
-        haphot_table = cutout_name_ha.split('.fits')[0]+'-'+prefix+'-phot.fits'
+        rphot_table = cutout_name_r.split('.fits')[0]+'-'+prefix+'_phot.fits'
+        haphot_table = cutout_name_ha.split('.fits')[0]+'-'+prefix+'_phot.fits'
 
     rfit = rprofile(cutout_name_r, rphot_table, label='R')
     rfit.becky_measurements()
@@ -767,7 +767,7 @@ if __name__ == '__main__':
     otab.write_sky()
     otab.write_fits_table()            
 
-
+    otab.e.plot_fancy_profiles()
     # should I run the photometry on the matched g and r images as well???
     # use our r-band as the reference, measure on legacy g
 

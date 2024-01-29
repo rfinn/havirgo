@@ -157,6 +157,8 @@ def get_gr(gfile,rfile,mask=None):
     # TODO - should add masking here - we don't want stars to be in our g-r image, right?
     gr_col[mask] = np.nan
     print('Smoothing images for color calculation')
+    # changing convolution size from 20 to 10 b/c I'm wondering if it's blurring the color
+    # gradients too much - specific example is 
     gr_col = convolution.convolve_fft(gr_col, convolution.Box2DKernel(20), allow_huge=True, nan_treatment='interpolate')
 
     # set the pixel with SNR < 10 to nan - don't use these for color correction
@@ -745,8 +747,7 @@ if __name__ == '__main__':
     flam_net = filter_width_AA[telescope]*(flam_NB-contscale*clam_NB) # matteo comment: 106 is the width of the filter
 
 
-    # TODO - I would like to save a version in AB mag for compatibility with my photometry programs
-    # QFM - is this just (data_NB - data_r_to_Ha)?
+    # TODONE - I would like to save a version in AB mag for compatibility with my photometry programs
     NB_ABmag = (data_NB - contscale*data_r_to_Ha)
     # this should still be good to use the Halpha ZP
     hhdu[0].header['CONSCALE']=(float(f'{contscale:.3f}'),'Continuum scale factor')    
@@ -798,11 +799,11 @@ if __name__ == '__main__':
     #hdu.close()
 
     print('Smoothing net image')
-
+    # QFM: why are we doing this?
     flam_net_smooth = convolution.convolve_fft(flam_net, convolution.Box2DKernel(15), allow_huge=True, nan_treatment='interpolate')
 
     hdu = fits.PrimaryHDU(flam_net_smooth, header=hhdu[0].header)
-    # DONE: TODO - change output image name
+    # TODONE - change output image name
     hdu.writeto(fileroot+'-net-smooth.fits', overwrite=True)
     #hdu.close()
     
