@@ -204,9 +204,21 @@ class galaxy():
 
     def get_ssfr_image(self):
         """ divide SFR image by mstar image  """
+        from astropy.stats import sigma_clipped_stats
+        #import ccdproc
+        from photutils import make_source_mask
 
+        # create mask to cut low SNR pixels based on SNR in SFR image
+        mask = make_source_mask(self.sfr_vr,nsigma=3,npixels=5,dilate_size=5)
+        masked_data = np.ma.array(self.sfr_vr,mask=mask)
+        #clipped_array = sigma_clip(masked_data,cenfunc=np.ma.mean)
+
+        mean,median,std = sigma_clipped_stats(masked_data,sigma=3.0,cenfunc=np.ma.mean)
+        print(f'STD cut in SF image = {std:.3e}')
+        flag = self.sfr_vr < 3*std
         self.logssfr = np.log10(self.sfr_vr) - self.logMstar_vr
-
+        self.logssfr[flag] = np.nan
+        self.haheader['SFRSTD']=float(f"{std:.3e}")
         outimage = self.dirname+'-ssfr.fits'
         hdu = fits.PrimaryHDU(self.logssfr, header=self.haheader)
         hdu.writeto(outimage, overwrite=True) 
@@ -256,6 +268,8 @@ class galaxy():
                 norm = simple_norm(cs, stretch=stretch[i],max_percent=percentile2,min_percent=percentile1)
                 if i == 2:
                     plt.imshow(cs, norm=norm,origin='lower',vmin=-1.2e-5,vmax=1e-4)
+                if i == 3:
+                    plt.imshow(cs, norm=norm,origin='lower',vmin=-10.5,vmax=-9)
                 else:
                     plt.imshow(cs, norm=norm,origin='lower')#,vmin=v1,vmax=v2)
                 if zoom:
