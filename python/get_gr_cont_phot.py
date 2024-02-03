@@ -694,7 +694,26 @@ if __name__ == '__main__':
     # move to subdirectory
     os.chdir(subdirname)
 
+
+    ###################################################################
+    # get galaxy properties from VFID
+    ###################################################################    
+    vfid = subdirname.split('-')[0]
+
+    maintab = homedir+"/research/Virgo/tables-north/v2/vf_v2_main.fits"
+    ephottab = homedir+"/research/Virgo/tables-north/v2/vf_v2_legacy_ephot.fits"    
+    # read in vf_main
+    mtab = Table.read(maintab)
+    # get redshift
+    galindex = np.arange(len(mtab))[mtab['VFID'] == vfid]
+        
+    # need RA, DEC, radius, BA, PA, like from halphagui
+    ra = mtab['RA'][galindex][0]
+    dec = mtab['DEC'][galindex][0]
+    print("RA,DEC = ",ra,dec)
+    ###################################################################    
     # get R and CS-gr image
+    ###################################################################    
     rfile = subdirname+'-R.fits'
 
     hfile = subdirname+'-CS-gr.fits'    
@@ -746,7 +765,7 @@ if __name__ == '__main__':
         hfilter = '4'
 
     
-    e = ellipse(rfile, image2=hfile, mask = maskfile, image_frame = None,image2_filter='4', filter_ratio=filter_ratio,psf=None,psf_ha=None)
+    e = ellipse(rfile, image2=hfile, mask = maskfile, image_frame = None,image2_filter='4', filter_ratio=filter_ratio,psf=None,psf_ha=None,objra=ra,objdec=dec)
     e.run_for_gui()
 
     otab.write_ellipse_output(e)
