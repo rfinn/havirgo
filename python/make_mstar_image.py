@@ -90,10 +90,11 @@ def get_params_from_cutout_directory_name(dirname):
 
 class galaxy():
 
-    def __init__(self,dirname,vr,vcosmic):
+    def __init__(self,dirname,vr,vcosmic,ra=None,dec=None):
         self.dirname = dirname
         self.vfid = dirname.split('-')[0]
-
+        self.ra = ra
+        self.dec = dec
         self.d_vr = cosmo.luminosity_distance(vr/3.e5) # dist in Mpc from recession velocity in km/s
         self.d_vcosmic = cosmo.luminosity_distance(vcosmic/3.e5) # dist in Mpc from flow-corrected recession vel in km/s
         
@@ -223,18 +224,21 @@ class galaxy():
         hdu = fits.PrimaryHDU(self.logssfr, header=self.haheader)
         hdu.writeto(outimage, overwrite=True) 
 
-    def save_figure(self,zoom=True):
+    def save_figure(self,zoom=True,zoomfactor=2):
         # save figure
         from matplotlib import pyplot as plt
         from scipy.stats import scoreatpercentile
         from astropy.visualization import simple_norm
         from astropy.wcs import WCS
         from PIL import Image
+        from astropy.coordinates import SkyCoord
+        import astropy.units as u
         
         legacy_jpg = glob.glob('legacy/*.jpg')[0]
         print("legacy jpg = ",legacy_jpg)
         jpeg_data = Image.open(legacy_jpg)
-
+        #plt.figure(figsize=(6,6))
+        #plt.imshow(jpeg_data,origin="lower")
 
         imwcs = WCS(self.haheader)
         
@@ -243,6 +247,7 @@ class galaxy():
         plt.subplots_adjust(wspace=0.3,left=.05)
 
         images = [jpeg_data,self.logMstar_vr,self.sfr_vr,self.logssfr]
+        ximsize,yimsize = self.logMstar_vr.shape
         titles = ["Legacy","logMstar","SFR",'logsSFR']
         percentile1 = .5
         percentile2 = 99.5
@@ -253,33 +258,87 @@ class galaxy():
                 plt.subplot(1,4,i+1,projection=imwcs)
                 plt.imshow(cs,origin='lower',interpolation='nearest')#,vmin=v1,vmax=v2)
                 if zoom:
+                    # check for RA and DEC, b/c image might not be centered
+                    #print("zooming")
                     xsize,ysize = cs.size
-                    center = xsize//2
-                    delta = xsize//4
-                    xmin = center - delta
-                    xmax = center + delta
-                
-                    plt.axis([xmin,xmax,xmin,xmax])                
+                    delta = xsize//(zoomfactor*2)                    
+                    if self.ra is not None:
+                        galcoord = SkyCoord(ra*u.deg,dec*u.deg,frame='icrs')
+                        xcenter,ycenter = imwcs.world_to_pixel(galcoord)
+                        xcenter = xcenter[0]
+                        ycenter = ycenter[0]
+
+                        ximcenter = xsize //2
+                        yimcenter = ysize // 2
+
+                        # scale factor to translate b/w fits image and jpg
+                        scalefactor = xsize/ximsize
+
+                    else:
+                        xcenter = xsize//2
+                        ycenter = ysize // 2
+
+                    xmin = xcenter - delta
+                    xmax = xcenter + delta
+
+                    ymin = ycenter - delta
+                    ymax = ycenter + delta
+
+                    if xmin < 1:
+                        xmin = 1
+                    if ymin < 1:
+                        ymin = 1
+                    if xmax > xsize:
+                        xmax=xsize-1
+                    if ymax > ysize:
+                        xmax=xsize-1
+                    # TODO : come back to this and figure out how to zoom the jpeg image - can't figure out now
+                    #print('jpeg : ',[xmin,xmax,ymin,ymax])
+                    #plt.axis([xmin,xmax,xmin,xmax])                
             else:
                 if self.mask is not None:
                     cs = np.ma.masked_where(self.mask,cs)
 
                 plt.subplot(1,4,i+1)#,projection=imwcs)                
                 norm = simple_norm(cs, stretch=stretch[i],max_percent=percentile2,min_percent=percentile1)
-                if i == 2:
-                    plt.imshow(cs, norm=norm,origin='lower',vmin=-1.2e-5,vmax=1e-4)
-                if i == 3:
-                    plt.imshow(cs, norm=norm,origin='lower',vmin=-10.5,vmax=-9)
-                else:
-                    plt.imshow(cs, norm=norm,origin='lower')#,vmin=v1,vmax=v2)
+                #if i == 2:
+                #    plt.imshow(cs, norm=norm,origin='lower',vmin=-1.2e-5,vmax=1e-4)
+                #if i == 3:
+                #    plt.imshow(cs, norm=norm,origin='lower',vmin=-10.5,vmax=-9)
+                #else:
+                #    plt.imshow(cs, norm=norm,origin='lower')#,vmin=v1,vmax=v2)
+                plt.imshow(cs, norm=norm,origin='lower')#,vmin=v1,vmax=v2)
                 if zoom:
+                    # check for RA and DEC, b/c image might not be centered
+                    #print("zooming")                    
                     xsize,ysize = cs.shape
-                    center = xsize//2
-                    delta = xsize//4
-                    xmin = center - delta
-                    xmax = center + delta
+                    delta = xsize//(zoomfactor*2)                    
+                    if self.ra is not None:
+                        galcoord = SkyCoord(ra*u.deg,dec*u.deg,frame='icrs')
+                        xcenter,ycenter = imwcs.world_to_pixel(galcoord)
+                        xcenter = xcenter[0]
+                        ycenter = ycenter[0]                        
+                    else:
+                        xcenter = xsize//2
+                        ycenter = ysize // 2
 
-                    plt.axis([xmin,xmax,xmin,xmax])                
+                    xmin = xcenter - delta
+                    xmax = xcenter + delta
+
+                    ymin = ycenter - delta
+                    ymax = ycenter + delta
+
+                    if xmin < 1:
+                        xmin = 1
+                    if ymin < 1:
+                        ymin = 1
+                    if xmax > xsize:
+                        xmax=xsize-1
+                    if ymax > ysize:
+                        xmax=xsize-1
+                    print([ymin,ymax,xmin,xmax]) 
+                    plt.axis([xmin,xmax,ymin,ymax])                
+                    
                 #plt.imshow(cs)#,vmin=-0.015,vmax=.1)#,cmap='gray_r')
                 
                 plt.colorbar(fraction=.045)
@@ -324,13 +383,17 @@ if __name__ == '__main__':
     # get vcosmic from vf_vf_env.fits
     vfenv = Table.read(tabledir+'vf_v2_environment.fits')
     vcosmic = vfenv['Vcosmic'][galindex]
-    
+
+    # get RA, DEC
+
+    ra = vfmain['RA'][galindex]
+    dec = vfmain['DEC'][galindex]
     # initiate instance of galaxy class
-    g = galaxy(dirname,vr, vcosmic)
+    g = galaxy(dirname,vr, vcosmic,ra=ra,dec=dec)
     g.construct_filenames()
     g.get_mstar_image()
     g.get_sfr_image()
     g.get_ssfr_image()
-    g.save_figure(zoom=zoomflag)
+    g.save_figure(zoom=zoomflag,zoomfactor=2.5)
     os.chdir(topdir)
 

@@ -120,7 +120,7 @@ def plot_profiles(subdirname):
     plt.savefig(outname)
 
 if __name__ == "__main__":
-    print("got here!")
+    #print("got here!")
     
     subdirname = sys.argv[1]
     topdir = os.getcwd()
@@ -185,6 +185,9 @@ if __name__ == "__main__":
     
     target_images = [mstar1,mstar2,sfr1,sfr2,ssfr]
     log_flag = [True,True,False,False,True]
+    # to speed things up for testing
+    #target_images = [mstar1]#,sfr1,ssfr]
+    #log_flag = [True]#,False,True]
 
     for i,t in enumerate(target_images):
         # run R, mstar
@@ -193,6 +196,10 @@ if __name__ == "__main__":
             hdu = fits.open(t)
             # convert to linear scale
             linear_data = 10.**hdu[0].data
+
+            # set nans to zero
+            linear_data = np.nan_to_num(linear_data,nan=0.0)
+            
             # save image as a temp file
             # DONE: TODO - change output image name
             hdu = fits.PrimaryHDU(linear_data, header=hdu[0].header)
@@ -206,7 +213,10 @@ if __name__ == "__main__":
         if log_flag[i]:
             # rename output file
             os.rename('temp_linear_phot.fits',target_images[i].replace('.fits','_phot.fits'))
-
+        if i == 0:
+            plotname = target_images[i].replace('.fits','_aperture.png')
+        
+            e.draw_phot_apertures(plotname=plotname)
     # create a plot of the output?
     # 3 panel: mstar, sfr, ssfr
                       
