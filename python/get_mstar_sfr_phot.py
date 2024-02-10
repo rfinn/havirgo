@@ -187,7 +187,7 @@ if __name__ == "__main__":
     log_flag = [True,True,False,False,True]
     # to speed things up for testing
     #target_images = [mstar1]#,sfr1,ssfr]
-    #log_flag = [True]#,False,True]
+    #updalog_flag = [True]#,False,True]
 
     for i,t in enumerate(target_images):
         # run R, mstar
