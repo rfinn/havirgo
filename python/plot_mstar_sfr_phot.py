@@ -51,7 +51,7 @@ from photwrapper import ellipse
 # define colors - need this for plotting line and fill_between in the same color
 mycolors = plt.rcParams['axes.prop_cycle'].by_key()['color']
 
-def plot_profiles(subdirname):
+def plot_profiles(subdirname,rmax=None):
     
     mstar1 = subdirname+'-logmstar-vr_phot.fits'
     mstar2 = subdirname+'-logmstar-vcosmic_phot.fits'
@@ -79,11 +79,13 @@ def plot_profiles(subdirname):
         y0 = ptab['flux']
         yerr = ptab['flux_err']
 
-        # cut the profiles at SNR > 3
-        snrflag = np.abs(yerr/y0) > 3
-        x = x[snrflag]
-        y0 = y0[snrflag]        
-        yerr = yerr[snrflag]
+        if rmax is not None:
+            rflag = x < rmax
+            x = x[rflag]
+            y0 = y0[rflag]        
+            yerr = yerr[rflag]
+        else:
+            rflag = np.ones(len(x),'bool')
         
         y1 = y0+yerr
         y2 = y0-yerr
@@ -100,7 +102,9 @@ def plot_profiles(subdirname):
         else:
             plt.xlim(xmin,xmax)
         plt.xlabel('SMA (arcsec)',fontsize=16)
-        total = np.max(y0[x < xmax])
+        #total = np.max(y0[x < rmax])
+        total = np.max(y0)
+        
         shortlab = labels[i].split('-')[0]
         label=f"{labels[i]} ({np.log10(total):.2f})"
         plt.plot(x,y0,'-',label=label,lw=2,color=mycolors[icolor[i]])        
@@ -117,7 +121,7 @@ def plot_profiles(subdirname):
     sfrtab = Table.read(tables[2])
     y0 = sfrtab['flux']/mstartab['flux']
     i += 1
-    plt.plot(x,np.log10(y0),'-',lw=2,color=mycolors[0])
+    plt.plot(x,np.log10(y0[rflag]),'-',lw=2,color=mycolors[0])
     plt.xlim(xmin,xmax)
     plt.ylabel('log10(sSFR)',fontsize=16)
     plt.xlabel('SMA (arcsec)',fontsize=16)
@@ -149,85 +153,14 @@ if __name__ == "__main__":
     dec = mtab['DEC'][galindex][0]
     rad = mtab['radius'][galindex][0]    
 
-    # testing
-    #ephot = Table.read(ephottab)
-    #bad_sb25 = ephot['SMA_SB25'] == 0
-    #radius_arcsec = ephot['SMA_SB25']*(~bad_sb25) + 1.35*ephot['SMA_SB24']*bad_sb25
-    #rad = radius_arcsec[galindex]
-    ## for galaxies with SMA_SB24=0, set radius to value in main table
-    #if rad == 0:
-    #    rad = mtab['radius'][galindex]
-    
-    # also save BA and PA from John's catalog
-    # use the self.radius_arcsec for the sma
-    #BA = np.ones(len(radius_arcsec))
-    #PA = np.zeros(len(radius_arcsec))
-    
-    #BA[~noradius_flag] = ephot['BA_MOMENT'][~noradius_flag]
-    #PA[~noradius_flag] = ephot['PA_MOMENT'][~noradius_flag]
-    
-    #ba = BA[galindex]
-    #pa = PA[galindex]
     
     ###################################################################    
     # move to subdirectory
     ###################################################################    
     os.chdir(subdirname)
 
-    # get R and CS-gr image
-    rfile = subdirname+'-R.fits'
 
-    hfile = subdirname+'-CS-gr.fits'    
-
-    maskfile = subdirname+'-R-mask.fits'
-
-
-    mstar1 = subdirname+'-logmstar-vr.fits'
-    mstar2 = subdirname+'-logmstar-vcosmic.fits'
-
-    sfr1 = subdirname+'-sfr-vr.fits'
-    sfr2 = subdirname+'-sfr-vcosmic.fits'
-
-    ssfr = subdirname+'-ssfr.fits'
-
-    
-    target_images = [mstar1,mstar2,sfr1,sfr2,ssfr]
-    log_flag = [True,True,False,False,True]
-    # to speed things up for testing
-    #target_images = [mstar1]#,sfr1,ssfr]
-    #updalog_flag = [True]#,False,True]
-
-    for i,t in enumerate(target_images):
-        # run R, mstar
-        if log_flag[i]:
-            # read in image
-            hdu = fits.open(t)
-            # convert to linear scale
-            linear_data = 10.**hdu[0].data
-
-            # set nans to zero
-            linear_data = np.nan_to_num(linear_data,nan=0.0)
-            
-            # save image as a temp file
-            # DONE: TODO - change output image name
-            hdu = fits.PrimaryHDU(linear_data, header=hdu[0].header)
-            t = 'temp_linear.fits'
-            hdu.writeto(t, overwrite=True)
-            
-        e = ellipse(rfile, image2=t, mask = maskfile, image_frame = None,image2_filter='4', filter_ratio=None,psf=None,psf_ha=None,objra=ra,objdec=dec)
-        e.run_two_image_phot()
-
-        # output table will be written as temp_linear_phot.fits
-        if log_flag[i]:
-            # rename output file
-            os.rename('temp_linear_phot.fits',target_images[i].replace('.fits','_phot.fits'))
-        if i == 0:
-            plotname = target_images[i].replace('.fits','_aperture.png')
-        
-            e.draw_phot_apertures(plotname=plotname)
-    # create a plot of the output?
-    # 3 panel: mstar, sfr, ssfr
                       
-    #plot_profiles(subdirname)
+    plot_profiles(subdirname, rmax=1.5*rad)
                       
     os.chdir(topdir)

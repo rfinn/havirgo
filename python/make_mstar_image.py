@@ -81,7 +81,7 @@ def get_params_from_cutout_directory_name(dirname):
     telescope = t[-3]
     vfid = t[0]
     vfid_ned = os.path.basename(dirname).split('-'+telescope)[0]
-    print(telescope,dateobs,pointing,vfid_ned)
+    #print(telescope,dateobs,pointing,vfid_ned)
     return telescope,dateobs,pointing,vfid_ned
 
 ######################################################################
@@ -235,7 +235,7 @@ class galaxy():
         import astropy.units as u
         
         legacy_jpg = glob.glob('legacy/*.jpg')[0]
-        print("legacy jpg = ",legacy_jpg)
+        #print("legacy jpg = ",legacy_jpg)
         jpeg_data = Image.open(legacy_jpg)
         #plt.figure(figsize=(6,6))
         #plt.imshow(jpeg_data,origin="lower")
@@ -307,7 +307,7 @@ class galaxy():
                 #    plt.imshow(cs, norm=norm,origin='lower',vmin=-10.5,vmax=-9)
                 #else:
                 #    plt.imshow(cs, norm=norm,origin='lower')#,vmin=v1,vmax=v2)
-                plt.imshow(cs, norm=norm,origin='lower')#,vmin=v1,vmax=v2)
+                plt.imshow(cs, norm=norm,origin='lower',interpolation='nearest')#,vmin=v1,vmax=v2)
                 if zoom:
                     # check for RA and DEC, b/c image might not be centered
                     #print("zooming")                    
@@ -336,7 +336,7 @@ class galaxy():
                         xmax=xsize-1
                     if ymax > ysize:
                         xmax=xsize-1
-                    print([ymin,ymax,xmin,xmax]) 
+                    #print([ymin,ymax,xmin,xmax]) 
                     plt.axis([xmin,xmax,ymin,ymax])                
                     
                 #plt.imshow(cs)#,vmin=-0.015,vmax=.1)#,cmap='gray_r')

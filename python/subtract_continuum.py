@@ -73,6 +73,7 @@ import numpy as np
 from astropy.io import fits
 from astropy import stats, convolution
 from astropy import wcs
+from astropy.table import Table
 
 import glob
 from reproject import reproject_interp
@@ -137,15 +138,15 @@ def get_gr(gfile,rfile,mask=None):
     
     # get noise in the image    
     #stat is a tuple of mean, median, sigma
-    print('\nIn get_gr \nComputing median values for g and r images')
+    #print('\nIn get_gr \nComputing median values for g and r images')
     stat_r = stats.sigma_clipped_stats(data_r,mask=mask)
-    print('Subtracting {0:3.2f} from r-band image'.format(stat_r[1]))
+    print('Subtracting {0:3.2e} from r-band image'.format(stat_r[1]))
 
     # this is not going to mask out the galaxy, so the sky values will likely be skewed
     # I am going to assume that the legacy images don't need another round of sky subtraction???
     #data_r -= stat_r[1]
     stat_g = stats.sigma_clipped_stats(data_g,mask=mask)
-    print('Subtracting {0:3.2f} from g-band image'.format(stat_g[1]))
+    print('Subtracting {0:3.2e} from g-band image'.format(stat_g[1]))
     #data_g -= stat_g[1]
 
     # create a mask, where SNR > 10    
@@ -482,7 +483,18 @@ if __name__ == '__main__':
     t = dirname.split('-')
     prefix = t[0]+'-'+t[1]
     vfid = t[0]
-    
+
+    # get the halpha filter correction from the vf_v2_halpha.fits table
+    # need to do this until I update halphamain to add it to the image header
+    tabledir = os.getenv("HOME")+'/research/Virgo/tables-north/v2/'
+    vhalpha = Table.read(tabledir+'vf_v2_halpha.fits')
+    gindex = np.arange(len(vhalpha))[vhalpha['VFID'] == vfid][0]
+    halpha_filter_cor = vhalpha['FILT_COR'][gindex]
+    print(f"{vfid}: halpha filter correction = {halpha_filter_cor:.3f}")
+    if halpha_filter_cor == 0:
+        print("resetting filter correction to 1")
+        halpha_filter_cor = 1
+        
     # define the file names
     Rfile = dirname+'-R.fits' # r-band image taken with same telescope as halpha
     Hfile = dirname+'-Ha.fits'  # halpha image
@@ -491,7 +503,7 @@ if __name__ == '__main__':
     # these are in the legacy subdirectory
     legacy_path = os.path.join('legacy',vfid+'*r-ha.fits')
     rfiles = glob.glob(legacy_path)
-    print(rfiles)
+    #print(rfiles)
     if len(rfiles) < 1:
         print("problem getting r-ha.fits legacy image",len(rfiles))
         sys.exit()
@@ -542,7 +554,7 @@ if __name__ == '__main__':
         #return
 
     outimage = rfile.replace('r-ha.fits','gr-ha-smooth.fits')
-    print(f"g-r image = {outimage}")
+    #print(f"g-r image = {outimage}")
     if os.path.exists(outimage) & (not overwrite):
         print("found g-r image.  not remaking this")
         hdu = fits.open(outimage)
@@ -628,7 +640,7 @@ if __name__ == '__main__':
     # TODONE - change ZP - get this from image header
     # but this will only work for positive flux values - should be ok b/c it's before cont sub
     mag_r = -2.5*np.log10(data_r) + rZP
-    mag_NB = -2.5*np.log10(data_r) + hZP    
+    mag_NB = -2.5*np.log10(data_NB) + hZP    
 
     # now calc fluxes using the same ZP
     data_r_ZP30 = 10.**(-0.4*(mag_r-30))
@@ -702,9 +714,9 @@ if __name__ == '__main__':
     #data_r_to_Ha[usemask] = 10**(-0.4*(mag_r_to_Ha[usemask]-30))    
 
     # save output to check that color adjustment is working ok
-    hdu = fits.PrimaryHDU(data_r_to_Ha/rscale, header=rhdu[0].header)
-    gr_r_name = Rfile.replace('-R.fits','-R-gr-trans.fits')    
-    hdu.writeto(gr_r_name, overwrite=True) #sky-subtracted r-band image - use this for photomet
+    #hdu = fits.PrimaryHDU(data_r_to_Ha/rscale, header=rhdu[0].header)
+    #gr_r_name = Rfile.replace('-R.fits','-R-gr-trans.fits')    
+    #hdu.writeto(gr_r_name, overwrite=True) #sky-subtracted r-band image - use this for photomet
 
 
     # scale both data arrays to ZP = 30?
@@ -748,7 +760,7 @@ if __name__ == '__main__':
 
 
     # TODONE - I would like to save a version in AB mag for compatibility with my photometry programs
-    NB_ABmag = (data_NB - contscale*data_r_to_Ha)
+    NB_ABmag = (halpha_filter_cor*data_NB - contscale*data_r_to_Ha)
     # this should still be good to use the Halpha ZP
     hhdu[0].header['CONSCALE']=(float(f'{contscale:.3f}'),'Continuum scale factor')    
     hdu = fits.PrimaryHDU(NB_ABmag, header=hhdu[0].header)
@@ -780,7 +792,7 @@ if __name__ == '__main__':
     # would rather keep it there b/c it masks out the central galaxy
     #flam_net -= stat[1]
 
-    print('Unbinned SB limit 1sigma {0:3.1f} e-18'.format(stat[2]/(pscale_NB[0]**2)))
+    print('Unbinned SB limit 1sigma {0:3.2e} e-18'.format(stat[2]/(pscale_NB[0]**2)))
 
     # DONE: TODO - change output image name
     # this is the continuum-subtracted image
@@ -810,7 +822,7 @@ if __name__ == '__main__':
     stat_sm = stats.sigma_clipped_stats(flam_net_smooth,mask=mask)
     # TODO - add this to image header
 
-    print('Smoothed {1}x{1} SB limit 1sigma {0:3.1f} e-18'.format(stat_sm[2]/(pscale_NB[0]**2), 15))
+    print('Smoothed {1}x{1} SB limit 1sigma {0:3.2e} e-18'.format(stat_sm[2]/(pscale_NB[0]**2), 15))
 
     # close hdu files
     hhdu.close()
