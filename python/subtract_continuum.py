@@ -160,7 +160,7 @@ def get_gr(gfile,rfile,mask=None):
     print('Smoothing images for color calculation')
     # changing convolution size from 20 to 10 b/c I'm wondering if it's blurring the color
     # gradients too much - specific example is 
-    gr_col = convolution.convolve_fft(gr_col, convolution.Box2DKernel(20), allow_huge=True, nan_treatment='interpolate')
+    #gr_col = convolution.convolve_fft(gr_col, convolution.Box2DKernel(20), allow_huge=True, nan_treatment='interpolate')
 
     # set the pixel with SNR < 10 to nan - don't use these for color correction
     gr_col[np.logical_not(usemask)] = np.nan
