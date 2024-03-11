@@ -745,7 +745,7 @@ class build_html_cutout():
 
 
         outfile = os.path.join(outdir,self.cutout.gname+'.html')
-
+        print("outfile = ",outfile)
         vfindices = np.arange(len(vfmain))
         self.vfindex = vfindices[vfmain['VFID'] == self.cutout.vfid]
         #print('inside build html')
@@ -884,7 +884,7 @@ class build_html_cutout():
         #        "{:.2f}".format(myrow['H_FWHM'][0]),\
         #        "{:.4f}".format(myrow['FILTER_RATIO'][0]),\
         #        "{:.2f}".format(myrow['FILT_COR'][0])]
-        data = [f'<a href="http://facultyweb.siena.edu/~rfinn/virgo/coadds/{pointing}/{pointing}.html">{pointing}</a>', \
+        data = [f'<a href="../../coadds/{pointing}/{pointing}.html">{pointing}</a>', \
                 "{:.2f}".format(myrow['R_FWHM']),\
                 "{:.2f}".format(myrow['H_FWHM']),\
                 "{:.4f}".format(myrow['FILTER_RATIO']),\
@@ -1132,6 +1132,6 @@ if __name__ == '__main__':
     
         image_pool.close()
         image_pool.join()
-        image_results = [r.get() for r in myresults]
+        #image_results = [r.get() for r in myresults]
 
     
