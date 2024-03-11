@@ -92,6 +92,20 @@ filter_width_AA = {'BOK':80.48,'HDI':80.48,'INT':95,'MOS':80.48,'INT6657':80}
 filter_lambda_c_AA = {'BOK':6620.52,'HDI':6620.52,'INT':6568,'MOS':6620.52,'INT6657':6657}
 
 
+# integral of filter transmission
+# calculated in Halpha-paper1.ipynb
+filter_Rlambda = {"KPNO_Ha+4nm": 78.58, "WFC_Ha": 84.21, "WFC_Ha6657": 71.96,\
+                  "KPNO_R" : 1341.54, "KPNO_r" : 1283.47, "BASS_r": 1042.18, "WFC_r": 1097.07}
+
+# from oversubtraction of continuum, a la Gavazzi+2006
+# take telescope as the key
+halpha_continuum_oversubtraction = {'BOK':(1 +filter_Rlambda["KPNO_Ha+4nm"]/filter_Rlambda["BASS_r"]),\
+                            'HDI':(1 +filter_Rlambda["KPNO_Ha+4nm"]/filter_Rlambda["KPNO_r"]),\
+                            'INT':(1 +filter_Rlambda["WFC_Ha"]/filter_Rlambda["WFC_r"]),\
+                            'MOS':(1 +filter_Rlambda["KPNO_Ha+4nm"]/filter_Rlambda["KPNO_R"]),\
+                            'INT6657':(1 +filter_Rlambda["WFC_Ha6657"]/filter_Rlambda["WFC_r"])}
+
+
 
 def filter_transformation(telescope,rfilter, gr_col):
     
@@ -489,11 +503,14 @@ if __name__ == '__main__':
     tabledir = os.getenv("HOME")+'/research/Virgo/tables-north/v2/'
     vhalpha = Table.read(tabledir+'vf_v2_halpha.fits')
     gindex = np.arange(len(vhalpha))[vhalpha['VFID'] == vfid][0]
+
+    # correction for the variation in the halpha filter transmission
     halpha_filter_cor = vhalpha['FILT_COR'][gindex]
     print(f"{vfid}: halpha filter correction = {halpha_filter_cor:.3f}")
     if halpha_filter_cor == 0:
         print("resetting filter correction to 1")
         halpha_filter_cor = 1
+
         
     # define the file names
     Rfile = dirname+'-R.fits' # r-band image taken with same telescope as halpha
@@ -672,8 +689,13 @@ if __name__ == '__main__':
     mag_r_to_Ha = mag_r + filter_transformation(telescope,rfilter, gr_col)
 
     # going to stay in counts to avoid nans
+    # create an image with delta needed to correct for color term
     delta_mag = filter_transformation(telescope,rfilter, gr_col)
+
+    # convert to flux units
     delta_flux = 10.**(-0.4*delta_mag)
+
+    # use the color correction for pixels with sufficient SNR
     data_r_to_Ha[usemask] = data_r_to_Ha[usemask] *delta_flux[usemask]
 
     
@@ -760,7 +782,7 @@ if __name__ == '__main__':
 
 
     # TODONE - I would like to save a version in AB mag for compatibility with my photometry programs
-    NB_ABmag = (halpha_filter_cor*data_NB - contscale*data_r_to_Ha)
+    NB_ABmag = (halpha_continuum_oversubtraction[telescope]*halpha_filter_cor*data_NB - contscale*data_r_to_Ha)
     # this should still be good to use the Halpha ZP
     hhdu[0].header['CONSCALE']=(float(f'{contscale:.3f}'),'Continuum scale factor')    
     hdu = fits.PrimaryHDU(NB_ABmag, header=hhdu[0].header)
