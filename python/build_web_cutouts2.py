@@ -12,12 +12,15 @@ NOTES:
 * https://docs.astropy.org/en/stable/visualization/normalization.html#:~:text=The%20astropy.visualization%20module%20provides%20a%20framework%20for%20transforming,x%20represents%20the%20values%20in%20the%20original%20image%3A
 
 TO DO: (I think these are all fixed!)
-* need to figure out how to handle repeated observations
+* DONE need to figure out how to handle repeated observations
   - don't overwrite directory
 
 * fix how I combine unwise images when multiple images are returned
 * same for galex
 
+2024-03-10 : 
+* add panel to show color-based continuum subtract (added this to Halpha panel, instead of showing CS with two stretches)
+* stellar mass, sfr and ssfr images
 
 '''
 
@@ -40,6 +43,8 @@ from astropy.visualization import LinearStretch,SinhStretch
 from astropy import units as u
 from astropy.nddata import Cutout2D
 from astropy.stats import sigma_clip
+
+import multiprocessing as mp
 
 from PIL import Image
 
@@ -373,7 +378,8 @@ class cutout_dir():
             print('WARNING: problem with wise images')
             self.galex_flag = False
         self.make_png_plots()
-        self.make_cs_png()        
+        self.make_cs_png()
+        self.make_cs_png(gr=True)        
         self.get_galfit_model()
         try:
             self.get_phot_tables()
@@ -390,6 +396,8 @@ class cutout_dir():
         self.csimage = glob.glob(os.path.join(self.cutoutdir,self.gname+'*-CS.fits'))[0]
         self.csgrimage = glob.glob(os.path.join(self.cutoutdir,self.gname+'*-CS-gr.fits'))[0]        
         self.maskimage = self.rimage.replace('.fits','-mask.fits')
+
+
     def get_ellipse_params(self):
         """ get ellipse parameters from the header of the mask image  """
         try:
@@ -534,15 +542,24 @@ class cutout_dir():
             # mark VF galaxies
             #plot_vf_gals(imx,imy,keepflag,vfmain,ax,galsize=galsize)
             suffix = "-{}.png".format(p2[i])
-            pngfile = os.path.join(self.outdir,os.path.basename(self.csimage).replace('.fits',suffix))
+            if gr:
+                pngfile = os.path.join(self.outdir,os.path.basename(self.csgrimage).replace('.fits',suffix))
+            else:
+                pngfile = os.path.join(self.outdir,os.path.basename(self.csimage).replace('.fits',suffix))
             plt.xlabel('RA (deg)',fontsize=16)
             plt.ylabel('DEC (deg)',fontsize=16)        
             plt.savefig(pngfile)
             plt.close(fig)
             if i == 0:
-                self.cs_png1 = pngfile
+                if gr:
+                    self.csgr_png1 = pngfile
+                else:
+                    self.cs_png1 = pngfile
             elif i == 1:
-                self.cs_png2 = pngfile                
+                if gr:
+                    self.csgr_png2 = pngfile
+                else:
+                    self.cs_png2 = pngfile 
     def get_galfit_model(self):
         ''' read in galfit model and make png '''
         self.galfit = self.rimage.replace('.fits','-1Comp-galfit-out.fits')
@@ -728,7 +745,7 @@ class build_html_cutout():
 
 
         outfile = os.path.join(outdir,self.cutout.gname+'.html')
-
+        print("outfile = ",outfile)
         vfindices = np.arange(len(vfmain))
         self.vfindex = vfindices[vfmain['VFID'] == self.cutout.vfid]
         #print('inside build html')
@@ -867,7 +884,7 @@ class build_html_cutout():
         #        "{:.2f}".format(myrow['H_FWHM'][0]),\
         #        "{:.4f}".format(myrow['FILTER_RATIO'][0]),\
         #        "{:.2f}".format(myrow['FILT_COR'][0])]
-        data = [f'<a href="http://facultyweb.siena.edu/~rfinn/virgo/coadds/{pointing}/{pointing}.html">{pointing}</a>', \
+        data = [f'<a href="../../coadds/{pointing}/{pointing}.html">{pointing}</a>', \
                 "{:.2f}".format(myrow['R_FWHM']),\
                 "{:.2f}".format(myrow['H_FWHM']),\
                 "{:.4f}".format(myrow['FILTER_RATIO']),\
@@ -917,6 +934,24 @@ class build_html_cutout():
     def write_halpha_images(self):
         '''  r, halpha, cs, and mask images '''
         self.html.write('<h2>Halpha Images</h2>\n')        
+        #images = [self.cutout.pngimages['r'],self.cutout.pngimages['ha'],self.cutout.cs_png1,self.cutout.cs_png2]
+        images = [self.cutout.pngimages['r'],self.cutout.pngimages['ha'],self.cutout.cs_png1,self.cutout.csgr_png1]
+        # just changing order to see if halpha image is still the biggest in the table, re issue #15
+        # the second was still the biggest
+        # so what if we also change the label
+        # seems to scale with label
+        #images = [self.cutout.pngimages['ha'],self.cutout.pngimages['r'],self.cutout.cs_png1,self.cutout.cs_png2]        
+        images = [os.path.basename(i) for i in images]
+
+        #labels = ['R-band Image','H&alpha;+Cont','CS, stretch 1','CS, stretch 2']
+
+        labels = ['R-band Image','H&alpha;+Cont','CS from ZP ratio','CS from ZP and g-r cor']        
+        #labels = ['Halpha+Cont','R','CS, stretch 1','CS, stretch 2']        
+        write_table(self.html,images=images,labels=labels)
+
+    def write_mstar_sfr_images(self):
+        '''  TODO : add panel for stellar mass, sfr and ssfr '''
+        self.html.write('<h2>Halpha Images</h2>\n')        
         images = [self.cutout.pngimages['r'],self.cutout.pngimages['ha'],self.cutout.cs_png1,self.cutout.cs_png2]
         # just changing order to see if halpha image is still the biggest in the table, re issue #15
         # the second was still the biggest
@@ -928,7 +963,7 @@ class build_html_cutout():
         labels = ['R-band Image','H&alpha;+Cont','CS, stretch 1','CS, stretch 2']
         #labels = ['Halpha+Cont','R','CS, stretch 1','CS, stretch 2']        
         write_table(self.html,images=images,labels=labels)
-
+        
     def write_legacy_images(self):
         ''' jpg, g,r,z legacy images '''
         self.html.write('<h2>Legacy Images</h2>\n')
@@ -1050,7 +1085,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description ='create psf image from image that contains stars')
 
     #parser.add_argument('--table-path', dest = 'tablepath', default = '/Users/rfinn/github/Virgo/tables/', help = 'path to github/Virgo/tables')
-    parser.add_argument('--cutoutdir',dest = 'cutoutdir', default=None, help='set to coadd directory. default is the current directory, like you are running from the cutouts/ directory')
+    parser.add_argument('--cutoutdir',dest = 'cutoutdir', default=None, help='set to cutout directory. default is the current directory, like you are running from the cutouts/ directory')
     parser.add_argument('--oneimage',dest = 'oneimage',default=None, help='give directory for one image')
     parser.add_argument('--outdir',dest = 'outdir',default='/data-pool/Halpha/html_dev/cutouts/', help='output directory.  default is /data-pool/Halpha/html_dev/cutouts/')    
      
@@ -1097,6 +1132,6 @@ if __name__ == '__main__':
     
         image_pool.close()
         image_pool.join()
-        image_results = [r.get() for r in myresults]
+        #image_results = [r.get() for r in myresults]
 
     
