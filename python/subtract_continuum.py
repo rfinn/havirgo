@@ -502,8 +502,10 @@ if __name__ == '__main__':
     # need to do this until I update halphamain to add it to the image header
     tabledir = os.getenv("HOME")+'/research/Virgo/tables-north/v2/'
     vhalpha = Table.read(tabledir+'vf_v2_halpha.fits')
+
     gindex = np.arange(len(vhalpha))[vhalpha['VFID'] == vfid][0]
 
+    
     # correction for the variation in the halpha filter transmission
     halpha_filter_cor = vhalpha['FILT_COR'][gindex]
     print(f"{vfid}: halpha filter correction = {halpha_filter_cor:.3f}")
@@ -511,6 +513,9 @@ if __name__ == '__main__':
         print("resetting filter correction to 1")
         halpha_filter_cor = 1
 
+    # table with extinction values
+    vext = Table.read(tabledir+'vf_v2_extinction.fits')    
+    halpha_extinction_correction = vext['A(R)_SandF'][gindex]
         
     # define the file names
     Rfile = dirname+'-R.fits' # r-band image taken with same telescope as halpha
@@ -778,11 +783,17 @@ if __name__ == '__main__':
     # can adjust factor of 1.03 to scale the continuum
     # in vestige, they check the star subtraction and then adjust the factor to make the stars go away
     # even with same telescope/filter, this factor can vary
-    flam_net = filter_width_AA[telescope]*(flam_NB-contscale*clam_NB) # matteo comment: 106 is the width of the filter
+    flam_net = filter_width_AA[telescope]*(halpha_continuum_oversubtraction[telescope]*halpha_filter_cor*flam_NB-contscale*clam_NB) # matteo comment: 106 is the width of the filter
 
+    # correct for extinction
+    flam_net = flam_net * halpha_extinction_correction
 
     # TODONE - I would like to save a version in AB mag for compatibility with my photometry programs
     NB_ABmag = (halpha_continuum_oversubtraction[telescope]*halpha_filter_cor*data_NB - contscale*data_r_to_Ha)
+
+    # correct for extinction
+    NB_ABmag = NB_ABmag * halpha_extinction_correction    
+    
     # this should still be good to use the Halpha ZP
     hhdu[0].header['CONSCALE']=(float(f'{contscale:.3f}'),'Continuum scale factor')    
     hdu = fits.PrimaryHDU(NB_ABmag, header=hhdu[0].header)

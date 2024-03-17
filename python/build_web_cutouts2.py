@@ -771,15 +771,17 @@ class build_html_cutout():
         self.write_navigation_links()
         # adding this here so we can inspect the masks quickly
         # can remove once we are done with masks
-        self.write_galfit_images()
+
         self.write_image_stats()
+        #self.write_galfit_images()        
         if self.cutout.legacy_flag:
             self.write_legacy_images()
+            
 
         self.write_sfr_images()
         if self.cutout.wise_flag:
             self.write_wise_images()
-        self.write_halpha_images()
+        self.write_halpha_images()            
         if self.cutout.galimage is not None:
             self.write_galfit_images()
             self.write_galfit_table()
