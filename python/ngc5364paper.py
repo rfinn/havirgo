@@ -14,6 +14,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 from astropy.io import fits
 from astropy.wcs import WCS
+from astropy.table import Table
 
 from PIL import Image
 
@@ -25,9 +26,46 @@ import warnings
 warnings.filterwarnings('ignore')
 
 
-%matplotlib inline
+#%matplotlib inline
 mycolors = plt.rcParams['axes.prop_cycle'].by_key()['color']
 plotdir = homedir+'/research/Virgo/plots/halpha/'
+
+zoom_coords_INT = {'VFID5889':[100,1300,850,2100],\
+                   'VFID5855':[820,1200,700,1400],\
+                   'VFID5842':[900,1300,700,1450],\
+                   'VFID5859':[50,150,30,145],\
+                   'VFID5892':[240,780,250,690]
+                   }
+
+
+zoom_coords_HDI = {'VFID5889':[250,1200,750,1700],\
+                   'VFID5842':[700,1000,550,1130],\
+                   'VFID5892':[200,600,190,550],\
+                   'VFID5859':[35,115,25,115]
+                   }
+
+
+acbfrac = {'VFID5889':.045,\
+          'VFID5855':0.08,\
+          'VFID5842':0.08,\
+          'VFID5859':0.05,\
+          'VFID5892':.075
+          }
+
+
+afigsize = {'VFID5889':[16,5.5],\
+           'VFID5855':[16,6],\
+           'VFID5842':[16,6],\
+           'VFID5859':[16,5],\
+           'VFID5892':[16,4.5]
+           }
+
+alevels = {'VFID5889':[4.5],\
+           'VFID5855':[4],\
+           'VFID5842':[4],\
+           'VFID5859':[3.55],\
+           'VFID5892':[4.3]
+           }
 
 def get_legacy_images():
 
@@ -53,9 +91,33 @@ def get_legacy_images():
 
     fits_name, jpeg_name = pch.get_legacy_images(ra,dec,galid='NGC5364_group',imsize=imsize,band='r',subfolder='legacy',makeplots=True)
     return  fits_name, jpeg_name
-    
-def plot_mstar_sfr(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xticks=True,figsize=[16,6],cbfrac=.08,cbaspect=20,clevels=[4,5],contourFlag=False):
-    %matplotlib inline
+
+
+
+# trying to display stellar mass and sSFR images better
+def display_image(image,percent=99.9,lowrange=False,mask=None,sigclip=True,cmap='gray_r'):
+    #from astropy.visualization import SqrtStretch
+    #from astropy.visualization.mpl_normalize import ImageNormalize
+
+    from astropy.stats import sigma_clip
+    from astropy.visualization import simple_norm
+
+    lowrange=False
+    if sigclip:
+        clipped_data = sigma_clip(image,sigma_lower=5,sigma_upper=5)#,grow=10)
+    else:
+        clipped_data = image
+    if lowrange:
+        norm = simple_norm(clipped_data, stretch='linear',percent=percent)
+    else:
+        norm = simple_norm(clipped_data, stretch='asinh',percent=percent)
+
+    plt.imshow(image, norm=norm,cmap=cmap,origin='lower')
+    #v1,v2=scoreatpercentile(image,[.5,99.5])            
+    #plt.imshow(image, cmap='gray_r',vmin=v1,vmax=v2,origin='lower')    
+
+def plot_mstar_sfr(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xticks=True,figsize=[16,6],cbfrac=.08,cbaspect=20,clevels=[4],contourFlag=True):
+    #%matplotlib inline
     os.chdir(homedir+'/research/Virgo-dev/cont-sub-gr')
     # add scale factor for continuue after the directory name
 
@@ -70,10 +132,24 @@ def plot_mstar_sfr(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xticks=True,f
     vmin = [2,0,-11.5]
     vmax = [6,1.e-6,-9]
     allim = [massim,sfrim,ssfrim]
+
+    vfid = dirname.split('-')[0]
+    print("VFID = ",vfid)
+    if 'INT' in dirname:
+        xmin,xmax,ymin,ymax = zoom_coords_INT[vfid]
+    else:
+        xmin,xmax,ymin,ymax = zoom_coords_HDI[vfid]
     
 
-    
-    plt.figure(figsize=(figsize[0],figsize[1]))
+
+    myfigsize=afigsize[vfid]
+    mycbfrac=acbfrac[vfid]
+    myclevels=alevels[vfid]
+
+    if 'VFID5892' in dirname:
+        cbaspect = 10
+        
+    plt.figure(figsize=(myfigsize[0],myfigsize[1]))
 
     plt.subplots_adjust(wspace=0.1)
     maskdat = fits.getdata(mask)
@@ -97,7 +173,7 @@ def plot_mstar_sfr(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xticks=True,f
             plt.xticks([],[])
             plt.yticks([],[])
         plt.title(titles[i],fontsize=20)
-        plt.colorbar(fraction=cbfrac,aspect=cbaspect)
+        plt.colorbar(fraction=mycbfrac,aspect=cbaspect)
         if i == 1:
             t = dirname.split('-')
             plt.xlabel(t[0]+' '+t[1],fontsize=20)
@@ -110,6 +186,7 @@ def plot_mstar_sfr(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xticks=True,f
     # get ramin,ramax and decmin,decmax from SFR image
     sfrim = dirname+"-sfr-vr.fits"
     header = fits.getheader(sfrim)
+    #print(header)
     wcs = WCS(header)
     sky = wcs.pixel_to_world(xcoords,ycoords)
     
@@ -136,7 +213,7 @@ def plot_mstar_sfr(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xticks=True,f
         hdu.close()
         mcontour_data = np.ma.array(contour_data,mask=maskdat)
         for ax in allax:
-            ax.contour((mcontour_data[ymin:ymax,xmin:xmax]),levels=clevels, colors='k',linestyles='-',linewidths=1)#,transform=ax.get_transform(WCS(contour_header))
+            ax.contour((mcontour_data[ymin:ymax,xmin:xmax]),levels=myclevels, colors='k',linestyles='-',linewidths=1)#,transform=ax.get_transform(WCS(contour_header))
     #plt.contour(contour_data[y[0]:y[1],x[0]:x[1]],levels = [4,5,6],colors='c',alpha=0.5)
     plt.title("Legacy grz",fontsize=20)
    
@@ -144,3 +221,162 @@ def plot_mstar_sfr(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xticks=True,f
 
 
     os.chdir(cwd)
+
+
+
+def fit_profiles(rp,hp,weights=None,rmax=None,fixN=False,labels = ['logMstar','logSFR']):
+    """
+    PARAMS: 
+    * rp = r-band photometry file
+    * hp = halpha photometry file
+    
+    RETURN:
+    * rfit = r-band model
+    * hfit = halpha model
+    """
+    # this is using R band and CS Halpha
+    import scipy.optimize
+    from astropy.modeling import models, fitting, functional_models
+    
+    ###################################################
+    # fit r-band
+    ###################################################
+    #flag = rp['sma_arcsec'] < 140
+    flag = rp['sb'] > 0
+    flag = np.ones(len(rp),'bool')
+    x = rp['sma_arcsec'][flag]
+    y = rp['sb'][flag]
+
+    t_init = models.Sersic1D(r_eff=20,n=1,fixed={'n':fixN})
+    fit_t = fitting.LevMarLSQFitter()
+
+    # add weight that scales with the area of the ellipse
+    # should be 2 pi r dr, but just using x for now.
+    rfit = fit_t(t_init, x, y, weights=x,maxiter=200)
+
+    ###################################################
+    # fit halpha
+    ###################################################
+    #flag = (hp['sb'] > 0) #& (hp['sma_arcsec'] > 5)
+    # force it to fit zeros as well
+    flag = np.ones(len(hp),'bool')
+    x = hp['sma_arcsec'][flag]
+    y = hp['sb'][flag]
+
+    h_init = models.Sersic1D(r_eff=20,n=1,fixed={'n':fixN})
+
+    fit_t = fitting.LevMarLSQFitter()
+    # add weight that scales with the area of the ellipse
+    hfit = fit_t(h_init, x, y, weights=x,maxiter=200)
+
+    ###################################################
+    # plot results
+    ###################################################
+    fits = [hfit,rfit]
+    phots = [hp,rp]
+    names = ['Halpha','r-band']
+    names = labels
+    names.reverse()
+    
+    plt.figure()
+
+    for i,f in enumerate(fits):
+        plt.subplot(2,1,i+1)
+        if rmax is not None:
+            plt.xlim(0,rmax)
+        #plt.gca().set_yscale('log')
+
+        plt.plot(phots[i]['sma_arcsec'],phots[i]['sb']/fits[i].amplitude.value,'bo',c=mycolors[0],label=labels[i])
+        plt.plot(phots[i]['sma_arcsec'],fits[i](phots[i]['sma_arcsec'])/fits[i].amplitude.value,label='SERSIC',c=mycolors[1])
+        plt.axhline(ls=':',color='k')
+        #plt.axhline(y=1,ls='--',color='k',alpha=.5)
+        plt.text(0.5,0.8,f"{names[i]}: Re = {fits[i].r_eff.value:.1f}, n={f.n.value:.1f}",transform=plt.gca().transAxes)
+        if i == 1:
+            plt.xlabel("SMA (arcsec)",fontsize=16)
+            plt.text(-.1,0.5,"Surface Brightness ",fontsize=16,transform=plt.gca().transAxes,rotation=90)
+    size_ratio = hfit.r_eff.value/rfit.r_eff.value
+    print(f"Ratio of Re({names[0]})/Re({names[1]}) = {size_ratio:.3}")
+    return rfit, hfit
+
+def plot_cog(rp,hp,rfit,hfit,rmax=None,labels = ['logMstar','logSFR']):
+    # plot enclosed flux to see if Re is approx half light radius
+
+    # this is using R band and CS Halpha
+    import scipy.optimize
+    from astropy.modeling import models, fitting, functional_models
+    #Sersic1D
+    plt.figure()
+
+
+
+    # restrict to positive fluxes
+    flag = rp['sb'] > 0
+    rp = rp[flag]
+    
+   
+    flag = hp['sb'] > 0
+    hp = hp[flag]
+    
+    
+    ###################################################
+    # plot results
+    ###################################################
+    fits = [hfit,rfit]
+    phots = [hp,rp]
+    names = ['Halpha','r-band']
+    names = labels
+    names.reverse()
+    
+    plt.figure()
+
+    for i,f in enumerate(fits):
+        plt.subplot(2,1,i+1)
+        if rmax is not None:
+            plt.xlim(0,rmax)
+        #plt.gca().set_yscale('log')
+
+        plt.plot(phots[i]['sma_arcsec'],phots[i]['flux'],'bo',c=mycolors[0],label=labels[i])
+        
+        plt.axhline(y=0.5*np.max(phots[i]['flux']),ls=':',color='k')
+        plt.axvline(x=fits[i].r_eff.value,ls='--',color='k')
+
+    
+        # plot R50, where the enclosed flux reaches the 0.5*total
+        r50flag = phots[i]['flux'] > 0.5*np.max(phots[i]['flux'])
+        r50 = phots[i]['sma_arcsec'][r50flag][0]
+        plt.axvline(x=r50,ls=':',color='k')                                     
+        plt.text(0.05,0.8,f"{names[i]}: Re = {fits[i].r_eff.value:.1f}, n={f.n.value:.1f}, R50={r50:.1f}",transform=plt.gca().transAxes)
+                                 
+        if i == 1:
+
+            plt.xlabel("SMA (arcsec)",fontsize=16)
+            plt.text(-.15,1,"Enclosed Flux",fontsize=16,transform=plt.gca().transAxes,rotation=90,horizontalalignment='center')
+    
+def fit1profile(dirname='VFID5842-NGC5356-INT-20190206-p120',rmax=None):
+    os.chdir(homedir+'/research/Virgo-dev/cont-sub-gr')
+
+
+    os.chdir(dirname)
+
+    rimage = dirname+'-logmstar-vr.fits'
+    haimage = dirname+'-sfr-vr.fits'
+    rphot = dirname+'-logmstar-vr_phot.fits'
+    haphot = dirname+'-sfr-vr_phot.fits'
+
+
+    rp = Table.read(rphot)
+    hp = Table.read(haphot)
+    mfit,sfit = fit_profiles(rp,hp,rmax=rmax,labels=['logMstar','logSFR'])
+
+        
+    plot_cog(rp,hp,mfit,sfit,rmax=rmax,labels=['logMstar','logSFR'])
+    
+    # use this to run on R and CS Halpha
+    rphot = dirname+'-R_phot.fits'
+    haphot = dirname+'-CS-gr_phot.fits'
+
+    rp = Table.read(rphot)
+    hp = Table.read(haphot)
+    rfit,hfit = fit_profiles(rp,hp,rmax=rmax,labels=['r','halpha'])
+
+    return mfit,sfit,rfit,hfit
