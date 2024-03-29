@@ -51,7 +51,7 @@ from astropy.table import Table
 from astropy.cosmology import WMAP9 as cosmo
 from astropy import stats, convolution
 
-
+#from matplotlib import pyplot as plt
 ######################################################################
 ###  CONSTANTS
 ######################################################################
@@ -128,16 +128,17 @@ class galaxy():
         
         pass
     
-    def get_mstar_image(self):
+    def get_mstar_image(self,makeplots=False):
         """ create mstar image from rband and g-r image and vr  """
-
+        # smoothing was 20, setting it to 5 to see if the effective radius changes
+        smoothing=15
         rhdu = fits.open(self.legacy_r)
-        rsmooth = convolution.convolve_fft(rhdu[0].data, convolution.Box2DKernel(20), allow_huge=True, nan_treatment='interpolate')
+        rsmooth = convolution.convolve_fft(rhdu[0].data, convolution.Box2DKernel(smoothing), allow_huge=True, nan_treatment='interpolate')
 
         # g-r image is in magnitudes already
         grhdu = fits.open(self.legacy_gr)
         mag_gr = grhdu[0].data
-        
+
         # convert to absolute magnitude
         Mr_vr = 22.5 -2.5*np.log10(rsmooth) - 5*np.log10(self.d_vr.to('pc').value) + 5
         Mr_vcosmic = 22.5 -2.5*np.log10(rsmooth) - 5*np.log10(self.d_vcosmic.to('pc').value) + 5        
@@ -162,7 +163,7 @@ class galaxy():
         
         pass
 
-    def get_sfr_image(self):
+    def get_sfr_image(self,makeplots=False,verbose=True):
         """ read in gr-CS image and convert to SFR"""
 
         # read in continuum-subtracted image
@@ -183,14 +184,28 @@ class galaxy():
         b = 3.e18*dlambda/clambda**2
 
         # convert flux to lumininosity
-        c_vr = 4*np.pi*self.d_vr.cgs.value**2
-        c_vcosmic = 4*np.pi*self.d_vcosmic.cgs.value**2
+        c_vr = 4*np.pi*self.d_vr.cgs.value[0]**2
+        c_vcosmic = 4*np.pi*self.d_vcosmic.cgs.value[0]**2
         # from halphagui
+
+        #print(a)
+        #print(b)
+        #print(c_vr)
+        if verbose:
+            print(f"scale factors for sfr image: a={a:3.2e}, b={b:3.2e}, c={c_vr:3.2e}, product={a*b*c_vr:3.2e}")
+
+        product = a*b*c_vr
+
         
-        self.sfr_vr = hahdu[0].data*a*b*c_vr
+        self.sfr_vr = hahdu[0].data*product
 
-        self.sfr_vcosmic = hahdu[0].data*a*b*c_vcosmic
-
+        product = a*b*c_vcosmic        
+        self.sfr_vcosmic = hahdu[0].data*product
+        #plt.figure()
+        #plt.subplot(1,2,1)
+        #plt.imshow(hahdu[0].data)
+        #plt.subplot(1,2,2)
+        #plt.imshow(self.sfr_vr)
 
         # write out images
         outimage = self.dirname+'-sfr-vr.fits'
@@ -299,16 +314,21 @@ class galaxy():
                 if self.mask is not None:
                     cs = np.ma.masked_where(self.mask,cs)
 
-                plt.subplot(1,4,i+1)#,projection=imwcs)                
-                norm = simple_norm(cs, stretch=stretch[i],max_percent=percentile2,min_percent=percentile1)
+                plt.subplot(1,4,i+1)#,projection=imwcs)
+                try:
+                    norm = simple_norm(cs, stretch=stretch[i],max_percent=percentile2,min_percent=percentile1)
+                    plt.imshow(cs, norm=norm,origin='lower',interpolation='nearest')#,vmin=v1,vmax=v2)
+                except:
+                    print("WARNING: problem calculating the simple_norm - check images ") 
                 #if i == 2:
                 #    plt.imshow(cs, norm=norm,origin='lower',vmin=-1.2e-5,vmax=1e-4)
                 #if i == 3:
                 #    plt.imshow(cs, norm=norm,origin='lower',vmin=-10.5,vmax=-9)
                 #else:
                 #    plt.imshow(cs, norm=norm,origin='lower')#,vmin=v1,vmax=v2)
-                plt.imshow(cs, norm=norm,origin='lower',interpolation='nearest')#,vmin=v1,vmax=v2)
+                
                 if zoom:
+                    # TODO fix to use headers to zoom
                     # check for RA and DEC, b/c image might not be centered
                     #print("zooming")                    
                     xsize,ysize = cs.shape

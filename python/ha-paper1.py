@@ -12,7 +12,8 @@ import os
 
 import sys
 homedir = os.getenv("HOME")
-sys.path.append(os.path.join(homedir,'/github/Virgo/programs/'))
+#print(homedir,os.path.join(homedir,'/github/Virgo/programs/'))
+sys.path.append(homedir+'/github/Virgo/programs/')
 import virgoCommon
 
 from scipy.stats import spearmanr
@@ -49,7 +50,13 @@ class haplots(vtables):
         snr_flag = np.abs(self.halpha['HF_TOT']/self.halpha['HF_TOT_ERR']) > 3
         snr_flag = (self.halpha['HM16'] > 10)
         # stellar mass cut
-        mass_flag = self.magphys['logMstar'] > 7.8
+        # get mass weighted center
+        badMassFlag = self.magphys['logMstar_med'] < 2
+
+        combinedMass = self.magphys['logMstar_med'] * ~badMassFlag + self.magphys['logMstar_best'] * badMassFlag
+
+        self.combinedMass = combinedMass
+        mass_flag = combinedMass > 7.8
 
         # morph flag?
 
@@ -573,7 +580,7 @@ class haplots(vtables):
         xvars = ['SMORPH_GINI','SMORPH_M20','SMORPH_C','SMORPH_A','SMORPH_S']
         yvars = ['SMORPH_HGINI','SMORPH_HM20','SMORPH_HC','SMORPH_HA','SMORPH_HS']        
 
-        cvars = [self.halpha['ELLIP_ASYM'],self.halpha['ELLIP_ASYM'],self.magphys['logMstar'],self.magphys['logMstar']]
+        cvars = [self.halpha['ELLIP_ASYM'],self.halpha['ELLIP_ASYM'],self.magphys['logMstar_med'],self.magphys['logMstar_med']]
         labels = ['ELLIP_ASYM','ELLIP_ASYM','logMstar','logMstar']        
         flag = self.sampleflag & self.smorph_flag & self.smorph_hflag
         vmins = [.1,.1,8.5,8.5]
@@ -582,7 +589,7 @@ class haplots(vtables):
         for i in range(len(xvars)):
             plt.subplot(2,3,i+1)
             #plt.scatter(self.halpha[xvars[i]][flag],self.halpha[yvars[i]][flag],c=self.magphys['logsSFR'][flag],alpha=.6,vmin=-12,vmax=-9)
-            plt.scatter(self.halpha[xvars[i]][flag],self.halpha[yvars[i]][flag],c=self.magphys['logMstar'][flag],alpha=.6,vmin=8,vmax=10.5)            
+            plt.scatter(self.halpha[xvars[i]][flag],self.halpha[yvars[i]][flag],c=self.magphys['logMstar_med'][flag],alpha=.6,vmin=8,vmax=10.5)            
             #if i < 2:
             #    plt.gca().set_xscale('log')
             #    plt.gca().set_yscale('log')                
@@ -688,9 +695,9 @@ class haplots(vtables):
         y = self.halpha['ELLIP_HASYM']-self.halpha['ELLIP_ASYM']
         x = self.halpha['ELLIP_HGINI']-self.halpha['ELLIP_GINI']
         #x = np.log10(self.env['n5th_2D'])
-        c = self.magphys['logsSFR']
+        c = self.magphys['logsSFR_med']
         #c = np.log10(self.env['n5th_2D'])
-        flag = self.sampleflag   & (self.magphys['logMstar'] > 0) & self.morph_flag & self.morph_hflag #& (self.magphys['logsSFR'] > -11)
+        flag = self.sampleflag   & (self.combinedMass > 0) & self.morph_flag & self.morph_hflag #& (self.magphys['logsSFR'] > -11)
         plt.scatter(x[flag],y[flag],c=c[flag])
         cb = plt.colorbar()
         cb.set_label(label="$sSFR$",size=16)
@@ -707,11 +714,12 @@ class haplots(vtables):
         y = self.halpha['HC30']-self.halpha['C30']
         x = self.halpha['ELLIP_HGINI']-self.halpha['ELLIP_GINI']
         #x = np.log10(self.env['n5th_2D'])
-        c = self.magphys['logsSFR']
+        c = self.magphys['logsSFR_med']
         c = self.halpha['ELLIP_HASYM']-self.halpha['ELLIP_ASYM']        
         #c = np.log10(self.env['n5th_2D'])
-        flag = self.sampleflag   & (self.magphys['logMstar'] > 0) & ~x.mask #& (self.magphys['logsSFR'] > -11)
-        plt.scatter(x[flag],y[flag],c=c[flag],vmin=-.2,vmax=.7)
+        #flag = self.sampleflag   & (self.magphys['logMstar_med'] > 0) & ~x.mask #& (self.magphys['logsSFR'] > -11)
+        flag = self.sampleflag   & (self.combinedMass > 0)  & self.morph_flag & self.morph_hflag # & ~x.mask #& (self.magphys['logsSFR'] > -11)
+        plt.scatter(x[flag],y[flag],c=c[flag])#,vmin=-.2,vmax=3,alpha=1)
         cb = plt.colorbar()
         #cb.set_label(label="$sSFR$",size=16)
         cb.set_label(label="$\Delta \ Asym $",size=16)        
@@ -720,7 +728,9 @@ class haplots(vtables):
         plt.ylabel(r"$\Delta \ C30 \ (H\alpha - R)$",fontsize=16)
         plt.xlabel(r"$\Delta \ Gini \ (H\alpha - R)$",fontsize=16)        
         s = f"Spearman rank: \nrho={rho:.2f}, pvalue={p:.1e}"
-        plt.text(0.05,0.95,s,transform=plt.gca().transAxes,horizontalalignment="left",verticalalignment="top")    
+        plt.text(0.05,0.95,s,transform=plt.gca().transAxes,horizontalalignment="left",verticalalignment="top")
+        #plt.xlim(-1,1)
+        #plt.ylim(-.3,.75)
         #return x[flag],y[flag]
     def plot_ha_sizes(self):
         """ compare various size measurements for halpha """
@@ -730,7 +740,9 @@ class haplots(vtables):
 
         # make table into a pandas dataframe
 
-        df = pdf(data=tab)
+        df = pdf(data=np.array(tab))
+
+        sns.pairplot(df[self.sampleflag],hue="environment",corner=True)#, diag_kind="hist")        
 
         # use seaborn to make pair plot!
 

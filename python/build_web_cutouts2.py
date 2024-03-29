@@ -196,7 +196,8 @@ def display_image(image,percentile1=.5,percentile2=99.5,stretch='asinh',mask=Non
 
     norm = simple_norm(clipped_data, stretch=stretch,max_percent=percentile2,min_percent=percentile1)
 
-    plt.imshow(image, norm=norm,cmap='gray_r',origin='lower')#,vmin=v1,vmax=v2)
+    #plt.imshow(image, norm=norm,cmap='gray_r',origin='lower')#,vmin=v1,vmax=v2)
+    plt.imshow(imdata, norm=norm,origin='lower')#,vmin=v1,vmax=v2)
     
 
 def make_png(fitsimage,outname,mask=None,ellipseparams=None):
@@ -531,14 +532,18 @@ class cutout_dir():
         mask = mask > 0
         #galsize=60/(abs(csheader['CD1_1'])*3600)        
         p2 = [99.5,99.9]
+        percentile1 = .5
+        percentile2 = 99.5
+        
         stretchs = ['asinh','linear']
         for i,s in enumerate(stretchs):
             fig = plt.figure(figsize=(6,6))
             plt.subplot(projection = wcs.WCS(csheader))
             plt.subplots_adjust(bottom=.15,left=.2,right=.95,top=.95)
             ax = plt.gca()
+            
             #clipped_data = sigma_clip(image[xmin:xmax,ymin:ymax],sigma_lower=1.5,sigma_upper=1.5,grow=10,stdfunc='mad_std')            
-            display_image(csdata,stretch=s,percentile1=.15,percentile2=p2[i],mask=mask)
+            display_image(csdata,stretch=s,percentile1=.5,percentile2=p2[i],mask=mask)
             # mark VF galaxies
             #plot_vf_gals(imx,imy,keepflag,vfmain,ax,galsize=galsize)
             suffix = "-{}.png".format(p2[i])
@@ -771,15 +776,17 @@ class build_html_cutout():
         self.write_navigation_links()
         # adding this here so we can inspect the masks quickly
         # can remove once we are done with masks
-        self.write_galfit_images()
+
         self.write_image_stats()
+        #self.write_galfit_images()        
         if self.cutout.legacy_flag:
             self.write_legacy_images()
+            
 
         self.write_sfr_images()
         if self.cutout.wise_flag:
             self.write_wise_images()
-        self.write_halpha_images()
+        self.write_halpha_images()            
         if self.cutout.galimage is not None:
             self.write_galfit_images()
             self.write_galfit_table()

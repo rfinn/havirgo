@@ -174,7 +174,7 @@ def get_gr(gfile,rfile,mask=None):
     print('Smoothing images for color calculation')
     # changing convolution size from 20 to 10 b/c I'm wondering if it's blurring the color
     # gradients too much - specific example is 
-    #gr_col = convolution.convolve_fft(gr_col, convolution.Box2DKernel(20), allow_huge=True, nan_treatment='interpolate')
+    gr_col = convolution.convolve_fft(gr_col, convolution.Box2DKernel(20), allow_huge=True, nan_treatment='interpolate')
 
     # set the pixel with SNR < 10 to nan - don't use these for color correction
     gr_col[np.logical_not(usemask)] = np.nan
@@ -487,6 +487,7 @@ if __name__ == '__main__':
     else:
         contscale = 1.
 
+    print("\nIn subtract continuum, continuum scale factor = ",contscale,"\n")
     # get current directory
     topdir = os.getcwd()
 
@@ -502,8 +503,10 @@ if __name__ == '__main__':
     # need to do this until I update halphamain to add it to the image header
     tabledir = os.getenv("HOME")+'/research/Virgo/tables-north/v2/'
     vhalpha = Table.read(tabledir+'vf_v2_halpha.fits')
+
     gindex = np.arange(len(vhalpha))[vhalpha['VFID'] == vfid][0]
 
+    
     # correction for the variation in the halpha filter transmission
     halpha_filter_cor = vhalpha['FILT_COR'][gindex]
     print(f"{vfid}: halpha filter correction = {halpha_filter_cor:.3f}")
@@ -511,6 +514,9 @@ if __name__ == '__main__':
         print("resetting filter correction to 1")
         halpha_filter_cor = 1
 
+    # table with extinction values
+    vext = Table.read(tabledir+'vf_v2_extinction.fits')    
+    halpha_extinction_correction = vext['A(R)_SandF'][gindex]
         
     # define the file names
     Rfile = dirname+'-R.fits' # r-band image taken with same telescope as halpha
@@ -630,7 +636,7 @@ if __name__ == '__main__':
     print('Computing median values for r and halpha images')
     print("currently, I am not subtracting these, so check values...")
     stat_r = stats.sigma_clipped_stats(rhdu[0].data,mask=mask)
-    #print('Subtracting {0:3.2f} from r-band image'.format(stat_r[1]))
+    print('Subtracting {0:3.2e} from r-band image'.format(stat_r[1]))
     # do I save the r-band image with new sky subtraction???
     data_r = rhdu[0].data - stat_r[1]
     data_r_to_Ha = data_r * rscale
@@ -644,7 +650,7 @@ if __name__ == '__main__':
     # TODONE - subtract sky from Halpha image
     # not subtracting sky for now - can try after we get CS to work
     stat_h = stats.sigma_clipped_stats(hhdu[0].data,mask=mask)
-    #print('Subtracting {0:3.2f} from halpha image'.format(stat_h[1]))
+    print('Subtracting {0:3.2e} from halpha image'.format(stat_h[1]))
     data_NB = hhdu[0].data - stat_h[1]
 
 
@@ -717,7 +723,9 @@ if __name__ == '__main__':
     # QFM: in your code, the following line feeds in data_r rather than data_r_to_Ha
     # I changed it to data_r_to_Ha.  Is this wrong?
     # can change smoothing to change to 1-2 psf size
-    data_r_to_Ha = convolution.convolve_fft(data_r_to_Ha, convolution.Box2DKernel(5), allow_huge=True, nan_treatment='interpolate')
+
+    # skipping this convolution for now
+    # data_r_to_Ha = convolution.convolve_fft(data_r_to_Ha, convolution.Box2DKernel(1), allow_huge=True, nan_treatment='interpolate')
     
     
     # so I don't understand what this line is doing - converting to flux?
@@ -778,11 +786,21 @@ if __name__ == '__main__':
     # can adjust factor of 1.03 to scale the continuum
     # in vestige, they check the star subtraction and then adjust the factor to make the stars go away
     # even with same telescope/filter, this factor can vary
-    flam_net = filter_width_AA[telescope]*(flam_NB-contscale*clam_NB) # matteo comment: 106 is the width of the filter
+    flam_net = filter_width_AA[telescope]*(halpha_continuum_oversubtraction[telescope]*halpha_filter_cor*flam_NB-contscale*clam_NB) # matteo comment: 106 is the width of the filter
 
+    # correct for extinction
+    flam_net = flam_net * halpha_extinction_correction
 
     # TODONE - I would like to save a version in AB mag for compatibility with my photometry programs
     NB_ABmag = (halpha_continuum_oversubtraction[telescope]*halpha_filter_cor*data_NB - contscale*data_r_to_Ha)
+
+    # correct for extinction
+    NB_ABmag = NB_ABmag * halpha_extinction_correction    
+
+
+    ############################################################
+    ## COMMENTING OUT WRITING UNTIL I UNDERSTAND WHAT THESE ARE
+    ############################################################    
     # this should still be good to use the Halpha ZP
     hhdu[0].header['CONSCALE']=(float(f'{contscale:.3f}'),'Continuum scale factor')    
     hdu = fits.PrimaryHDU(NB_ABmag, header=hhdu[0].header)
@@ -800,10 +818,10 @@ if __name__ == '__main__':
     # add new field to header to track continuum scale factor
 
     hdu = fits.PrimaryHDU(flam_NB, header=hhdu[0].header)
-    hdu.writeto(fileroot+'-net-new.fits', overwrite=True) #NB image in F_lambda units, before
+    #hdu.writeto(fileroot+'-net-new.fits', overwrite=True) #NB image in F_lambda units, before
     # DONE: TODO - change output image name
     hdu = fits.PrimaryHDU(clam_NB, header=hhdu[0].header)
-    hdu.writeto(fileroot+'-cont-new.fits', overwrite=True)
+    #hdu.writeto(fileroot+'-cont-new.fits', overwrite=True)
     #hdu.close()
     
     #Calculate clipped statistic
@@ -819,7 +837,7 @@ if __name__ == '__main__':
     # DONE: TODO - change output image name
     # this is the continuum-subtracted image
     hdu = fits.PrimaryHDU(flam_net, header=hhdu[0].header)
-    hdu.writeto(fileroot+'-net-flux.fits', overwrite=True)
+    #hdu.writeto(fileroot+'-net-flux.fits', overwrite=True)
     #hdu.writeto(outname, overwrite=True)    
     #hdu.close()
 
@@ -829,7 +847,7 @@ if __name__ == '__main__':
     
     # DONE: TODO - change output image name
     hdu = fits.PrimaryHDU(sblam_net, header=hhdu[0].header)
-    hdu.writeto(fileroot+'-net-sb.fits', overwrite=True)
+    #hdu.writeto(fileroot+'-net-sb.fits', overwrite=True)
     #hdu.close()
 
     print('Smoothing net image')
@@ -838,7 +856,7 @@ if __name__ == '__main__':
 
     hdu = fits.PrimaryHDU(flam_net_smooth, header=hhdu[0].header)
     # TODONE - change output image name
-    hdu.writeto(fileroot+'-net-smooth.fits', overwrite=True)
+    #hdu.writeto(fileroot+'-net-smooth.fits', overwrite=True)
     #hdu.close()
     
     stat_sm = stats.sigma_clipped_stats(flam_net_smooth,mask=mask)

@@ -193,6 +193,7 @@ if __name__ == "__main__":
     
     target_images = [mstar1,mstar2,sfr1,sfr2,ssfr]
     log_flag = [True,True,False,False,True]
+    log_flag = [True,True,False,False,True]    
     # to speed things up for testing
     #target_images = [mstar1]#,sfr1,ssfr]
     #updalog_flag = [True]#,False,True]
