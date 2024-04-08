@@ -42,8 +42,28 @@ zoom_coords_INT = {'VFID5889':[100,1300,850,2100],\
                    }
 
 
+# new coords to fit HI contours
+zoom_coords_INT = {'VFID5889':[100,1300,850,2100],\
+                   'VFID5851':[255,1500,740,2120],\
+                   'VFID5855':[730,1290,640,1460],\
+                   'VFID5842':[800,1400,650,1500],\
+                   'VFID5859':[1,175,1,175],\
+                   'VFID5892':[240,780,250,690]
+                   }
+
+
+HIdir = homedir+'/research/Virgo/alma/2023/MeerKAT_ALMA_target_list/'
+HI_file = {'VFID5889':None,\
+           'VFID5851':HIdir+'J1355_fin_lw05_bpcorr_2_mom0.fits',\
+           'VFID5855':HIdir+'J1355_fin_lw05_bpcorr_6_mom0.fits',\
+           'VFID5842':HIdir+'J1355_fin_lw05_bpcorr_5_mom0.fits',\
+           'VFID5859':None,\
+           'VFID5892':None
+}
+
+
 zoom_coords_HDI = {'VFID5889':[250,1200,750,1700],\
-                   'VFID5842':[700,1000,550,1130],\
+                   'VFID5842':[400,1300,550,1130],\
                    'VFID5892':[200,600,190,550],\
                    'VFID5859':[35,115,25,115]
                    }
@@ -60,8 +80,8 @@ acbfrac = {'VFID5889':.045,\
 
 afigsize = {'VFID5889':[16,3.5],\
             'VFID5851':[16,3.5],\
-           'VFID5855':[16,6],\
-           'VFID5842':[16,6],\
+           'VFID5855':[16,4.5],\
+           'VFID5842':[16,4.5],\
            'VFID5859':[16,3.5],\
            'VFID5892':[16,3.]
            }
@@ -79,6 +99,32 @@ HIfiles = {'VFID5859':'research/Virgo/alma/2023/MeerKAT_ALMA_target_list/J1355_f
            'VFID5855':'research/Virgo/alma/2023/MeerKAT_ALMA_target_list/J1355_fin_lw05_bpcorr_6_mom0.fits',\
            'VFID5851':'research/Virgo/alma/2023/MeerKAT_ALMA_target_list/J1355_fin_lw05_bpcorr_2_mom0.fits',\
            }
+
+###########################################
+## FUNCTIONS
+###########################################
+def plot_HI_contours(ax,HIfilename,xmin=None,xmax=None,ymin=None,ymax=None,levels=None):
+    """ plot HI contours, given current axis + reference image header """
+    # borrowing from alma 2023 proposal
+    ncontour=5
+
+    hdu = fits.open(HIfilename)[0]
+    HI_WCS = WCS(hdu.header)
+
+    if levels is None:
+        levels = 3**np.arange(ncontour)+1
+    ax.contour(hdu.data,transform=ax.get_transform(HI_WCS),levels=levels,colors='white',alpha=.5,lw=1)    
+
+def update_ngc5348_mask():
+    imname = ''
+    hdu = fits.open()
+
+    # mask out all columns with with x > 1290
+    flag 
+
+    # mask out rows with y > 1680
+
+        
 
 
 def get_rad_fluxfrac(pfit,frac=0.9):
@@ -199,8 +245,11 @@ def plot_mstar_sfr(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xticks=True,f
         else:
             display_image(mdat,percent=99.5,cmap='viridis')#,vmin=vmin[i],vmax=vmax[i])
         
-        
-        if not xticks: 
+        if i in [1,2]:
+            plt.xticks([],[])
+            plt.yticks([],[])
+
+        elif not xticks: 
             plt.xticks([],[])
             plt.yticks([],[])
         plt.title(titles[i],fontsize=20)
@@ -210,16 +259,6 @@ def plot_mstar_sfr(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xticks=True,f
             plt.xlabel(t[0]+' '+t[1],fontsize=20)
         # plot contours from mass
         allax.append(plt.gca())
-    # plot the legacy image in panel 1
-    xcoords = np.array([xmin,xmax])
-    ycoords = np.array([ymin,ymax])
-    
-    # get ramin,ramax and decmin,decmax from SFR image
-    sfrim = dirname+"-sfr-vr.fits"
-    header = fits.getheader(sfrim)
-    #print(header)
-    wcs = WCS(header)
-    sky = wcs.pixel_to_world(xcoords,ycoords)
     
     # read in header from legacy r-band image
     legacyr = glob.glob("legacy/*r.fits")[0]
@@ -275,11 +314,10 @@ def plot_mstar_sfr_profiles(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xtic
     ssfrim = dirname+"-ssfr.fits"
     mask = dirname+'-R-mask.fits'
     titles = ['log Mstar','SFR','log sSFR']
-    vmin = [2,0,-11.5]
-    vmax = [6,1.e-6,-9]
+    vmin = [2,-.2e-5,-11.5]
+    vmax = [6,.6e-5,-9]
     allim = [massim,sfrim,ssfrim]
     allim = [massim,sfrim]    
-
 
     
     vfid = dirname.split('-')[0]
@@ -303,39 +341,76 @@ def plot_mstar_sfr_profiles(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xtic
     plt.subplots_adjust(wspace=0.2,bottom=.15)
     maskdat = fits.getdata(mask)
 
+    if contourFlag:
+        # get contours from logmstar image
+        hdu = fits.open(massim)
+        contour_data = hdu[0].data
+        contour_header = hdu[0].header
+        contour_WCS = WCS(contour_header)
+        hdu.close()
+        mcontour_data = np.ma.array(contour_data,mask=maskdat)
+
+    
     allax = []
     for i, im in enumerate(allim):
-        plt.subplot(1,4,i+2)
+        hdu = fits.open(im)[0]
         dat = fits.getdata(im)
+        imwcs = WCS(fits.getheader(im))
+
+        dat = hdu.data
+        imwcs = WCS(hdu.header)
+        plt.subplot(1,4,i+2,projection=imwcs)
+
+
         mdat = np.ma.array(dat,mask=maskdat)
-        if xmin == None:
-            mdat = mdat
-        else:
-            mdat = mdat[ymin:ymax,xmin:xmax]
+        #if xmin is None:
+        #    mdat = mdat
+        #else:
+        #    mdat = mdat[ymin:ymax,xmin:xmax]
         if i == 2:
             plt.imshow(mdat,vmin=vmin[i],vmax=vmax[i],origin='lower',interpolation='nearest')
 
         else:
-            display_image(mdat,percent=99.5,cmap='viridis')#,vmin=vmin[i],vmax=vmax[i])
+            #display_image(mdat,percent=99.5,cmap='viridis')#,vmin=vmin[i],vmax=vmax[i])
+            plt.imshow(mdat,cmap='viridis',vmin=vmin[i],vmax=vmax[i])
         
-        
-        if not xticks: 
-            plt.xticks([],[])
-            plt.yticks([],[])
-        plt.title(titles[i],fontsize=20)
+
+        #############################################################
+        # add HI contour to halpha image
+        #############################################################
+        if i == 1:
+            # check if HI moment zero map is available
+            HIfilename = HI_file[vfid]
+            if HIfilename is not None:
+                print("HIfilename = ",HIfilename)
+                plot_HI_contours(plt.gca(),HIfilename)
+
+
+        #############################################################
+        # add contours from stellar mass image
+        #############################################################    
+        if contourFlag:
+            ax = plt.gca()
+            ax.contour(mcontour_data,levels=myclevels, colors='k',linestyles='-',linewidths=1,transform=ax.get_transform(contour_WCS))
+
+                
+        plt.title(titles[i],fontsize=18)
         plt.colorbar(fraction=mycbfrac,aspect=cbaspect)
         # plot contours from mass
+
+        if xmin is not None:
+            plt.axis([xmin,xmax,ymin,ymax])
+        if i in [0,1]:
+            plt.xticks([],[])
+            plt.yticks([],[])
+
+        elif not xticks: 
+            plt.xticks([],[])
+            plt.yticks([],[])
+        
         allax.append(plt.gca())
-    # plot the legacy image in panel 1
-    xcoords = np.array([xmin,xmax])
-    ycoords = np.array([ymin,ymax])
-    
-    # get ramin,ramax and decmin,decmax from SFR image
-    sfrim = dirname+"-sfr-vr.fits"
-    header = fits.getheader(sfrim)
-    #print(header)
-    wcs = WCS(header)
-    sky = wcs.pixel_to_world(xcoords,ycoords)
+
+
     
     # read in header from legacy r-band image
     legacyr = glob.glob("legacy/*r.fits")[0]
@@ -348,25 +423,42 @@ def plot_mstar_sfr_profiles(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xtic
     
     plt.subplot(1,4,1,projection=legwcs)
     plt.imshow(jpeg_data)
-    # set limits in ra,dec
-    x,y = legwcs.world_to_pixel(sky)
-    # convert ramin,ramax and decmin,decmax to (x,y)
-    print(sky)
-    plt.axis([x[0],x[1],y[0],y[1]])
-    #print(x[0],x[1],y[0],y[1])
-    if contourFlag:
-        # get contours from logmstar image
-        hdu = fits.open(massim)
-        contour_data = hdu[0].data
-        contour_header = hdu[0].header
-        hdu.close()
-        mcontour_data = np.ma.array(contour_data,mask=maskdat)
-        for ax in allax:
-            ax.contour((mcontour_data[ymin:ymax,xmin:xmax]),levels=myclevels, colors='k',linestyles='-',linewidths=1)#,transform=ax.get_transform(WCS(contour_header))
-    #plt.contour(contour_data[y[0]:y[1],x[0]:x[1]],levels = [4,5,6],colors='c',alpha=0.5)
-    plt.title("Legacy grz",fontsize=20)
+
+    if xmin is not None:
+        # plot the legacy image in panel 1
+        xcoords = np.array([xmin,xmax])
+        ycoords = np.array([ymin,ymax])
+    
+        # get ramin,ramax and decmin,decmax from SFR image
+        sfrim = dirname+"-sfr-vr.fits"
+        header = fits.getheader(sfrim)
+        #print(header)
+        wcs = WCS(header)
+        sky = wcs.pixel_to_world(xcoords,ycoords)
+    
+        # set limits in ra,dec
+        x,y = legwcs.world_to_pixel(sky)
+        # convert ramin,ramax and decmin,decmax to (x,y)
+        #print(sky)
+        plt.axis([x[0],x[1],y[0],y[1]])
     t = dirname.split('-')
-    plt.text(.05,.02,t[0],fontsize=20,transform=plt.gca().transAxes,horizontalalignment='left',color='white')
+    #plt.text(.05,.02,t[0],fontsize=20,transform=plt.gca().transAxes,horizontalalignment='left',color='white')
+    
+    plt.title(f"{t[0]} Legacy grz",fontsize=18)
+    
+    #print(x[0],x[1],y[0],y[1])
+    #############################################################
+    # add HI contour to legacy image
+    #############################################################    
+    # check if HI moment zero map is available
+    HIfilename = HI_file[vfid]
+    if HIfilename is not None:
+        print("HIfilename = ",HIfilename)
+        plot_HI_contours(plt.gca(),HIfilename)
+
+        
+
+    
 
     #################################################################
     # plot profiles in the 4th panel
@@ -436,19 +528,19 @@ def fit_profiles(rp,hp,weights=None,rmax=None,fixN=False,labels = ['logMstar','l
     # fit r-band
     ###################################################
     #flag = rp['sma_arcsec'] < 140
-    flag = rp['sb'] > 0
+    flag = rp['sb'] > 0 & (rp['sb'] != np.nan)
     flag = np.ones(len(rp),'bool')
     x = rp['sma_arcsec'][flag]
     y = rp['sb'][flag]
     if log1Flag:
         y = 10.**y
 
-    t_init = models.Sersic1D(amplitude=1,r_eff=10,n=1,fixed={'n':fixN})
+    t_init = models.Sersic1D(amplitude=1,r_eff=50,n=2,fixed={'n':fixN})
     fit_t = fitting.LevMarLSQFitter()
 
     # add weight that scales with the area of the ellipse
     # should be 2 pi r dr, but just using x for now.
-    rfit = fit_t(t_init, x, y, weights=x,maxiter=200)
+    rfit = fit_t(t_init, x, y, weights=x*2*np.pi,maxiter=400)
 
     ###################################################
     # fit halpha
@@ -459,7 +551,7 @@ def fit_profiles(rp,hp,weights=None,rmax=None,fixN=False,labels = ['logMstar','l
     x = hp['sma_arcsec'][flag]
     y = hp['sb'][flag]
 
-    h_init = models.Sersic1D(r_eff=20,n=1,fixed={'n':fixN})
+    h_init = models.Sersic1D(r_eff=50,n=2,fixed={'n':fixN})
 
     fit_t = fitting.LevMarLSQFitter()
     # add weight that scales with the area of the ellipse
@@ -529,7 +621,7 @@ def plot_cog(rp,hp,rfit,hfit,rmax=None,labels = ['logMstar','logSFR']):
     names.reverse()
     
     plt.figure()
-
+    radii50=[]
     for i,f in enumerate(fits):
         plt.subplot(2,1,i+1)
         if rmax is not None:
@@ -545,6 +637,7 @@ def plot_cog(rp,hp,rfit,hfit,rmax=None,labels = ['logMstar','logSFR']):
         # plot R50, where the enclosed flux reaches the 0.5*total
         r50flag = phots[i]['flux'] > 0.5*np.max(phots[i]['flux'])
         r50 = phots[i]['sma_arcsec'][r50flag][0]
+        radii50.append(r50)
         plt.axvline(x=r50,ls=':',color='k')                                     
         plt.text(0.05,0.8,f"{names[i]}: Re = {fits[i].r_eff.value:.1f}, n={f.n.value:.1f}, R50={r50:.1f}",transform=plt.gca().transAxes)
                                  
@@ -552,6 +645,7 @@ def plot_cog(rp,hp,rfit,hfit,rmax=None,labels = ['logMstar','logSFR']):
 
             plt.xlabel("SMA (arcsec)",fontsize=16)
             plt.text(-.15,1,"Enclosed Flux",fontsize=16,transform=plt.gca().transAxes,rotation=90,horizontalalignment='center')
+    return radii50
     
 def fit1profile(dirname='VFID5842-NGC5356-INT-20190206-p120',rmax=None):
     os.chdir(homedir+'/research/Virgo-dev/cont-sub-gr')
@@ -573,7 +667,7 @@ def fit1profile(dirname='VFID5842-NGC5356-INT-20190206-p120',rmax=None):
     vfid = dirname.split('-')[0]
     plt.savefig(vfid+'-mstar-sfr-profiles.png')
         
-    plot_cog(rp,hp,mfit,sfit,rmax=rmax,labels=['logMstar','logSFR'])
+    radii50 = plot_cog(rp,hp,mfit,sfit,rmax=rmax,labels=['logMstar','logSFR'])
     plt.savefig(vfid+'-mstar-sfr-cog.png')    
     # use this to run on R and CS Halpha
     rphot = dirname+'-R_phot.fits'
