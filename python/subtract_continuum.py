@@ -515,9 +515,12 @@ if __name__ == '__main__':
         halpha_filter_cor = 1
 
     # table with extinction values
-    vext = Table.read(tabledir+'vf_v2_extinction.fits')    
-    halpha_extinction_correction = vext['A(R)_SandF'][gindex]
-        
+    vext = Table.read(tabledir+'vf_v2_extinction.fits')
+    # I was multiplying this without first converting from magnitude to flux ratio    
+    halpha_extinction_correction = 10.**(vext['A(R)_SandF'][gindex]/2.5)
+    
+    
+    print("\nhalpha extinction correction = ",halpha_extinction_correction)
     # define the file names
     Rfile = dirname+'-R.fits' # r-band image taken with same telescope as halpha
     Hfile = dirname+'-Ha.fits'  # halpha image

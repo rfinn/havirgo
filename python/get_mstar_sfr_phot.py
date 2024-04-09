@@ -190,6 +190,10 @@ if __name__ == "__main__":
 
     ssfr = subdirname+'-ssfr.fits'
 
+    if 'VFID5851' in subdirname:
+        fixcenter = True
+    else:
+        fixcenter = False
     
     target_images = [mstar1,mstar2,sfr1,sfr2,ssfr]
     log_flag = [True,True,False,False,True]
@@ -215,7 +219,7 @@ if __name__ == "__main__":
             t = 'temp_linear.fits'
             hdu.writeto(t, overwrite=True)
             
-        e = ellipse(rfile, image2=t, mask = maskfile, image_frame = None,image2_filter='4', filter_ratio=None,psf=None,psf_ha=None,objra=ra,objdec=dec)
+        e = ellipse(rfile, image2=t, mask = maskfile, image_frame = None,image2_filter='4', filter_ratio=None,psf=None,psf_ha=None,objra=ra,objdec=dec,fixcenter=fixcenter)
         e.run_two_image_phot()
 
         # output table will be written as temp_linear_phot.fits
