@@ -117,13 +117,19 @@ def filter_transformation(telescope,rfilter, gr_col):
     QFM: is it ok that I am using these transformations on legacy g-r
     when they were derived for panstarrs g-r
     """
-
+    if (telescope == 'BOK') :
+        # need to get updated transformation from matteo that is using the
+        # BASS r filter, which seems to havesignificantly lower transmission
+        # than other r-band filters
+        #Ha4_KPSr = -0.1804 * (gr_col) + 0.0158
+        ha_r = -0.1804*gr_col + 0.0158
+        ha_r
     
-    if (telescope == 'BOK') | ((telescope == 'HDI') and (rfilter == 'r')):
+    elif ((telescope == 'HDI') and (rfilter == 'r')):
         
         #Ha4_KPSr = -0.1804 * (gr_col) + 0.0158
         ha_r = -0.1804*gr_col + 0.0158
-    elif telescope == 'INT':
+    elif telescope == 'INT': # should be another case for the redder halpha, right?
         #Intha_INTSr = -0.2334 * (gr_col) + 0.0711
         ha_r = -0.2334 * (gr_col) + 0.0711
     elif (telescope == 'MOS') | ((telescope == 'HDI') and (rfilter == 'R')):
@@ -174,7 +180,7 @@ def get_gr(gfile,rfile,mask=None):
     print('Smoothing images for color calculation')
     # changing convolution size from 20 to 10 b/c I'm wondering if it's blurring the color
     # gradients too much - specific example is 
-    gr_col = convolution.convolve_fft(gr_col, convolution.Box2DKernel(20), allow_huge=True, nan_treatment='interpolate')
+    gr_col = convolution.convolve_fft(gr_col, convolution.Box2DKernel(10), allow_huge=True, nan_treatment='interpolate')
 
     # set the pixel with SNR < 10 to nan - don't use these for color correction
     gr_col[np.logical_not(usemask)] = np.nan
@@ -651,7 +657,8 @@ if __name__ == '__main__':
     
     # TODONE - subtract sky from r-band image
     print('Computing median values for r and halpha images')
-    print("currently, I am not subtracting these, so check values...")
+    print("subtracting these values from the image...")    
+    #print("currently, I am not subtracting these, so check values...")
     stat_r = stats.sigma_clipped_stats(rhdu[0].data,mask=mask)
     print('Subtracting {0:3.2e} from r-band image'.format(stat_r[1]))
     # do I save the r-band image with new sky subtraction???
@@ -742,7 +749,7 @@ if __name__ == '__main__':
     # can change smoothing to change to 1-2 psf size
 
     # skipping this convolution for now
-    # data_r_to_Ha = convolution.convolve_fft(data_r_to_Ha, convolution.Box2DKernel(1), allow_huge=True, nan_treatment='interpolate')
+    data_r_to_Ha = convolution.convolve_fft(data_r_to_Ha, convolution.Box2DKernel(5), allow_huge=True, nan_treatment='interpolate')
     
     
     # so I don't understand what this line is doing - converting to flux?
