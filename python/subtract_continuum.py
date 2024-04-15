@@ -188,6 +188,20 @@ def get_gr(gfile,rfile,mask=None):
     #hdu.close()
     return gr_col
 
+def plot_image(data):
+    ###########################################################
+    # show the continuum subtracted image
+    ###########################################################
+    from matplotlib import pyplot as plt
+    #from scipy.stats import scoreatpercentile
+    from astropy.visualization import simple_norm
+    
+    plt.figure()
+    norm = simple_norm(data, stretch='asinh',max_percent=99,min_percent=.5)
+    plt.imshow(data, norm=norm,origin='lower',interpolation='nearest')#,vmin=v1,vmax=v2)
+    plt.show()
+
+
 # def subtract_continuum(Rfile, Hfile, gfile, rfile, mask=None,overwrite=False,testing=False):
 #     """
 #     reproject infile to reffile image
@@ -810,7 +824,7 @@ if __name__ == '__main__':
 
     # outname is *CS-gr.fits
     hdu.writeto(outname, overwrite=True) #NB image in F_lambda units, before
-
+    plot_image(hdu.data)
 
     # The rest are different version of the CS image that matteo saves
     # don't know if I need all of this...
@@ -876,4 +890,5 @@ if __name__ == '__main__':
 
     # move back to the top directory
     os.chdir(topdir)
+
     

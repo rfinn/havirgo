@@ -19,6 +19,7 @@ from astropy.io import ascii
 from astropy.wcs import WCS
 from astropy.table import Table
 
+from astropy.nddata import Cutout2D
 from PIL import Image
 
 import glob
@@ -38,7 +39,7 @@ zoom_coords_INT = {'VFID5889':[100,1300,850,2100],\
                    'VFID5855':[820,1200,700,1400],\
                    'VFID5842':[900,1300,700,1450],\
                    'VFID5859':[50,150,30,145],\
-                   'VFID5892':[240,780,250,690]
+                   'VFID5892':[240,780,250,690],
                    }
 
 
@@ -48,7 +49,11 @@ zoom_coords_INT = {'VFID5889':[100,1300,850,2100],\
                    'VFID5855':[730,1290,640,1460],\
                    'VFID5842':[800,1400,650,1500],\
                    'VFID5859':[1,175,1,175],\
-                   'VFID5892':[240,780,250,690]
+                   'VFID5892':[240,780,250,690],\
+                   'VFID5879':[1,207,1,207],\
+                   'VFID5844':[1,194,1,194]            
+                   
+                   
                    }
 
 
@@ -58,7 +63,10 @@ HI_file = {'VFID5889':None,\
            'VFID5855':HIdir+'J1355_fin_lw05_bpcorr_6_mom0.fits',\
            'VFID5842':HIdir+'J1355_fin_lw05_bpcorr_5_mom0.fits',\
            'VFID5859':None,\
-           'VFID5892':None
+           'VFID5892':None,\
+            'VFID5879':None,\
+           'VFID5844':None            
+           
 }
 
 
@@ -74,7 +82,10 @@ acbfrac = {'VFID5889':.045,\
           'VFID5855':0.08,\
           'VFID5842':0.08,\
           'VFID5859':0.05,\
-          'VFID5892':.075
+           'VFID5892':.075,\
+            'VFID5879':.05,\
+           'VFID5844':.05            
+           
           }
 
 
@@ -83,7 +94,9 @@ afigsize = {'VFID5889':[16,3.5],\
            'VFID5855':[16,4.5],\
            'VFID5842':[16,4.5],\
            'VFID5859':[16,3.5],\
-           'VFID5892':[16,3.]
+            'VFID5892':[16,3.],\
+            'VFID5879':[16,3.5],\
+           'VFID5844':[16,3.5]            
            }
 
 alevels = {'VFID5889':[4.5],\
@@ -91,8 +104,12 @@ alevels = {'VFID5889':[4.5],\
            'VFID5855':[4],\
            'VFID5842':[4],\
            'VFID5859':[3.55],\
-           'VFID5892':[4.3]
+           'VFID5892':[4.3],
+            'VFID5879':[4],\
+           'VFID5844':[4]            
+           
            }
+
 
 
 HIfiles = {'VFID5859':'research/Virgo/alma/2023/MeerKAT_ALMA_target_list/J1355_fin_lw05_bpcorr_5_mom0.fits',\
@@ -103,7 +120,7 @@ HIfiles = {'VFID5859':'research/Virgo/alma/2023/MeerKAT_ALMA_target_list/J1355_f
 ###########################################
 ## FUNCTIONS
 ###########################################
-def plot_HI_contours(ax,HIfilename,xmin=None,xmax=None,ymin=None,ymax=None,levels=None):
+def plot_HI_contours(ax,HIfilename,xmin=None,xmax=None,ymin=None,ymax=None,levels=None,color='white'):
     """ plot HI contours, given current axis + reference image header """
     # borrowing from alma 2023 proposal
     ncontour=5
@@ -113,8 +130,70 @@ def plot_HI_contours(ax,HIfilename,xmin=None,xmax=None,ymin=None,ymax=None,level
 
     if levels is None:
         levels = 3**np.arange(ncontour)+1
-    ax.contour(hdu.data,transform=ax.get_transform(HI_WCS),levels=levels,colors='white',alpha=.5,lw=1)    
+    ax.contour(hdu.data,transform=ax.get_transform(HI_WCS),levels=levels,colors=color,alpha=.5,lw=1)
 
+
+def plot_sfr_contours(dirname,ax,legwcs=None,xmin=None,xmax=None,ymin=None,ymax=None,levels=None):
+    from astropy import convolution
+    topdir = homedir+'/research/Virgo-dev/cont-sub-gr/'+dirname+'/'
+    sfrim = topdir+dirname+"-sfr-vr.fits"
+    hdu = fits.open(sfrim)[0]
+    
+    mask = topdir+dirname+'-R-mask.fits'
+    maskdat = fits.getdata(mask)
+
+    if dirname.find('5889') > -1:
+        maskdat[0:600,:]= 1
+    mdat = np.ma.array(hdu.data,mask=maskdat)
+    
+    hdu.data = np.ma.array(hdu.data,mask=maskdat)
+    if levels is not None:
+        mylevels = levels
+    else:
+        mylevels = [1e-5,3e-5]
+    if xmin is None:
+        contour_data = hdu.data
+        contour_header = hdu.header
+        contour_WCS = WCS(contour_header)
+    else:
+        xcenter = (xmin+xmax)//2
+        ycenter = (ymin+ymax)//2
+        xsize = xmax - xmin
+        ysize = ymax - ymin
+        position = (ycenter,xcenter)
+        size = (ysize,xsize)
+        print(position)
+        cutout = Cutout2D(hdu.data,position,size,wcs=WCS(hdu.header))
+        contour_data = cutout.data
+        #print(contour_data.wcs.to_header())
+        contour_WCS = cutout.wcs
+        
+        
+        # alternate approach - transform extent 
+        #contour_data = hdu.data
+        #contour_header = hdu.header
+        #contour_WCS = WCS(contour_header)
+        #xcoords = np.array([xmin,xmax])
+        #ycoords = np.array([ymin,ymax])
+
+
+        #header = hdu.header 
+        #wcs = WCS(header)
+        #sky = wcs.pixel_to_world(xcoords,ycoords)
+
+        #x,y = legwcs.world_to_pixel(sky)
+        
+        #xmin,xmax = x
+        #ymin,ymax = y
+    contour_data = convolution.convolve_fft(contour_data, convolution.Box2DKernel(5), allow_huge=True, nan_treatment='interpolate')
+    ax.contour(contour_data,transform=ax.get_transform(contour_WCS),levels=mylevels,colors='fuchsia',lw=5)
+
+def add_spine(ax,color='c'):
+    from astropy.table import Table
+    spinedir = '/home/rfinn/research/Virgo/tables-north/v2/spines/'
+    spine  = Table.read(spinedir+'filament_spine_VirgoIII.fits')
+    ax.plot(spine['ra'],spine['dec'],'c--',color=color,transform=ax.get_transform('world'))#, ,label='Filament Spine')
+    
 def update_ngc5348_mask():
     imname = ''
     hdu = fits.open()
@@ -211,13 +290,29 @@ def plot_mstar_sfr(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xticks=True,f
             xmin,xmax,ymin,ymax = zoom_coords_INT[vfid]
         except KeyError:
             print("no xmin,xmax in dictionary")
+            t = fits.getdata(massim)
+            xmin=1
+            ymin=1
+            ymax,xmax = t.shape
     else:
         try:
             xmin,xmax,ymin,ymax = zoom_coords_HDI[vfid]
         except KeyError:
             print("no xmin,xmax in dictionary")
+            print("no xmin,xmax in dictionary")
+            t = fits.getdata(massim)
+            xmin=1
+            ymin=1
+            ymax,xmax = t.shape
     
 
+    xcoords = np.array([xmin,xmax])
+    ycoords = np.array([ymin,ymax])
+
+    header = fits.getheader(sfrim)
+    wcs = WCS(header)
+    sky = wcs.pixel_to_world(xcoords,ycoords)
+    #print("skycoords = ",sky)
 
     myfigsize=afigsize[vfid]
     mycbfrac=acbfrac[vfid]
@@ -295,7 +390,7 @@ def plot_mstar_sfr(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xticks=True,f
 
 def plot_mstar_sfr_profiles(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xticks=True,figsize=[16,6],\
                             cbfrac=.08,cbaspect=20,clevels=[4],contourFlag=True,rmax=None,\
-                            Re_mstar=None,Re_sfr=None,R90_mstar=None,R90_sfr=None):
+                            Re_mstar=None,Re_sfr=None,R90_mstar=None,R90_sfr=None,logMstar=None):
     """
     same plot as mstar_sfr, but swap out ssfr for radial profiles in the 4th panel
 
@@ -383,7 +478,7 @@ def plot_mstar_sfr_profiles(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xtic
             HIfilename = HI_file[vfid]
             if HIfilename is not None:
                 print("HIfilename = ",HIfilename)
-                plot_HI_contours(plt.gca(),HIfilename)
+                plot_HI_contours(plt.gca(),HIfilename,color='lightsteelblue')
 
 
         #############################################################
@@ -444,6 +539,7 @@ def plot_mstar_sfr_profiles(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xtic
     t = dirname.split('-')
     #plt.text(.05,.02,t[0],fontsize=20,transform=plt.gca().transAxes,horizontalalignment='left',color='white')
     
+
     plt.title(f"{t[0]} Legacy grz",fontsize=18)
     
     #print(x[0],x[1],y[0],y[1])
@@ -454,10 +550,16 @@ def plot_mstar_sfr_profiles(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xtic
     HIfilename = HI_file[vfid]
     if HIfilename is not None:
         print("HIfilename = ",HIfilename)
-        plot_HI_contours(plt.gca(),HIfilename)
+        plot_HI_contours(plt.gca(),HIfilename,color='lightsteelblue')
 
         
-
+    #############################################################
+    # add stellar mass from magphys to the legacy image
+    #############################################################    
+    if logMstar is not None:
+        print("adding logMstar = ",logMstar)
+        plt.text(0.05,0.05,logMstar,fontsize=16,color='white',transform=plt.gca().transAxes,horizontalalignment='left')
+    
     
 
     #################################################################
@@ -672,7 +774,7 @@ def fit1profile(dirname='VFID5842-NGC5356-INT-20190206-p120',rmax=None):
     # use this to run on R and CS Halpha
     rphot = dirname+'-R_phot.fits'
     haphot = dirname+'-CS-gr_phot.fits'
-
+    
     rp = Table.read(rphot)
     hp = Table.read(haphot)
     rfit,hfit = fit_profiles(rp,hp,rmax=rmax,labels=['r','halpha'])
@@ -816,21 +918,193 @@ def plot_sfr_indicators(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xticks=T
 
     os.chdir(cwd)
 
+def Jaffe15_phase_space_region(c=2.8,sigma=1.,M200=1e+14,R200=1.55):
+    """                                                                                                                                               
+    PURPOSE:                                                                                                                                          
+    macro that plots the virialized region in the phase space diagram following Jaffe et al. 2015, MNRAS 448.1715J                                     
+    
+    INPUT:                                                                                                                                            
+    c : r200/rs ,  concentration parameter                                                                                                            
+    sigma : velocity dispersion (km/s)                                                                                                                
+    M200 : M200 mass (Msun)                                                                                                                          
+    R200 : R200 (Mpc)                                                                                                                                
+    """
+    G = 6.67260e-8 #(cm3 g-1 s-2) Gravitational constant                                                                                           
+    Msun = 1.99e+33 #(g) solar mass                                                                                                                  
+    Mpc = 3.086e+24 #(cm) Mpc                                                                                                                        
+    km = 1e+5 #(cm)                                                                                                                                   
+    ##########                                                                                                                                        
+    M200 *= Msun #M200 in g                                                                                                                           
+    R200 *= Mpc #R200 in cm                                                                                                                          
+    sigma *= km #sigma in cm/s                                                                                                                        
+    ##################                                                                                                                               
+    r_to_r200 = np.arange(0.,3.,0.01) #r/r200 ratio                                                                                                   
+    vesc = 0.*r_to_r200-1000.
+    ###                                                                                                                                              
+    s = r_to_r200                                                                                                                          
+    gc = 1./(np.log(1.+c)-c/(1.+c))
+    K = gc*(np.log(1+c*s)/s-np.log(1+c))+1.
+    ######################                                                                                                                            
+    cond = (r_to_r200<1.)
+    vesc[cond] = np.sqrt(2*G*M200*K[cond]/(3.*R200))
+    vesc[~cond] = np.sqrt(2*G*M200/(3.*(R200*s[~cond])))
+    return r_to_r200,vesc/sigma
+
+def plot_gianluca_caustics(sepmax=15):
+    """ code from Gianluca to plot caustics for Virgo """
+    ################
+    #I plot an hyperbolic caustic derived empirically from Fig 4 (Kim_14)
+    #y= a/x+b, two points in the fig are A = (1.7,3000); B = (20,1000)
+    a = 3968.0
+    b = 1016. #cosmic velocity of Virgo from Mould+2000 (see NED database: "V (Virgo + GA only) : Quantities derived from redshift)    
+    x = np.arange(0.0001,sepmax,0.01)
+    y_up = a/x+b
+    y_down = -1*a/x+b
+    ################
+    """
+    phase space model (Jaffe+15)
+    """
+    G = 6.67260e-8 #(cm3 g-1 s-2) Gravitational constant                                                                                              
+    Msun = 1.99e+33 #(g) solar mass                                                                                                                   
+    Mpc = 3.086e+24 #(cm) Mpc                                                                                                                         
+    km = 1e+5 #(cm)                                                                                                                                   
+    H0 = 74.
+    #############
+    r200 = 1.55*70./H0 #Mpc (McLaughlin 1999)
+    concentration = 2.8 #concentration parameter (McLaughlin 1999)
+    rhoc = 3./(8.*np.pi*G)*((H0/Mpc*1e+5)**2) #g/cm3 - critical density
+    M200 = 4./3*np.pi*((r200*Mpc)**3)*200.*rhoc/Msun #Mo - M200 mass
+    phase_space = Jaffe15_phase_space_region(c=concentration,sigma=1.,M200=M200,R200=r200)
+    separation = phase_space[0]*r200*H0/b*180./np.pi
+    #separation = phase_space[0]*r200*H0/b*180./np.pi
+    vel_up = phase_space[1]+b
+    vel_down = b-phase_space[1]
+    
+    plt.plot(separation,vel_up,'k-')
+    plt.plot(separation,vel_down,'k-')    
+
+def plot_sky_positions():
+    plt.figure(figsize=(8,6))
+
+    x = v.main['RA']
+    y = v.main['DEC']
+    c = v.dist3dVirgo
+    plt.scatter(x,y,c='k',marker='.',alpha=.1,vmin=1,vmax=10,s=8)
+    plt.scatter(x[v.groupMembs],y[v.groupMembs],c=c[v.groupMembs],alpha=1,vmin=1,vmax=10,label='NGC5364 Group')
+    plt.scatter(x[v.env['cluster_member']],y[v.env['cluster_member']],alpha=.4,vmin=1,vmax=10,s=50,marker='*',label='Virgo Cluster Members')
+    #plt.colorbar(label="3D Distance (Mpc)")
+    plt.axis([170,214,-3,28])
+    plt.gca().invert_xaxis()
+    plt.ylabel("RA (deg)",fontsize=16)
+    plt.xlabel("DEC (deg)",fontsize=16)
+
+
+
+    spinedir = '/home/rfinn/research/Virgo/tables-north/v2/spines/'
+    spine  = Table.read(spinedir+'filament_spine_VirgoIII.fits')
+    plt.plot(spine['ra'],spine['dec'],'k--',label='Virgo III Filament Spine',alpha=.6)
+
+    plt.subplots_adjust(right=.9)
+    plt.legend(loc='upper left')
+    mainax = plt.gca()
+    x1,x2 = plt.xlim()
+    y1,y2 = plt.ylim()
+    # add projected separation on other axes
+
+    # virgo cluster
+    RAvirgo,DECvirgo = 187.697083, 12.336944
+
+
+    from astropy.cosmology import WMAP9 as cosmo
+
+    H0 = cosmo.H0.value
+
+    DA = cosmo.angular_diameter_distance(1100/3.e5)
+    DAperdeg = DA*np.pi/180
+
+
+    ax2 =mainax.twiny()
+
+    ax2.set_xlim((x1-RAvirgo)*DAperdeg.value,(x2-RAvirgo)*DAperdeg.value)
+    ax2.set_xlabel("Angular Separation (Mpc)",fontsize=16)
+    plt.grid()
+
+    ax2 =mainax.twinx()
+
+    ax2.set_ylim((y1-DECvirgo)*DAperdeg.value,(y2-DECvirgo)*DAperdeg.value)
+    ax2.set_ylabel("Angular Separation (Mpc)",fontsize=16,rotation=270,labelpad=20)
+    plt.grid()
+    plt.savefig(plotdir+'/NGC5364_Virgo_sky_positions.png')
+
+def plot_phase_space(sepmax=15):
+    # like Fig 3 in Castignani+2022b
+
+    # virgo cluster
+    RAvirgo,DECvirgo = 187.697083, 12.336944
+    vr = 1150
+    sigma=600
+    # phase space
+
+    dv = (v.main['vr'])
+
+    dr = np.sqrt((RAvirgo-v.main['RA'])**2 + (DECvirgo - v.main['DEC'])**2)
+
+    plt.figure(figsize=(8,6))
+
+    x = dr
+    y = dv
+    c = v.dist3dVirgo
+
+    plt.scatter(x,y,c='k',alpha=.1,vmin=1,vmax=10,s=6)
+
+    #plt.scatter(x[v.env['cluster_member']],y[v.env['cluster_member']],c=c[v.env['cluster_member']],alpha=.4,vmin=1,vmax=10,s=50,marker='*',label='Cluster member')
+    plt.scatter(x[v.env['cluster_member']],y[v.env['cluster_member']],alpha=.4,vmin=1,vmax=10,s=50,marker='*',label='Virgo Cluster members')
+    plt.scatter(x[v.groupMembs],y[v.groupMembs],c=c[v.groupMembs],alpha=1,vmin=1,vmax=10,s=100,label='NGC 5364 Group')
+    #plt.scatter(x[v.groupMembs],y[v.groupMembs],c='c',alpha=1,vmin=1,vmax=10,s=100,label='NGC 5364 Group')
+
+    plot_gianluca_caustics(sepmax=sepmax)
+    
+    plt.colorbar(label="3D Distance (Mpc)")
+    plt.xlabel("Angular Separation (deg)",fontsize=16)
+    plt.ylabel(r"$\rm v_r \ (km/s)$",fontsize=16)
+    plt.axis([-.2,26,-1000,3000])
+    plt.legend()
+    #plt.axhline(y=1100,ls='--',color='k',alpha=.5)
+
+
+
+    from astropy.cosmology import WMAP9 as cosmo
+
+    H0 = cosmo.H0.value
+
+    DA = cosmo.angular_diameter_distance(1100/3.e5)
+    DAperdeg = DA*np.pi/180
+    x1,x2 = plt.xlim()
+    print(x1,x2)
+
+    ax2 = plt.gca().twiny()
+
+    ax2.set_xlim(x1*DAperdeg.value,x2*DAperdeg.value)
+    ax2.set_xlabel("Angular Separation (Mpc)",fontsize=16)
+    
+    plt.savefig(plotdir+'/NGC5364_Virgo_phasespace.png')
+
 
 class grouptables(vtables):
     def get_group_members(self):
-        self.groupMembs = v.kt['PGC1'] == 49547
+        self.groupMembs = self.kt['PGC1'] == 49547
         print(f"number of Kourkchi group members = {np.sum(self.groupMembs)}")
     def write_latex_table(self):
-
-        flag = self.groupMembs & v.main['HAobsflag']
-        col_names = ['VFID','NED Name','vr','logMstar','logSFR','logsSFR','H2 def','HI def', 'HI def Bos']
+        self.get_distance_Virgo()
+        flag = self.groupMembs & self.main['HAobsflag']
+        col_names = ['VFID','NED Name','vr','Virgo $d_{3d}$','logMstar','logSFR','logsSFR','H2 def','HI def', 'HI def Bos']
         col_formats={'logMstar': '%5.2f',\
                      'logSFR': '%5.2f',\
                      'logsSFR': '%5.2f',\
                      'H2 def': '%5.2f',\
                      'HI def': '%5.2f',\
-                     'HI def Bos': '%5.2f'}
+                     'HI def Bos': '%5.2f',\
+                     'Virgo $d_{3d}$':'%5.1f'}
         latexdict={'preamble': r'\begin{center}',\
                    'tablefoot': r'\end{center}',\
                    'tabletype': 'table*',\
@@ -838,13 +1112,26 @@ class grouptables(vtables):
                    'header_end': '\\hline',\
                    'data_end': '\\hline',\
                    'caption': 'NGC~5364 Group Members within the \\ha \\ footprint \\label{tab:sample}'}
-        paperTab = Table([self.main['VFID'],self.main['NEDname'],self.main['vr'],self.magphys['logMstar_med'],self.magphys['logSFR_med'],self.magphys['logsSFR_med'],self.paper1['H2def'],self.paper1['HIdef'],self.a100['HIdef_bos']])[flag]
+        paperTab = Table([self.main['VFID'],self.main['NEDname'],self.main['vr'],self.dist3dVirgo,self.magphys['logMstar_med'],self.magphys['logSFR_med'],self.magphys['logsSFR_med'],self.paper1['H2def'],self.paper1['HIdef'],self.a100['HIdef_bos']])[flag]
         paperTab.write(plotdir+'/NGC5364_tab1.tex',format='latex',names=col_names,formats=col_formats,latexdict=latexdict,\
                        fill_values=[(ascii.masked,'\\nodata')])#,(np.ma.masked,'no data')])
         #paperTab.write(plotdir+'/NGC5364_tab1.tex',format='latex',names=col_names,formats=col_formats,latexdict=ascii.latex.latexdicts['ApJ'])
         self.paperTab = paperTab
         pass
 
+    def get_distance_Virgo(self):
+        """ calculate 3D distance to Virgo for group members """
+        # environment table has distSGX_Virgo, SGY, SGZ
+        self.dist3dVirgo = np.sqrt(self.env['distSGX_Virgo']**2+self.env['distSGY_Virgo']**2+self.env['distSGZ_Virgo']**2)
+        dist3dVirgo = np.sqrt(self.env['distSGX_Virgo']**2+self.env['distSGY_Virgo']**2+self.env['distSGZ_Virgo']**2)[self.groupMembs]        
+        self.dist3dVirgo_mean = np.mean(dist3dVirgo)
+        self.dist3dVirgo_med = np.median(dist3dVirgo)
+        self.dist3dVirgo_std = np.std(dist3dVirgo)        
+        print(f"distance to Virgo = {self.dist3dVirgo_mean:.1f} ({self.dist3dVirgo_med:.1f}) +/- {self.dist3dVirgo_std:.1f}")
+
+    def fit_profiles(self):
+        """ fit profile of each group member """
+        pass
 
 if __name__ == '__main__':
     import argparse
@@ -858,4 +1145,6 @@ if __name__ == '__main__':
         args.tabledir = args.tabledir.replace('/home/rfinn',homedir)
     v = grouptables(args.tabledir,args.tableprefix) 
     v.read_all()
-
+    v.get_group_members()
+    v.get_distance_Virgo()
+    groupMembs = v.kt['PGC1'] == 49547
