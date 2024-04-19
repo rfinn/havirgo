@@ -20,6 +20,10 @@ from astropy.wcs import WCS
 from astropy.table import Table
 
 from astropy.nddata import Cutout2D
+
+
+from mpl_toolkits.axes_grid1.inset_locator import inset_axes
+
 from PIL import Image
 
 import glob
@@ -89,14 +93,14 @@ acbfrac = {'VFID5889':.045,\
           }
 
 
-afigsize = {'VFID5889':[16,3.5],\
-            'VFID5851':[16,3.5],\
-           'VFID5855':[16,4.5],\
-           'VFID5842':[16,4.5],\
-           'VFID5859':[16,3.5],\
-            'VFID5892':[16,3.],\
-            'VFID5879':[16,3.5],\
-           'VFID5844':[16,3.5]            
+afigsize = {'VFID5889':[14.5,4],\
+            'VFID5851':[14,4],\
+           'VFID5855':[14,5.2],\
+           'VFID5842':[14,5],\
+           'VFID5859':[14,3.5],\
+            'VFID5892':[14,2.8],\
+            'VFID5879':[14,3.5],\
+           'VFID5844':[14,3.5]            
            }
 
 alevels = {'VFID5889':[4.5],\
@@ -390,7 +394,7 @@ def plot_mstar_sfr(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xticks=True,f
 
 def plot_mstar_sfr_profiles(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xticks=True,figsize=[16,6],\
                             cbfrac=.08,cbaspect=20,clevels=[4],contourFlag=True,rmax=None,\
-                            Re_mstar=None,Re_sfr=None,R90_mstar=None,R90_sfr=None,logMstar=None):
+                            Re_mstar=None,Re_sfr=None,R90_mstar=None,R90_sfr=None,logMstar=None,cmap='magma_r'):
     """
     same plot as mstar_sfr, but swap out ssfr for radial profiles in the 4th panel
 
@@ -408,8 +412,8 @@ def plot_mstar_sfr_profiles(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xtic
     
     ssfrim = dirname+"-ssfr.fits"
     mask = dirname+'-R-mask.fits'
-    titles = ['log Mstar','SFR','log sSFR']
-    vmin = [2,-.2e-5,-11.5]
+    titles = [r'$\log_{10}(M_\star/M_\odot)$',r'$H\alpha \ SFR$','log sSFR']
+    vmin = [2,0e-5,-11.5]
     vmax = [6,.6e-5,-9]
     allim = [massim,sfrim,ssfrim]
     allim = [massim,sfrim]    
@@ -431,9 +435,9 @@ def plot_mstar_sfr_profiles(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xtic
     if 'VFID5892' in dirname:
         cbaspect = 10
         
-    plt.figure(figsize=(myfigsize[0],myfigsize[1]))
+    fig = plt.figure(figsize=(myfigsize[0],myfigsize[1]))
 
-    plt.subplots_adjust(wspace=0.2,bottom=.15)
+    plt.subplots_adjust(wspace=0.01,bottom=.15)
     maskdat = fits.getdata(mask)
 
     if contourFlag:
@@ -454,7 +458,7 @@ def plot_mstar_sfr_profiles(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xtic
 
         dat = hdu.data
         imwcs = WCS(hdu.header)
-        plt.subplot(1,4,i+2,projection=imwcs)
+        ax2=plt.subplot(1,4,i+2,projection=imwcs)
 
 
         mdat = np.ma.array(dat,mask=maskdat)
@@ -463,12 +467,21 @@ def plot_mstar_sfr_profiles(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xtic
         #else:
         #    mdat = mdat[ymin:ymax,xmin:xmax]
         if i == 2:
-            plt.imshow(mdat,vmin=vmin[i],vmax=vmax[i],origin='lower',interpolation='nearest')
+            plt.imshow(mdat,vmin=vmin[i],vmax=vmax[i],origin='lower',interpolation='nearest',cmap=cmap)
 
         else:
             #display_image(mdat,percent=99.5,cmap='viridis')#,vmin=vmin[i],vmax=vmax[i])
-            plt.imshow(mdat,cmap='viridis',vmin=vmin[i],vmax=vmax[i])
+            plt.imshow(mdat,vmin=vmin[i],vmax=vmax[i],cmap=cmap)#cmap='viridis'
         
+            lon = ax2.coords[0]
+            lat = ax2.coords[1]
+            lon.set_ticklabel_visible(False)
+            lon.set_ticks_visible(False)            
+            lat.set_ticklabel_visible(False)
+            lat.set_ticks_visible(False)            
+        
+        #plt.colorbar(fraction=mycbfrac,aspect=cbaspect)
+        # plot contours from mass
 
         #############################################################
         # add HI contour to halpha image
@@ -478,7 +491,7 @@ def plot_mstar_sfr_profiles(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xtic
             HIfilename = HI_file[vfid]
             if HIfilename is not None:
                 print("HIfilename = ",HIfilename)
-                plot_HI_contours(plt.gca(),HIfilename,color='lightsteelblue')
+                plot_HI_contours(ax2,HIfilename,color='steelblue')
 
 
         #############################################################
@@ -490,8 +503,8 @@ def plot_mstar_sfr_profiles(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xtic
 
                 
         plt.title(titles[i],fontsize=18)
-        plt.colorbar(fraction=mycbfrac,aspect=cbaspect)
-        # plot contours from mass
+
+
 
         if xmin is not None:
             plt.axis([xmin,xmax,ymin,ymax])
@@ -505,6 +518,9 @@ def plot_mstar_sfr_profiles(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xtic
         
         allax.append(plt.gca())
 
+        #if i in [1,2]:
+        cbaxes = inset_axes(ax2, width="80%", height="3%", loc=8) 
+        plt.colorbar(cax=cbaxes, orientation='horizontal')
 
     
     # read in header from legacy r-band image
@@ -572,8 +588,9 @@ def plot_mstar_sfr_profiles(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xtic
     mtab = Table.read(massphot)
     stab = Table.read(sfrphot)    
     tables = [mtab,stab]
-    labels = ['$M_\star$','$SFR$']    
-    
+    labels = ['$M_\star$',r'$H\alpha \ SFR$']    
+    colors = ['navy','mediumvioletred']
+    markers = ['s','o']
     for i,t in enumerate(tables):
         x = t['sma_arcsec']
         y = t['sb']
@@ -582,19 +599,21 @@ def plot_mstar_sfr_profiles(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xtic
             norm_factor = np.median(y[0:5])
         else:
             norm_factor = np.median(y[0:15])
-        plt.plot(x,y/norm_factor,'bo',c=mycolors[i],label=labels[i])
+        plt.plot(x,y/norm_factor,'bo',c=colors[i],label=labels[i],marker=markers[i])
         #plt.fill_between(x,(y+yerr)/norm_factor,y2=(y-yerr)/norm_factor,color=mycolors[i],alpha=.5)
     # add R50 if it's provided
     if Re_mstar is not None:
-        plt.axvline(x=Re_mstar,ls='--',lw=2,color=mycolors[0],label='$R_e(M_\star)$')
+        plt.axvline(x=Re_mstar,ls='--',lw=2,color=colors[0],label='$R_e$')#,label='$R_e(M_\star)$')
     if Re_sfr is not None:
-        plt.axvline(x=Re_sfr,ls='--',color=mycolors[1],label='$R_e(SFR)$')
+        plt.axvline(x=Re_sfr,ls='--',color=colors[1])#,label='$R_e(SFR)$')
     if R90_mstar is not None:
-        plt.axvline(x=R90_mstar,ls='-',lw=2,color=mycolors[0],label='$R_{90}(M_\star)$')
+        plt.axvline(x=R90_mstar,ls='-',lw=2,color=colors[0],label='$R_{90}$')#,label='$R_{90}(M_\star)$')
     if R90_sfr is not None:
-        plt.axvline(x=R90_sfr,ls='-',color=mycolors[1],label='$R_{90}(SFR)$')
-    plt.legend(bbox_to_anchor=(1.02,0.95))
+        plt.axvline(x=R90_sfr,ls='-',color=colors[1])#,label='$R_{90}(SFR)$')
+        
+    plt.legend()#bbox_to_anchor=(1.02,0.95))
     plt.gca().set_yscale('log')
+    plt.gca().yaxis.tick_right()
     plt.ylim(.003,3.5)
     #print("rmax = ",rmax)    
     if rmax is not None:
@@ -815,7 +834,8 @@ def plot_sfr_indicators(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xticks=T
     #vmin = [2,0,-11.5]
     #vmax = [6,1.e-6,-9]
     allim = [nuvim,sfrim,w3im]
-    
+    vmins = [0.002,0,0]
+    vmaxs = [.03,.00002,14000]    
     print(nuvim,w3im)
     
     if xmin is not None:
@@ -865,8 +885,11 @@ def plot_sfr_indicators(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xticks=T
         #    plt.imshow(mdat,vmin=vmin[i],vmax=vmax[i],origin='lower',interpolation='nearest')
         #else:
         #    display_image(mdat,percent=99.5,cmap='viridis')#,vmin=vmin[i],vmax=vmax[i])
-        display_image(mdat,percent=99.5,cmap='viridis')#,vmin=vmin[i],vmax=vmax[i])
-        
+        #display_image(mdat,percent=99.9,cmap='magma_r')#,vmin=vmin[i],vmax=vmax[i])
+        if i == 1:
+            plt.imshow(mdat,cmap='magma_r',origin='lower',vmin=vmins[i],vmax=vmaxs[i])
+        else:
+            plt.imshow(mdat,vmin=vmins[i],vmax=vmaxs[i],cmap='magma_r',origin='lower')
         if not xticks: 
             plt.xticks([],[])
             plt.yticks([],[])
