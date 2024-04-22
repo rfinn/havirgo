@@ -797,8 +797,8 @@ def fit1profile(dirname='VFID5842-NGC5356-INT-20190206-p120',rmax=None):
         rp = Table.read(rphot)
         hp = Table.read(haphot)
     except FileNotFoundError:
-        rphot = dirname+'-R_phot.fits'
-        haphot = dirname+'-CS-gr_phot.fits'
+        rphot = dirname+'-R-phot.fits'
+        haphot = dirname+'-CS-phot.fits'
         rp = Table.read(rphot)
         hp = Table.read(haphot)
     rfit,hfit = fit_profiles(rp,hp,rmax=rmax,labels=['r','halpha'])
