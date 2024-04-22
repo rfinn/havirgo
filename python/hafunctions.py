@@ -793,9 +793,14 @@ def fit1profile(dirname='VFID5842-NGC5356-INT-20190206-p120',rmax=None):
     # use this to run on R and CS Halpha
     rphot = dirname+'-R_phot.fits'
     haphot = dirname+'-CS-gr_phot.fits'
-    
-    rp = Table.read(rphot)
-    hp = Table.read(haphot)
+    try:
+        rp = Table.read(rphot)
+        hp = Table.read(haphot)
+    except FileNotFoundError:
+        rphot = dirname+'-R_phot.fits'
+        haphot = dirname+'-CS-gr_phot.fits'
+        rp = Table.read(rphot)
+        hp = Table.read(haphot)
     rfit,hfit = fit_profiles(rp,hp,rmax=rmax,labels=['r','halpha'])
     plt.savefig(vfid+'-r-halpha-profiles.png')    
     return mfit,sfit,rfit,hfit
