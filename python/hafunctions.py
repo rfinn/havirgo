@@ -422,9 +422,26 @@ def plot_mstar_sfr_profiles(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xtic
     vfid = dirname.split('-')[0]
     print("VFID = ",vfid)
     if 'INT' in dirname:
-        xmin,xmax,ymin,ymax = zoom_coords_INT[vfid]
+        try:
+            xmin,xmax,ymin,ymax = zoom_coords_INT[vfid]
+        except KeyError:
+            # use the full image
+            # read in massim
+            data = fits.getdata(massim)
+            ymax,xmax = data.shape
+            xmin=1
+            ymin=1
+
     else:
-        xmin,xmax,ymin,ymax = zoom_coords_HDI[vfid]
+        try:
+            xmin,xmax,ymin,ymax = zoom_coords_HDI[vfid]
+        except KeyError:
+            # use the full image
+            # read in massim
+            data = fits.getdata(massim)
+            ymax,xmax = data.shape
+            xmin=1
+            ymin=1
     
 
 
