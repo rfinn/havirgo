@@ -388,8 +388,8 @@ class galaxy():
             print(sky)
             print(sky[0])
             print(sky[0].ra)
-            plt.xlim(sky[0].ra,sky[1].ra)
-            plt.ylim(sky[0].dec,sky[1].dec)
+            plt.xlim(sky[0].ra.value,sky[1].ra.value)
+            plt.ylim(sky[0].dec.value,sky[1].dec.value)
             #plt.axis([sky[0][0],sky[1][0],sky[1][0],sky[1][1]])
             
 
