@@ -271,6 +271,7 @@ class galaxy():
             if i == 0:
 
                 plt.subplot(1,4,i+1,projection=imwcs)
+                axleg = plt.gca()
                 plt.imshow(cs,origin='lower',interpolation='nearest')#,vmin=v1,vmax=v2)
                 if zoom:
                     # check for RA and DEC, b/c image might not be centered
@@ -366,6 +367,23 @@ class galaxy():
             
             # this next block zooms into center half of the image
 
+            # zoom jpeg image
+            xcoords = np.array([xmin,xmax])
+            ycoords = np.array([ymin,ymax])
+
+            header = fits.getheader(sfrim)
+            wcs = WCS(header)
+            sky = imwcs.pixel_to_world(xcoords,ycoords)
+            
+            # now use legacy header to convert to coordinates in the jpeg image
+            #print("skycoords = ",sky)
+            legheader = fits.getheader(self.legacy_r)
+            legwcs = WCS(legheader)
+            x,y = legwcs.world_to_pixel(sky)
+            x,y = legwcs.world_to_pixel(sky)
+            
+            plt.sca(axleg)
+            plt.axis([x[0],x[1],y[0],y[1]])
             
 
             plt.xticks([],[])
