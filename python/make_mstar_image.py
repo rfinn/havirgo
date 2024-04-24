@@ -368,29 +368,29 @@ class galaxy():
             # this next block zooms into center half of the image
 
             # zoom jpeg image
-            xcoords = np.array([xmin,xmax])
-            ycoords = np.array([ymin,ymax])
+        xcoords = np.array([xmin,xmax])
+        ycoords = np.array([ymin,ymax])
 
 
-            sky = imwcs.pixel_to_world(xcoords,ycoords)
+        sky = imwcs.pixel_to_world(xcoords,ycoords)
             
-            # now use legacy header to convert to coordinates in the jpeg image
-            #print("skycoords = ",sky)
-            legheader = fits.getheader(self.legacy_r)
-            legwcs = WCS(legheader)
-            x,y = legwcs.world_to_pixel(sky)
-            plt.sca(axleg)
-            # plt.subplot(1,4,1,projection=imwcs)
+        # now use legacy header to convert to coordinates in the jpeg image
+        #print("skycoords = ",sky)
+        legheader = fits.getheader(self.legacy_r)
+        legwcs = WCS(legheader)
+        x,y = legwcs.world_to_pixel(sky)
+        plt.sca(axleg)
+        # plt.subplot(1,4,1,projection=imwcs)
             #    axleg = plt.gca()
             #    plt.imshow(cs,origin='lower',interpolation='nearest')#,vmin=v1,vmax=v2)
             
-            #plt.axis([x[0],x[1],y[0],y[1]])
-            print(sky)
-            print(sky[0])
-            print(sky[0].ra)
-            plt.xlim(sky[0].ra.value,sky[1].ra.value)
-            plt.ylim(sky[0].dec.value,sky[1].dec.value)
-            #plt.axis([sky[0][0],sky[1][0],sky[1][0],sky[1][1]])
+        #plt.axis([x[0],x[1],y[0],y[1]])
+        print(sky)
+        print(sky[0])
+        print(sky[0].ra)
+        plt.xlim(sky[0].ra.value,sky[1].ra.value)
+        plt.ylim(sky[0].dec.value,sky[1].dec.value)
+        #plt.axis([sky[0][0],sky[1][0],sky[1][0],sky[1][1]])
             
 
             plt.xticks([],[])
