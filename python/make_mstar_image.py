@@ -258,7 +258,7 @@ class galaxy():
         imwcs = WCS(self.haheader)
         
         
-        plt.figure(figsize=(12,4))
+        fig = plt.figure(figsize=(12,4))
         plt.subplots_adjust(wspace=0.3,left=.05)
 
         images = [jpeg_data,self.logMstar_vr,self.sfr_vr,self.logssfr]
@@ -269,48 +269,49 @@ class galaxy():
         stretch=['','linear','asinh','linear']
         for i,cs in enumerate(images):
             if i == 0:
+                continue
+                # plt.subplot(1,4,i+1,projection=imwcs)
+                # axleg = plt.gca()
+                # plt.imshow(cs,origin='lower',interpolation='nearest')#,vmin=v1,vmax=v2)
+                # if zoom:
+                #     # check for RA and DEC, b/c image might not be centered
+                #     #print("zooming")
+                #     xsize,ysize = cs.size
+                #     delta = xsize//(zoomfactor*2)                    
+                #     if self.ra is not None:
+                #         galcoord = SkyCoord(ra*u.deg,dec*u.deg,frame='icrs')
+                #         xcenter,ycenter = imwcs.world_to_pixel(galcoord)
+                #         xcenter = xcenter[0]
+                #         ycenter = ycenter[0]
 
-                plt.subplot(1,4,i+1,projection=imwcs)
-                axleg = plt.gca()
-                plt.imshow(cs,origin='lower',interpolation='nearest')#,vmin=v1,vmax=v2)
-                if zoom:
-                    # check for RA and DEC, b/c image might not be centered
-                    #print("zooming")
-                    xsize,ysize = cs.size
-                    delta = xsize//(zoomfactor*2)                    
-                    if self.ra is not None:
-                        galcoord = SkyCoord(ra*u.deg,dec*u.deg,frame='icrs')
-                        xcenter,ycenter = imwcs.world_to_pixel(galcoord)
-                        xcenter = xcenter[0]
-                        ycenter = ycenter[0]
+                #         ximcenter = xsize //2
+                #         yimcenter = ysize // 2
 
-                        ximcenter = xsize //2
-                        yimcenter = ysize // 2
+                #         # scale factor to translate b/w fits image and jpg
+                #         scalefactor = xsize/ximsize
 
-                        # scale factor to translate b/w fits image and jpg
-                        scalefactor = xsize/ximsize
+                #     else:
+                #         xcenter = xsize//2
+                #         ycenter = ysize // 2
 
-                    else:
-                        xcenter = xsize//2
-                        ycenter = ysize // 2
+                #     xmin = xcenter - delta
+                #     xmax = xcenter + delta
 
-                    xmin = xcenter - delta
-                    xmax = xcenter + delta
+                #     ymin = ycenter - delta
+                #     ymax = ycenter + delta
 
-                    ymin = ycenter - delta
-                    ymax = ycenter + delta
-
-                    if xmin < 1:
-                        xmin = 1
-                    if ymin < 1:
-                        ymin = 1
-                    if xmax > xsize:
-                        xmax=xsize-1
-                    if ymax > ysize:
-                        xmax=xsize-1
-                    # TODO : come back to this and figure out how to zoom the jpeg image - can't figure out now
-                    #print('jpeg : ',[xmin,xmax,ymin,ymax])
-                    #plt.axis([xmin,xmax,xmin,xmax])                
+                #     if xmin < 1:
+                #         xmin = 1
+                #     if ymin < 1:
+                #         ymin = 1
+                #     if xmax > xsize:
+                #         xmax=xsize-1
+                #     if ymax > ysize:
+                #         xmax=xsize-1
+                #     # TODO : come back to this and figure out how to zoom the jpeg image - can't figure out now
+                #     #print('jpeg : ',[xmin,xmax,ymin,ymax])
+                #     #plt.axis([xmin,xmax,xmin,xmax])     
+           
             else:
                 if self.mask is not None:
                     cs = np.ma.masked_where(self.mask,cs)
@@ -359,34 +360,53 @@ class galaxy():
                         xmax=xsize-1
                     #print([ymin,ymax,xmin,xmax]) 
                     plt.axis([xmin,xmax,ymin,ymax])                
+                    xcoords = np.array([xmin,xmax])
+                    ycoords = np.array([ymin,ymax])
                     
                 #plt.imshow(cs)#,vmin=-0.015,vmax=.1)#,cmap='gray_r')
                 
                 plt.colorbar(fraction=.045)
             plt.title(titles[i],fontsize=16)
-            plt.xticks([],[])
-            plt.yticks([],[])
+            #plt.xticks([],[])
+            #plt.yticks([],[])
             
             # this next block zooms into center half of the image
 
             # zoom jpeg image
-        xcoords = np.array([xmin,xmax])
-        ycoords = np.array([ymin,ymax])
-
 
         sky = imwcs.pixel_to_world(xcoords,ycoords)
+        print("xmin,xmax = ",xmin,xmax,ymin,xmax)
+        print("xcoords = ",xcoords)
+        print("sky = ",sky)
+        #print(legacyr)
+        jpeg_data = Image.open(legacy_jpg)
+        legwcs = WCS(fits.getheader(self.legacy_r))
+        # plot jpg as projection of legacy r-band
+        plt.subplot(1,4,1,projection=legwcs)
+        plt.imshow(jpeg_data)
+        axleg = plt.gca()
+        #zoom=False
+        if zoom:
+            # set limits in ra,dec
+            x,y = legwcs.world_to_pixel(sky)
+            print("x,y = ",x,y)
+            # convert ramin,ramax and decmin,decmax to (x,y)
+            #print(sky)
+            plt.axis([x[0],x[1],y[0],y[1]])
+
+        #sky = imwcs.pixel_to_world(xcoords,ycoords)
             
         # now use legacy header to convert to coordinates in the jpeg image
         #print("skycoords = ",sky)
-        legheader = fits.getheader(self.legacy_r)
-        legwcs = WCS(legheader)
-        x,y = legwcs.world_to_pixel(sky)
-        plt.sca(axleg)
-        # plt.subplot(1,4,1,projection=imwcs)
-            #    axleg = plt.gca()
-            #    plt.imshow(cs,origin='lower',interpolation='nearest')#,vmin=v1,vmax=v2)
+        # legheader = fits.getheader(self.legacy_r)
+        # legwcs = WCS(legheader)
+        # x,y = legwcs.world_to_pixel(sky)
+        # plt.sca(axleg)
+        # # plt.subplot(1,4,1,projection=imwcs)
+        #     #    axleg = plt.gca()
+        #     #    plt.imshow(cs,origin='lower',interpolation='nearest')#,vmin=v1,vmax=v2)
             
-        plt.axis([x[0],x[1],y[0],y[1]])
+        # plt.axis([x[0],x[1],y[0],y[1]])
         #print(sky)
         #print(sky[0])
         #print(sky[0].ra)
@@ -397,8 +417,9 @@ class galaxy():
 
 
         plt.savefig(self.dirname+'-mstar-sfr-ssfr.png')        
-        pass
         
+        return fig,axleg
+    
 if __name__ == '__main__':
     dirname = sys.argv[1]
     topdir = os.getcwd()
