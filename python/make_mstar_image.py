@@ -364,6 +364,8 @@ class galaxy():
                 
                 plt.colorbar(fraction=.045)
             plt.title(titles[i],fontsize=16)
+            plt.xticks([],[])
+            plt.yticks([],[])
             
             # this next block zooms into center half of the image
 
@@ -393,8 +395,6 @@ class galaxy():
         #plt.axis([sky[0][0],sky[1][0],sky[1][0],sky[1][1]])
             
 
-            plt.xticks([],[])
-            plt.yticks([],[])
 
         plt.savefig(self.dirname+'-mstar-sfr-ssfr.png')        
         pass
