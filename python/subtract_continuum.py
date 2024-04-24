@@ -190,7 +190,9 @@ def get_gr(gfile,rfile,mask=None):
     gr_col[mask] = np.nan
     print('Smoothing images for color calculation')
     # changing convolution size from 20 to 10 b/c I'm wondering if it's blurring the color
-    # gradients too much - specific example is 
+    # gradients too much - specific example is
+
+    # Testing to remove smoothing on M109
     gr_col = convolution.convolve_fft(gr_col, convolution.Box2DKernel(10), allow_huge=True, nan_treatment='interpolate')
 
     # set the pixel with SNR < 10 to nan - don't use these for color correction
@@ -760,7 +762,7 @@ if __name__ == '__main__':
     # can change smoothing to change to 1-2 psf size
 
     # skipping this convolution for now
-    data_r_to_Ha = convolution.convolve_fft(data_r_to_Ha, convolution.Box2DKernel(5), allow_huge=True, nan_treatment='interpolate')
+    #data_r_to_Ha = convolution.convolve_fft(data_r_to_Ha, convolution.Box2DKernel(5), allow_huge=True, nan_treatment='interpolate')
     
     
     # so I don't understand what this line is doing - converting to flux?
