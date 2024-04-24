@@ -386,12 +386,12 @@ class galaxy():
             #    axleg = plt.gca()
             #    plt.imshow(cs,origin='lower',interpolation='nearest')#,vmin=v1,vmax=v2)
             
-        #plt.axis([x[0],x[1],y[0],y[1]])
-        print(sky)
-        print(sky[0])
-        print(sky[0].ra)
-        plt.xlim(sky[0].ra.value,sky[1].ra.value)
-        plt.ylim(sky[0].dec.value,sky[1].dec.value)
+        plt.axis([x[0],x[1],y[0],y[1]])
+        #print(sky)
+        #print(sky[0])
+        #print(sky[0].ra)
+        #plt.xlim(sky[0].ra.value,sky[1].ra.value)
+        #plt.ylim(sky[0].dec.value,sky[1].dec.value)
         #plt.axis([sky[0][0],sky[1][0],sky[1][0],sky[1][1]])
             
 
