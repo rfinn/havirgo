@@ -371,8 +371,7 @@ class galaxy():
             xcoords = np.array([xmin,xmax])
             ycoords = np.array([ymin,ymax])
 
-            header = fits.getheader(sfrim)
-            wcs = WCS(header)
+
             sky = imwcs.pixel_to_world(xcoords,ycoords)
             
             # now use legacy header to convert to coordinates in the jpeg image
@@ -380,8 +379,6 @@ class galaxy():
             legheader = fits.getheader(self.legacy_r)
             legwcs = WCS(legheader)
             x,y = legwcs.world_to_pixel(sky)
-            x,y = legwcs.world_to_pixel(sky)
-            
             plt.sca(axleg)
             plt.axis([x[0],x[1],y[0],y[1]])
             
