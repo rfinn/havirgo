@@ -270,7 +270,7 @@ def display_image(image,percent=99.9,lowrange=False,mask=None,sigclip=True,cmap=
     #plt.imshow(image, cmap='gray_r',vmin=v1,vmax=v2,origin='lower')    
 
 def plot_mstar_sfr(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xticks=True,figsize=[16,6],cbfrac=.08,cbaspect=20,\
-                   clevels=[4],contourFlag=True):
+                   clevels=[4],contourFlag=True,zoomflag=True):
     #%matplotlib inline
     os.chdir(homedir+'/research/Virgo-dev/cont-sub-gr')
     # add scale factor for continuue after the directory name
@@ -298,16 +298,32 @@ def plot_mstar_sfr(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xticks=True,f
             xmin=1
             ymin=1
             ymax,xmax = t.shape
+            if zoomflag:
+                # zoom by factor of two
+                xcenter = xmax//2
+                ycenter = ymax//2
+                xmin = xcenter-xmax//4
+                xmax = xcenter + xmax//4
+                xmin = xcenter-xmax//4
+                xmax = xcenter + xmax//4            
     else:
         try:
             xmin,xmax,ymin,ymax = zoom_coords_HDI[vfid]
         except KeyError:
             print("no xmin,xmax in dictionary")
-            print("no xmin,xmax in dictionary")
             t = fits.getdata(massim)
             xmin=1
             ymin=1
             ymax,xmax = t.shape
+            if zoomflag:
+                # zoom by factor of two
+                xcenter = xmax//2
+                ycenter = ymax//2
+                xmin = xcenter-xmax//4
+                xmax = xcenter + xmax//4
+                xmin = xcenter-xmax//4
+                xmax = xcenter + xmax//4            
+        
     
 
     xcoords = np.array([xmin,xmax])
@@ -318,9 +334,19 @@ def plot_mstar_sfr(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xticks=True,f
     sky = wcs.pixel_to_world(xcoords,ycoords)
     #print("skycoords = ",sky)
 
-    myfigsize=afigsize[vfid]
-    mycbfrac=acbfrac[vfid]
-    myclevels=alevels[vfid]
+    try:
+        myfigsize=afigsize[vfid]
+    except KeyError:
+        myfigsize = [14,5]
+    try:
+        mycbfrac=acbfrac[vfid]
+    except KeyError:
+        mycbfrac = 0.08
+
+    try:
+        myclevels=alevels[vfid]
+    except KeyError:
+        myclevels = [4]            
 
     if 'VFID5892' in dirname:
         cbaspect = 10
@@ -422,9 +448,26 @@ def plot_mstar_sfr_profiles(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xtic
     vfid = dirname.split('-')[0]
     print("VFID = ",vfid)
     if 'INT' in dirname:
-        xmin,xmax,ymin,ymax = zoom_coords_INT[vfid]
+        try:
+            xmin,xmax,ymin,ymax = zoom_coords_INT[vfid]
+        except KeyError:
+            # use the full image
+            # read in massim
+            data = fits.getdata(massim)
+            ymax,xmax = data.shape
+            xmin=1
+            ymin=1
+
     else:
-        xmin,xmax,ymin,ymax = zoom_coords_HDI[vfid]
+        try:
+            xmin,xmax,ymin,ymax = zoom_coords_HDI[vfid]
+        except KeyError:
+            # use the full image
+            # read in massim
+            data = fits.getdata(massim)
+            ymax,xmax = data.shape
+            xmin=1
+            ymin=1
     
 
 
@@ -793,9 +836,14 @@ def fit1profile(dirname='VFID5842-NGC5356-INT-20190206-p120',rmax=None):
     # use this to run on R and CS Halpha
     rphot = dirname+'-R_phot.fits'
     haphot = dirname+'-CS-gr_phot.fits'
-    
-    rp = Table.read(rphot)
-    hp = Table.read(haphot)
+    try:
+        rp = Table.read(rphot)
+        hp = Table.read(haphot)
+    except FileNotFoundError:
+        rphot = dirname+'-R-phot.fits'
+        haphot = dirname+'-CS-phot.fits'
+        rp = Table.read(rphot)
+        hp = Table.read(haphot)
     rfit,hfit = fit_profiles(rp,hp,rmax=rmax,labels=['r','halpha'])
     plt.savefig(vfid+'-r-halpha-profiles.png')    
     return mfit,sfit,rfit,hfit
