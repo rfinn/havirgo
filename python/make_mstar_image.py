@@ -380,7 +380,9 @@ class galaxy():
             legwcs = WCS(legheader)
             x,y = legwcs.world_to_pixel(sky)
             plt.sca(axleg)
-            plt.axis([x[0],x[1],y[0],y[1]])
+            #plt.axis([x[0],x[1],y[0],y[1]])
+            print(sky)
+            plt.axis([sky[0][0],sky[0][1],sky[1][0],sky[1][1]])
             
 
             plt.xticks([],[])
