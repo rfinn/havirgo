@@ -385,7 +385,9 @@ class galaxy():
             #    plt.imshow(cs,origin='lower',interpolation='nearest')#,vmin=v1,vmax=v2)
             
             #plt.axis([x[0],x[1],y[0],y[1]])
-            print(sky,sky[0],sky[0][0])
+            print(sky)
+            print(sky[0])
+            print(sky[0][0])
             plt.xlim(sky[0][0],sky[1][0])
             plt.ylim(sky[0][1],sky[1][1])
             #plt.axis([sky[0][0],sky[1][0],sky[1][0],sky[1][1]])
