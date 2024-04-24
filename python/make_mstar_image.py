@@ -105,6 +105,10 @@ class galaxy():
         
         # reprojected legacy r-band image
         legacy_images = glob.glob(os.path.join('legacy/*r-ha.fits'))
+        self.legacy_r2ha = legacy_images[0]
+
+        # reprojected legacy r-band image
+        legacy_images = glob.glob(os.path.join('legacy/*r.fits'))
         self.legacy_r = legacy_images[0]
         
         # reprojected legacy g-r image
@@ -132,7 +136,7 @@ class galaxy():
         """ create mstar image from rband and g-r image and vr  """
         # smoothing was 20, setting it to 5 to see if the effective radius changes
         smoothing=15
-        rhdu = fits.open(self.legacy_r)
+        rhdu = fits.open(self.legacy_r2ha)
         rsmooth = convolution.convolve_fft(rhdu[0].data, convolution.Box2DKernel(smoothing), allow_huge=True, nan_treatment='interpolate')
 
         # g-r image is in magnitudes already
@@ -249,11 +253,6 @@ class galaxy():
         from astropy.coordinates import SkyCoord
         import astropy.units as u
         
-        legacy_jpg = glob.glob('legacy/*.jpg')[0]
-        #print("legacy jpg = ",legacy_jpg)
-        jpeg_data = Image.open(legacy_jpg)
-        #plt.figure(figsize=(6,6))
-        #plt.imshow(jpeg_data,origin="lower")
 
         imwcs = WCS(self.haheader)
         
@@ -261,159 +260,100 @@ class galaxy():
         fig = plt.figure(figsize=(12,4))
         plt.subplots_adjust(wspace=0.3,left=.05)
 
-        images = [jpeg_data,self.logMstar_vr,self.sfr_vr,self.logssfr]
+
+        # set up list of images to 
+        images = [self.logMstar_vr,self.sfr_vr,self.logssfr]
         ximsize,yimsize = self.logMstar_vr.shape
-        titles = ["Legacy","logMstar","SFR",'logsSFR']
+        titles = ["logMstar",r"$H\alpha \ SFR$",'logsSFR']
         percentile1 = .5
         percentile2 = 99.5
-        stretch=['','linear','asinh','linear']
+        stretch=['linear','asinh','linear']
         for i,cs in enumerate(images):
-            if i == 0:
-                continue
-                # plt.subplot(1,4,i+1,projection=imwcs)
-                # axleg = plt.gca()
-                # plt.imshow(cs,origin='lower',interpolation='nearest')#,vmin=v1,vmax=v2)
-                # if zoom:
-                #     # check for RA and DEC, b/c image might not be centered
-                #     #print("zooming")
-                #     xsize,ysize = cs.size
-                #     delta = xsize//(zoomfactor*2)                    
-                #     if self.ra is not None:
-                #         galcoord = SkyCoord(ra*u.deg,dec*u.deg,frame='icrs')
-                #         xcenter,ycenter = imwcs.world_to_pixel(galcoord)
-                #         xcenter = xcenter[0]
-                #         ycenter = ycenter[0]
+            if self.mask is not None:
+                cs = np.ma.masked_where(self.mask,cs)
 
-                #         ximcenter = xsize //2
-                #         yimcenter = ysize // 2
+            plt.subplot(1,4,i+2)#,projection=imwcs)
+            try:
+                norm = simple_norm(cs, stretch=stretch[i],max_percent=percentile2,min_percent=percentile1)
+                plt.imshow(cs, norm=norm,origin='lower',interpolation='nearest')#,vmin=v1,vmax=v2)
+            except:
+                print("WARNING: problem calculating the simple_norm - check images ") 
+            #if i == 2:
+            #    plt.imshow(cs, norm=norm,origin='lower',vmin=-1.2e-5,vmax=1e-4)
+            #if i == 3:
+            #    plt.imshow(cs, norm=norm,origin='lower',vmin=-10.5,vmax=-9)
+            #else:
+            #    plt.imshow(cs, norm=norm,origin='lower')#,vmin=v1,vmax=v2)
 
-                #         # scale factor to translate b/w fits image and jpg
-                #         scalefactor = xsize/ximsize
+            if zoom:
+                # TODO fix to use headers to zoom
+                # check for RA and DEC, b/c image might not be centered
+                #print("zooming")                    
+                xsize,ysize = cs.shape
+                delta = xsize//(zoomfactor*2)                    
+                if self.ra is not None:
+                    galcoord = SkyCoord(ra*u.deg,dec*u.deg,frame='icrs')
+                    xcenter,ycenter = imwcs.world_to_pixel(galcoord)
+                    xcenter = xcenter[0]
+                    ycenter = ycenter[0]                        
+                else:
+                    xcenter = xsize//2
+                    ycenter = ysize // 2
 
-                #     else:
-                #         xcenter = xsize//2
-                #         ycenter = ysize // 2
+                xmin = xcenter - delta
+                xmax = xcenter + delta
 
-                #     xmin = xcenter - delta
-                #     xmax = xcenter + delta
+                ymin = ycenter - delta
+                ymax = ycenter + delta
 
-                #     ymin = ycenter - delta
-                #     ymax = ycenter + delta
+                if xmin < 1:
+                    xmin = 1
+                if ymin < 1:
+                    ymin = 1
+                if xmax > xsize:
+                    xmax=xsize-1
+                if ymax > ysize:
+                    xmax=xsize-1
+                #print([ymin,ymax,xmin,xmax]) 
+                plt.axis([xmin,xmax,ymin,ymax])                
+                xcoords = np.array([xmin,xmax])
+                ycoords = np.array([ymin,ymax])
 
-                #     if xmin < 1:
-                #         xmin = 1
-                #     if ymin < 1:
-                #         ymin = 1
-                #     if xmax > xsize:
-                #         xmax=xsize-1
-                #     if ymax > ysize:
-                #         xmax=xsize-1
-                #     # TODO : come back to this and figure out how to zoom the jpeg image - can't figure out now
-                #     #print('jpeg : ',[xmin,xmax,ymin,ymax])
-                #     #plt.axis([xmin,xmax,xmin,xmax])     
-           
-            else:
-                if self.mask is not None:
-                    cs = np.ma.masked_where(self.mask,cs)
+            #plt.imshow(cs)#,vmin=-0.015,vmax=.1)#,cmap='gray_r')
 
-                plt.subplot(1,4,i+1)#,projection=imwcs)
-                try:
-                    norm = simple_norm(cs, stretch=stretch[i],max_percent=percentile2,min_percent=percentile1)
-                    plt.imshow(cs, norm=norm,origin='lower',interpolation='nearest')#,vmin=v1,vmax=v2)
-                except:
-                    print("WARNING: problem calculating the simple_norm - check images ") 
-                #if i == 2:
-                #    plt.imshow(cs, norm=norm,origin='lower',vmin=-1.2e-5,vmax=1e-4)
-                #if i == 3:
-                #    plt.imshow(cs, norm=norm,origin='lower',vmin=-10.5,vmax=-9)
-                #else:
-                #    plt.imshow(cs, norm=norm,origin='lower')#,vmin=v1,vmax=v2)
-                
-                if zoom:
-                    # TODO fix to use headers to zoom
-                    # check for RA and DEC, b/c image might not be centered
-                    #print("zooming")                    
-                    xsize,ysize = cs.shape
-                    delta = xsize//(zoomfactor*2)                    
-                    if self.ra is not None:
-                        galcoord = SkyCoord(ra*u.deg,dec*u.deg,frame='icrs')
-                        xcenter,ycenter = imwcs.world_to_pixel(galcoord)
-                        xcenter = xcenter[0]
-                        ycenter = ycenter[0]                        
-                    else:
-                        xcenter = xsize//2
-                        ycenter = ysize // 2
-
-                    xmin = xcenter - delta
-                    xmax = xcenter + delta
-
-                    ymin = ycenter - delta
-                    ymax = ycenter + delta
-
-                    if xmin < 1:
-                        xmin = 1
-                    if ymin < 1:
-                        ymin = 1
-                    if xmax > xsize:
-                        xmax=xsize-1
-                    if ymax > ysize:
-                        xmax=xsize-1
-                    #print([ymin,ymax,xmin,xmax]) 
-                    plt.axis([xmin,xmax,ymin,ymax])                
-                    xcoords = np.array([xmin,xmax])
-                    ycoords = np.array([ymin,ymax])
-                    
-                #plt.imshow(cs)#,vmin=-0.015,vmax=.1)#,cmap='gray_r')
-                
-                plt.colorbar(fraction=.045)
+            plt.colorbar(fraction=.045)
             plt.title(titles[i],fontsize=16)
-            #plt.xticks([],[])
-            #plt.yticks([],[])
-            
-            # this next block zooms into center half of the image
+            plt.xticks([],[])
+            plt.yticks([],[])
 
-            # zoom jpeg image
+        # this next block zooms into center half of the image
+
+        # zoom jpeg image
 
         sky = imwcs.pixel_to_world(xcoords,ycoords)
-        print("xmin,xmax = ",xmin,xmax,ymin,xmax)
-        print("xcoords = ",xcoords)
-        print("sky = ",sky)
+        # for debugging
+        #print("xmin,xmax = ",xmin,xmax,ymin,xmax)
+        #print("xcoords = ",xcoords)
+        #print("sky = ",sky)
+        
         #print(legacyr)
-        jpeg_data = Image.open(legacy_jpg)
         legwcs = WCS(fits.getheader(self.legacy_r))
+        # read in the Legacy jpeg image
+        legacy_jpg = glob.glob('legacy/*.jpg')[0]        
+        jpeg_data = Image.open(legacy_jpg)        
+        
         # plot jpg as projection of legacy r-band
         plt.subplot(1,4,1,projection=legwcs)
         plt.imshow(jpeg_data)
+        plt.title("Legacy")
         axleg = plt.gca()
         #zoom=False
         if zoom:
-            # set limits in ra,dec
+            # convert ra and dec of zoomed image into pixel
+            # coordinates on jpeg image using the legacy wcs
+            # to translate between the world and pixel coords
             x,y = legwcs.world_to_pixel(sky)
-            print("x,y = ",x,y)
-            # convert ramin,ramax and decmin,decmax to (x,y)
-            #print(sky)
             plt.axis([x[0],x[1],y[0],y[1]])
-
-        #sky = imwcs.pixel_to_world(xcoords,ycoords)
-            
-        # now use legacy header to convert to coordinates in the jpeg image
-        #print("skycoords = ",sky)
-        # legheader = fits.getheader(self.legacy_r)
-        # legwcs = WCS(legheader)
-        # x,y = legwcs.world_to_pixel(sky)
-        # plt.sca(axleg)
-        # # plt.subplot(1,4,1,projection=imwcs)
-        #     #    axleg = plt.gca()
-        #     #    plt.imshow(cs,origin='lower',interpolation='nearest')#,vmin=v1,vmax=v2)
-            
-        # plt.axis([x[0],x[1],y[0],y[1]])
-        #print(sky)
-        #print(sky[0])
-        #print(sky[0].ra)
-        #plt.xlim(sky[0].ra.value,sky[1].ra.value)
-        #plt.ylim(sky[0].dec.value,sky[1].dec.value)
-        #plt.axis([sky[0][0],sky[1][0],sky[1][0],sky[1][1]])
-            
 
 
         plt.savefig(self.dirname+'-mstar-sfr-ssfr.png')        
@@ -460,6 +400,6 @@ if __name__ == '__main__':
     g.get_mstar_image()
     g.get_sfr_image()
     g.get_ssfr_image()
-    g.save_figure(zoom=zoomflag,zoomfactor=2.5)
+    g.save_figure(zoom=zoomflag,zoomfactor=2.)
     os.chdir(topdir)
 
