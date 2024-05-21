@@ -20,7 +20,7 @@ from astropy.wcs import WCS
 from astropy.table import Table
 
 from astropy.nddata import Cutout2D
-
+from astropy import stats as apstats
 
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 
@@ -34,7 +34,6 @@ import warnings
 warnings.filterwarnings('ignore')
 
 
-#%matplotlib inline
 mycolors = plt.rcParams['axes.prop_cycle'].by_key()['color']
 plotdir = homedir+'/research/Virgo/plots/halpha/'
 
@@ -60,17 +59,17 @@ zoom_coords_INT = {'VFID5889':[100,1300,850,2100],\
                    
                    }
 
-
+#'VFID5851': 
 HIdir = homedir+'/research/Virgo/alma/2023/MeerKAT_ALMA_target_list/'
-HI_file = {'VFID5889':None,\
+HI_file = {'VFID5889':HIdir+'ngc5363_ngc5364_ngc5360.fits',\
            'VFID5851':HIdir+'J1355_fin_lw05_bpcorr_2_mom0.fits',\
+           #'VFID5851':None, \
            'VFID5855':HIdir+'J1355_fin_lw05_bpcorr_6_mom0.fits',\
            'VFID5842':HIdir+'J1355_fin_lw05_bpcorr_5_mom0.fits',\
            'VFID5859':None,\
-           'VFID5892':None,\
-            'VFID5879':None,\
-           'VFID5844':None            
-           
+           'VFID5892':HIdir+'ngc5363_ngc5364_ngc5360.fits',\
+           'VFID5879':None,\
+           'VFID5844':HIdir+'ngc5363_ngc5364_ngc5360.fits'
 }
 
 
@@ -103,14 +102,14 @@ afigsize = {'VFID5889':[14.5,4],\
            'VFID5844':[14,3.5]            
            }
 
-alevels = {'VFID5889':[4.5],\
-           'VFID5851':[4.5],\
-           'VFID5855':[4],\
-           'VFID5842':[4],\
-           'VFID5859':[3.55],\
-           'VFID5892':[4.3],
-            'VFID5879':[4],\
-           'VFID5844':[4]            
+alevels = {'VFID5889':[3.5],\
+           'VFID5851':[4.],\
+           'VFID5855':[3.5],\
+           'VFID5842':[3.5],\
+           'VFID5859':[3.5],\
+           'VFID5892':[3.5],
+            'VFID5879':[3.75],\
+           'VFID5844':[3.75]            
            
            }
 
@@ -127,14 +126,14 @@ HIfiles = {'VFID5859':'research/Virgo/alma/2023/MeerKAT_ALMA_target_list/J1355_f
 def plot_HI_contours(ax,HIfilename,xmin=None,xmax=None,ymin=None,ymax=None,levels=None,color='white'):
     """ plot HI contours, given current axis + reference image header """
     # borrowing from alma 2023 proposal
-    ncontour=5
+    ncontour=3
 
     hdu = fits.open(HIfilename)[0]
     HI_WCS = WCS(hdu.header)
 
     if levels is None:
         levels = 3**np.arange(ncontour)+1
-    ax.contour(hdu.data,transform=ax.get_transform(HI_WCS),levels=levels,colors=color,alpha=.5,lw=1)
+    ax.contour(hdu.data,transform=ax.get_transform(HI_WCS),levels=levels,colors=color,alpha=.4,lw=1)
 
 
 def plot_sfr_contours(dirname,ax,legwcs=None,xmin=None,xmax=None,ymin=None,ymax=None,levels=None):
@@ -192,11 +191,24 @@ def plot_sfr_contours(dirname,ax,legwcs=None,xmin=None,xmax=None,ymin=None,ymax=
     contour_data = convolution.convolve_fft(contour_data, convolution.Box2DKernel(5), allow_huge=True, nan_treatment='interpolate')
     ax.contour(contour_data,transform=ax.get_transform(contour_WCS),levels=mylevels,colors='fuchsia',lw=5)
 
+
+    
 def add_spine(ax,color='c'):
     from astropy.table import Table
     spinedir = '/home/rfinn/research/Virgo/tables-north/v2/spines/'
     spine  = Table.read(spinedir+'filament_spine_VirgoIII.fits')
     ax.plot(spine['ra'],spine['dec'],'c--',color=color,transform=ax.get_transform('world'))#, ,label='Filament Spine')
+
+def plot_spines():
+    import glob
+    sfiles = glob.glob(homedir+'/research/Virgo/tables-north/spines/filament*.fits')
+    ncolor = 0
+    for i,f in enumerate(sfiles):
+        spine  = Table.read(f)
+        plt.plot(spine['ra'],spine['dec'],c=mycolors[ncolor],label=os.path.basename(f).replace('filament_spine_','').replace('.fits','').replace('_Filament',''),lw=3)
+        ncolor += 1
+        if ncolor > len(mycolors)-1:
+            ncolor = 0
     
 def update_ngc5348_mask():
     imname = ''
@@ -210,7 +222,7 @@ def update_ngc5348_mask():
         
 
 
-def get_rad_fluxfrac(pfit,frac=0.9):
+def get_rad_fluxfrac(pfit,frac=0.9,verbose=False):
     from scipy.interpolate import interp1d
     N = 10
     x = np.linspace(0,N*pfit.r_eff.value,100*N)
@@ -218,6 +230,8 @@ def get_rad_fluxfrac(pfit,frac=0.9):
     integral2 = np.cumsum(flux)
     
     interp_profile = interp1d(integral2,x)
+    if verbose:
+        print(f"cumulative sum of profile = {integral2[-1]:.2e}")
     return interp_profile(frac*integral2[-1])
 
 def get_legacy_images():
@@ -420,7 +434,7 @@ def plot_mstar_sfr(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xticks=True,f
 
 def plot_mstar_sfr_profiles(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xticks=True,figsize=[16,6],\
                             cbfrac=.08,cbaspect=20,clevels=[4],contourFlag=True,rmax=None,\
-                            Re_mstar=None,Re_sfr=None,R90_mstar=None,R90_sfr=None,logMstar=None,cmap='magma_r'):
+                            Re_mstar=None,Re_sfr=None,R90_mstar=None,R90_sfr=None,logMstar=None,cmap='magma_r',markGroupCenter=False):
     """
     same plot as mstar_sfr, but swap out ssfr for radial profiles in the 4th panel
 
@@ -443,7 +457,7 @@ def plot_mstar_sfr_profiles(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xtic
     vmax = [6,.6e-5,-9]
     allim = [massim,sfrim,ssfrim]
     allim = [massim,sfrim]    
-
+    cblabels = [r'$\rm \log_{10}(M_\star/M_\odot)/pixel$',r'$\rm SFR(M_\star/yr)/pixel$']
     
     vfid = dirname.split('-')[0]
     print("VFID = ",vfid)
@@ -563,7 +577,8 @@ def plot_mstar_sfr_profiles(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xtic
 
         #if i in [1,2]:
         cbaxes = inset_axes(ax2, width="80%", height="3%", loc=8) 
-        plt.colorbar(cax=cbaxes, orientation='horizontal')
+        cb = plt.colorbar(cax=cbaxes, orientation='horizontal')
+        cb.set_label(label=cblabels[i],fontsize=12)
 
     
     # read in header from legacy r-band image
@@ -575,7 +590,7 @@ def plot_mstar_sfr_profiles(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xtic
     # plot jpg as projection of legacy r-band
 
     
-    plt.subplot(1,4,1,projection=legwcs)
+    ax1 = plt.subplot(1,4,1,projection=legwcs)
     plt.imshow(jpeg_data)
 
     if xmin is not None:
@@ -600,7 +615,41 @@ def plot_mstar_sfr_profiles(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xtic
     
 
     plt.title(f"{t[0]} Legacy grz",fontsize=18)
-    
+
+    #############################################################
+    # add arrow showing direction to group center
+    #############################################################
+    print("VFID = ",vfid)
+
+    if (vfid == 'VFID5855') | (vfid == 'VFID5859'):
+        print('hi')
+        # get coords of galaxy
+        vflag = v.main['VFID'] == vfid
+        print(np.sum(vflag))
+        x = v.main['RA'][vflag][0]
+        y = v.main['DEC'][vflag][0]      
+        dRA = v.mw_RAcenter - x
+        dDEC = v.mw_DECcenter - y        
+        norm = np.sqrt(dRA**2+dDEC**2)
+
+        if  (vfid == 'VFID5855'):
+            scale = 0.02
+            mylw = 0.05
+            dx = dRA/norm*scale
+            dy = dDEC/norm*scale
+
+            plt.arrow(x,y,dx,dy,color='c',transform=ax1.get_transform('world'),lw=mylw,alpha=.7)
+        elif (vfid == 'VFID5859'):
+            scale = 0.0025
+            mylw=.5
+            dx = dRA/norm*scale
+            dy = dDEC/norm*scale
+            width=.001
+            plt.arrow(x,y,dx,dy,color='c',transform=ax1.get_transform('world'),linewidth=mylw,alpha=.7,head_width=2.5*width,head_length=2.5*width)
+        print(x,y)
+        #plt.plot(x*u.deg,y*u.deg,'bo',markersize=20,color='c',transform=ax1.get_transform('world'))
+        
+
     #print(x[0],x[1],y[0],y[1])
     #############################################################
     # add HI contour to legacy image
@@ -671,7 +720,7 @@ def plot_mstar_sfr_profiles(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xtic
     os.chdir(cwd)
 
 
-
+    return ax1
     
 
 def fit_profiles(rp,hp,weights=None,rmax=None,fixN=False,labels = ['logMstar','logSFR'],log1Flag=False):
@@ -1161,10 +1210,57 @@ def plot_phase_space(sepmax=15):
     plt.savefig(plotdir+'/NGC5364_Virgo_phasespace.png')
 
 
+def plot_sky_positions_with_filaments():
+
+    plt.figure(figsize=(12,6))
+    plt.subplots_adjust(right=.8)
+    plot_spines()
+    plt.plot(v.main['RA'],v.main['DEC'],'k.',alpha=.1,label='Virgo Filament Catalog')
+    # plot CO sources
+    flag = v.main['HAobsflag'] #& ~v.main['COflag']
+    #plt.plot(v.main['RA'][flag],v.main['DEC'][flag],'cs',alpha=.5,mfc='None',label=r'$H\alpha$',markersize=8)
+    flag = v.groupMembs
+    plt.plot(v.main['RA'][flag],v.main['DEC'][flag],'bo',alpha=.7,label=r'$NGC5364~Group$',markersize=6,mec='k')    
+
+
+    
+
+    #flag = v.main['COflag'] & ~v.main['HAobsflag']
+    #plt.plot(v.main['RA'][flag],v.main['DEC'][flag],'bo',color='purple',markersize=8,alpha=.7,label=r'$CO, No \ H\alpha$',mec='0.5')
+    #flag = v.main['COflag'] & v.main['HAobsflag']
+    #plt.plot(v.main['RA'][flag],v.main['DEC'][flag],'co',markersize=5,alpha=.7,label=r'$CO + H\alpha$',mec='0.5')
+    plt.axis([118,262,-1,65])    
+    plt.legend(bbox_to_anchor=(1.01,1),loc='upper left')
+
+
+
+    plt.gca().invert_xaxis()
+    plt.xlabel('RA (deg)',fontsize=20)
+    plt.ylabel('DEC (deg)',fontsize=20)
+    plt.xticks(fontsize=14)
+    plt.yticks(fontsize=14)
+    #plt.legend(loc='upper right')
+    #plt.title('Filamentary Structures Surrounding the Virgo Cluster',fontsize=18)
+    plt.savefig(plotdir+'/ngc5364_positions_filaments.png')
+    plt.savefig(plotdir+'/ngc5364_positions_filaments.pdf')
 class grouptables(vtables):
     def get_group_members(self):
         self.groupMembs = self.kt['PGC1'] == 49547
         print(f"number of Kourkchi group members = {np.sum(self.groupMembs)}")
+    def get_mass_weighted_center(self):
+        """get RA and DEC of mass weighted center  """
+
+        # create a combined mass that uses the best fit magphys mass for those with bad med values
+        badMassFlag = v.magphys['logMstar_med'] < 2
+        combinedMass = v.magphys['logMstar_med'] * ~badMassFlag + v.magphys['logMstar_best'] * badMassFlag
+
+        # calculate the mass-weighted center
+        self.mw_RAcenter = np.sum(v.main['RA'][self.groupMembs]*10.**combinedMass[self.groupMembs])/np.sum(10.**combinedMass[self.groupMembs])
+
+        self.mw_DECcenter = np.sum(v.main['DEC'][self.groupMembs]*10.**combinedMass[self.groupMembs])/np.sum(10.**combinedMass[self.groupMembs])
+
+        self.mw_vrcenter = np.sum(v.main['vr'][self.groupMembs]*10.**combinedMass[self.groupMembs])/np.sum(10.**combinedMass[self.groupMembs])
+
     def write_latex_table(self):
         self.get_distance_Virgo()
         flag = self.groupMembs & self.main['HAobsflag']
@@ -1200,6 +1296,19 @@ class grouptables(vtables):
         self.dist3dVirgo_std = np.std(dist3dVirgo)        
         print(f"distance to Virgo = {self.dist3dVirgo_mean:.1f} ({self.dist3dVirgo_med:.1f}) +/- {self.dist3dVirgo_std:.1f}")
 
+    def get_biweight_location_scale(self):
+        """ calculate 3D distance to Virgo for group members """
+        # environment table has distSGX_Virgo, SGY, SGZ
+
+        self.bw_location = apstats.biweight_location(self.env['Vcosmic'][self.groupMembs])
+        self.bw_scale = apstats.biweight.biweight_scale(self.env['Vcosmic'][self.groupMembs])
+        print(f"Vcosmic: biweight location (scale) = {self.bw_location:.1f} ({self.bw_scale:.1f})")
+
+
+        self.bw_location = apstats.biweight_location(self.main['vr'][self.groupMembs])
+        self.bw_scale = apstats.biweight.biweight_scale(self.main['vr'][self.groupMembs])
+        print(f"vr: biweight location (scale) = {self.bw_location:.1f} ({self.bw_scale:.1f})")
+        
     def fit_profiles(self):
         """ fit profile of each group member """
         pass
@@ -1217,5 +1326,7 @@ if __name__ == '__main__':
     v = grouptables(args.tabledir,args.tableprefix) 
     v.read_all()
     v.get_group_members()
+    v.get_mass_weighted_center()    
     v.get_distance_Virgo()
+    v.get_biweight_location_scale()
     groupMembs = v.kt['PGC1'] == 49547
