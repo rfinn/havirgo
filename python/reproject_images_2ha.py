@@ -51,7 +51,7 @@ if __name__ == '__main__':
     reffile = os.path.join(dirname,dirname+'-CS.fits')
 
     if not os.path.exists(reffile):
-        print("can't find CS image - exiting")
+        print("can't find CS image - exiting ",reffile)
         sys.exit()
     #get legacy/*.fits
     legacy_images = glob.glob(os.path.join(dirname,'legacy/*.fits'))
