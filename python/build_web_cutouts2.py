@@ -1103,7 +1103,8 @@ if __name__ == '__main__':
     vfha = fits.getdata(homedir+'/research/Virgo/tables-north/v2/vf_v2_halpha.fits')
     #fullha = fits.getdata('../halphagui-output-combined-2023-Aug-27.fits')
     # adding new filename
-    fullha = fits.getdata('../halphagui-output-combined-2024-Jan-04.fits')        
+    #fullha = fits.getdata('../halphagui-output-combined-2024-Jan-04.fits')
+    fullha = fits.getdata('../halphagui-output-combined-2024-May-24.fits')
 
     
     if args.cutoutdir is not None:
