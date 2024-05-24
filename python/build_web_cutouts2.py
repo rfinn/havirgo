@@ -772,6 +772,7 @@ class build_html_cutout():
         
         #self.build_html()
     def build_html(self):
+        print("building html ",self.html)
         self.write_header()
         self.write_navigation_links()
         # adding this here so we can inspect the masks quickly
