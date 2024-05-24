@@ -218,7 +218,7 @@ def plot_image(data):
     plt.figure()
     norm = simple_norm(data, stretch='asinh',max_percent=99,min_percent=.5)
     plt.imshow(data, norm=norm,origin='lower',interpolation='nearest')#,vmin=v1,vmax=v2)
-    plt.show()
+    #plt.show()
 
 
 # def subtract_continuum(Rfile, Hfile, gfile, rfile, mask=None,overwrite=False,testing=False):
