@@ -47,6 +47,15 @@ else:
 s = f"python ~/github/HalphaImaging/python3/generate_all_cutout_plots.py --onegal {cutout_dir}"
 os.system(s)
 
+# reproject legacy to halpha
+s = f"python ~/github/havirgo/python/reproject_images_2ha.py {cutout_dir}"
+os.system(s)
+
+# subtract continuum
+s = f"python ~/github/havirgo/python/subtract_continuum.py {cutout_dir}"
+os.system(s)
+
+
 # build webpage
 s = f"python ~/github/havirgo/python/build_web_cutouts2.py --oneimage {cutout_dir}"
 os.system(s)
