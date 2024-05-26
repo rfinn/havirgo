@@ -1212,15 +1212,15 @@ def plot_phase_space(sepmax=15):
 
 def plot_sky_positions_with_filaments():
 
-    plt.figure(figsize=(12,6))
-    plt.subplots_adjust(right=.8)
+    plt.figure(figsize=(9,5.5))
+    plt.subplots_adjust(right=.95,top=.95)
     plot_spines()
     plt.plot(v.main['RA'],v.main['DEC'],'k.',alpha=.1,label='Virgo Filament Catalog')
     # plot CO sources
     flag = v.main['HAobsflag'] #& ~v.main['COflag']
     #plt.plot(v.main['RA'][flag],v.main['DEC'][flag],'cs',alpha=.5,mfc='None',label=r'$H\alpha$',markersize=8)
     flag = v.groupMembs
-    plt.plot(v.main['RA'][flag],v.main['DEC'][flag],'bo',alpha=.7,label=r'$NGC5364~Group$',markersize=6,mec='k')    
+    plt.plot(v.main['RA'][flag],v.main['DEC'][flag],'mo',alpha=.7,label=r'$NGC5364~Group$',markersize=6)    
 
 
     
@@ -1230,7 +1230,7 @@ def plot_sky_positions_with_filaments():
     #flag = v.main['COflag'] & v.main['HAobsflag']
     #plt.plot(v.main['RA'][flag],v.main['DEC'][flag],'co',markersize=5,alpha=.7,label=r'$CO + H\alpha$',mec='0.5')
     plt.axis([118,262,-1,65])    
-    plt.legend(bbox_to_anchor=(1.01,1),loc='upper left')
+    plt.legend(loc='upper left')#bbox_to_anchor=(1.01,1),loc='upper left')
 
 
 
