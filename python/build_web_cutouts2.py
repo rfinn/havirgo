@@ -1105,7 +1105,7 @@ if __name__ == '__main__':
     #fullha = fits.getdata('../halphagui-output-combined-2023-Aug-27.fits')
     # adding new filename
     #fullha = fits.getdata('../halphagui-output-combined-2024-Jan-04.fits')
-    fullha = fits.getdata('../halphagui-output-combined-2024-May-24.fits')
+    fullha = fits.getdata('../halphagui-output-combined-2024-May-30.fits')
 
     
     if args.cutoutdir is not None:
