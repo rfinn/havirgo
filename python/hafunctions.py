@@ -14,13 +14,17 @@ from readtablesv2 import vtables
 import os
 import numpy as np
 from matplotlib import pyplot as plt
+from matplotlib.patches import Ellipse
+
 from astropy.io import fits
 from astropy.io import ascii
 from astropy.wcs import WCS
+from astropy import wcs
 from astropy.table import Table
 
 from astropy.nddata import Cutout2D
 from astropy import stats as apstats
+from astropy import units as u
 
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 
@@ -66,10 +70,10 @@ HI_file = {'VFID5889':HIdir+'ngc5363_ngc5364_ngc5360.fits',\
            #'VFID5851':None, \
            'VFID5855':HIdir+'J1355_fin_lw05_bpcorr_6_mom0.fits',\
            'VFID5842':HIdir+'J1355_fin_lw05_bpcorr_5_mom0.fits',\
-           'VFID5859':None,\
+           'VFID5859':HIdir+'J1355_p_0512_lw05_final_15_mom0.fits',\
            'VFID5892':HIdir+'ngc5363_ngc5364_ngc5360.fits',\
            'VFID5879':None,\
-           'VFID5844':HIdir+'ngc5363_ngc5364_ngc5360.fits'
+           'VFID5844':None 
 }
 
 
@@ -123,10 +127,10 @@ HIfiles = {'VFID5859':'research/Virgo/alma/2023/MeerKAT_ALMA_target_list/J1355_f
 ###########################################
 ## FUNCTIONS
 ###########################################
-def plot_HI_contours(ax,HIfilename,xmin=None,xmax=None,ymin=None,ymax=None,levels=None,color='white'):
+def plot_HI_contours(ax,HIfilename,xmin=None,xmax=None,ymin=None,ymax=None,levels=None,color='white',addbeam=False,ncontour=3):
     """ plot HI contours, given current axis + reference image header """
     # borrowing from alma 2023 proposal
-    ncontour=3
+    #ncontour=3
 
     hdu = fits.open(HIfilename)[0]
     HI_WCS = WCS(hdu.header)
@@ -135,6 +139,38 @@ def plot_HI_contours(ax,HIfilename,xmin=None,xmax=None,ymin=None,ymax=None,level
         levels = 3**np.arange(ncontour)+1
     ax.contour(hdu.data,transform=ax.get_transform(HI_WCS),levels=levels,colors=color,alpha=.4,lw=1)
 
+def plot_HI_beam(ax,HIfilename,hostim_header,color='white'):
+    ###
+    # get size of the host image
+    ###
+    naxis1 = hostim_header['NAXIS1']
+    naxis2 = hostim_header['NAXIS2']
+    pscale = wcs.utils.proj_plane_pixel_scales(WCS(hostim_header))*u.deg # in deg
+    image_x = naxis1*pscale[0]
+    image_y = naxis2*pscale[1] 
+
+    ###
+    # get dimensions of host image
+    ###
+    hdu = fits.open(HIfilename)
+    HI_WCS = WCS(hdu[0].header)
+    PA = hdu[0].header['BPA']#*u.deg
+    a = hdu[0].header['BMAJ']*u.deg
+    b = hdu[0].header['BMIN']*u.deg
+    hdu.close()
+    
+    #patch_height = (cube_params['bmaj'] / opt_view).decompose()
+    #patch_width = (cube_params['bmin'] / opt_view).decompose()
+    patch_height = a/image_x
+    patch_width = b/image_y    
+    patch = {'width': patch_width, 'height': patch_height}
+    print(a,image_x,patch['height'], patch['width'], PA)
+    ax.add_patch(Ellipse((0.92, 0.9), height=patch['height'], width=patch['width'], angle=PA,\
+                         transform=ax.transAxes, edgecolor=color,facecolor=color, linewidth=1))    
+
+        
+        
+    
 
 def plot_sfr_contours(dirname,ax,legwcs=None,xmin=None,xmax=None,ymin=None,ymax=None,levels=None):
     from astropy import convolution
@@ -549,7 +585,7 @@ def plot_mstar_sfr_profiles(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xtic
             if HIfilename is not None:
                 print("HIfilename = ",HIfilename)
                 plot_HI_contours(ax2,HIfilename,color='steelblue')
-
+                plot_HI_beam(ax2,HIfilename,hdu.header,color='steelblue') 
 
         #############################################################
         # add contours from stellar mass image
@@ -618,6 +654,7 @@ def plot_mstar_sfr_profiles(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xtic
 
     #############################################################
     # add arrow showing direction to group center
+    # TODO : figure out how to make this smaller in smaller images
     #############################################################
     print("VFID = ",vfid)
 
@@ -659,7 +696,7 @@ def plot_mstar_sfr_profiles(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xtic
     if HIfilename is not None:
         print("HIfilename = ",HIfilename)
         plot_HI_contours(plt.gca(),HIfilename,color='lightsteelblue')
-
+        plot_HI_beam(plt.gca(),HIfilename,fits.getheader(legacyr),color='steelblue') 
         
     #############################################################
     # add stellar mass from magphys to the legacy image
@@ -687,21 +724,28 @@ def plot_mstar_sfr_profiles(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xtic
         x = t['sma_arcsec']
         y = t['sb']
         yerr = t['sb_err']
+        if (i == 1) & (('VFID5844' in dirname) | ('VFID5879' in dirname)):
+            continue
         if ('VFID5859' in dirname) | ('VFID5892' in dirname):
             norm_factor = np.median(y[0:5])
         else:
             norm_factor = np.median(y[0:15])
+        
         plt.plot(x,y/norm_factor,'bo',c=colors[i],label=labels[i],marker=markers[i])
         #plt.fill_between(x,(y+yerr)/norm_factor,y2=(y-yerr)/norm_factor,color=mycolors[i],alpha=.5)
     # add R50 if it's provided
     if Re_mstar is not None:
         plt.axvline(x=Re_mstar,ls='--',lw=2,color=colors[0],label='$R_e$')#,label='$R_e(M_\star)$')
-    if Re_sfr is not None:
-        plt.axvline(x=Re_sfr,ls='--',color=colors[1])#,label='$R_e(SFR)$')
     if R90_mstar is not None:
         plt.axvline(x=R90_mstar,ls='-',lw=2,color=colors[0],label='$R_{90}$')#,label='$R_{90}(M_\star)$')
-    if R90_sfr is not None:
-        plt.axvline(x=R90_sfr,ls='-',color=colors[1])#,label='$R_{90}(SFR)$')
+
+    if (('VFID5844' in dirname) | ('VFID5879' in dirname)):
+        print("not adding halpha radii")
+    else:
+        if Re_sfr is not None:
+            plt.axvline(x=Re_sfr,ls='--',color=colors[1])#,label='$R_e(SFR)$')
+            if R90_sfr is not None:
+                plt.axvline(x=R90_sfr,ls='-',color=colors[1])#,label='$R_{90}(SFR)$')
         
     plt.legend()#bbox_to_anchor=(1.02,0.95))
     plt.gca().set_yscale('log')
