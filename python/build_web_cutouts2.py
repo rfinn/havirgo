@@ -1105,6 +1105,8 @@ if __name__ == '__main__':
     #fullha = fits.getdata('../halphagui-output-combined-2023-Aug-27.fits')
     # adding new filename
     #fullha = fits.getdata('../halphagui-output-combined-2024-Jan-04.fits')
+
+    # need to update this automatically - find the most recent version in the directory
     fullha = fits.getdata('../halphagui-output-combined-2024-May-30.fits')
 
     
