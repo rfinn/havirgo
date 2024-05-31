@@ -2,12 +2,16 @@
 
 
 """
+This is my subtract_continuum.py program with Gautam's code to optimize the scale factor used for the r-band image.
+
+It creates an output image -CS-gr-auto.fits
+
 GOAL:
 * subtract the continuum using color-correction from legacy images
 
 USEAGE:
 
-python subtract_continuum.py dirname
+python subtract_continuum_auto.py dirname
 
 this assumes the file structure and naming convention used in the Virgo Filament Survey, with 
 
@@ -31,6 +35,7 @@ PROCEDURE:
 
 * apply color correction to continuum-subtracted images
   
+* determine best scale factor in the range from 0.8 - 1.3
 
 FILTER TRANSFORMATIONS FROM MATTEO
 
@@ -545,13 +550,12 @@ if __name__ == '__main__':
     # this makes the program easy to run with gnu parallel
     dirname = sys.argv[1]
 
-    # check to see if additional scale factor for continuum is provided
     if len(sys.argv) > 2:
-        contscale = float(sys.argv[2])
+        coloruse = int(sys.argv[2])
     else:
-        contscale = 1.
+        coloruse = 0
 
-    print("\nIn subtract continuum, continuum scale factor = ",contscale,"\n")
+    #print("\nIn subtract continuum, continuum scale factor = ",contscale,"\n")
     # get current directory
     topdir = os.getcwd()
 
@@ -568,9 +572,12 @@ if __name__ == '__main__':
     tabledir = os.getenv("HOME")+'/research/Virgo/tables-north/v2/'
     vhalpha = Table.read(tabledir+'vf_v2_halpha.fits')
 
+    # get ellipse data to use when optimizing continuum subtraction
+    ellip_dat = fits.getdata(tabledir+'vf_v2_legacy_ephot.fits')
+    sma, pa, ba = ellip_dat['sma_moment'][gindex], ellip_dat['pa_moment'][gindex], ellip_dat['ba_moment'][gindex]
+    
     gindex = np.arange(len(vhalpha))[vhalpha['VFID'] == vfid][0]
 
-    
     # correction for the variation in the halpha filter transmission
     halpha_filter_cor = vhalpha['FILT_COR'][gindex]
     print(f"{vfid}: halpha filter correction = {halpha_filter_cor:.3f}")
@@ -584,7 +591,7 @@ if __name__ == '__main__':
     halpha_extinction_correction = 10.**(vext['A(R)_SandF'][gindex]/2.5)
     
     
-    print("\nhalpha extinction correction = ",halpha_extinction_correction)
+    #print("\nhalpha extinction correction = ",halpha_extinction_correction)
     # define the file names
     Rfile = dirname+'-R.fits' # r-band image taken with same telescope as halpha
     Hfile = dirname+'-Ha.fits'  # halpha image
@@ -638,7 +645,7 @@ if __name__ == '__main__':
     nothing, but save the CS subtracted image that uses the g-r color in the current directory
     
     """
-    outname = Hfile.replace('Ha.fits','CS-gr.fits')
+    outname = Hfile.replace('Ha.fits','CS-gr-auto.fits')
     if os.path.exists(outname) & (not overwrite):
         print("continuum-subtracted image exists - not redoing it")
         #return
@@ -756,22 +763,22 @@ if __name__ == '__main__':
 
     # The r-band mag has to be scaled to the same ZP as the halpha image
 
+    if coloruse:
+        # mag_r in AB mags
+        # g-r color is in AB mags
+        # mag_r_to_Ha and mag_r should be very similar - check this
+        # mag_r_to_Ha = mag_r + filter_transformation(telescope,rfilter, gr_col)
 
-    # mag_r in AB mags
-    # g-r color is in AB mags
-    # mag_r_to_Ha and mag_r should be very similar - check this
-    mag_r_to_Ha = mag_r + filter_transformation(telescope,rfilter, gr_col)
+        # going to stay in counts to avoid nans
+        # create an image with delta needed to correct for color term
+        delta_mag = filter_transformation(telescope,rfilter, gr_col)
 
-    # going to stay in counts to avoid nans
-    # create an image with delta needed to correct for color term
-    delta_mag = filter_transformation(telescope,rfilter, gr_col)
+        # convert to flux units
+        delta_flux = 10.**(-0.4*delta_mag)
 
-    # convert to flux units
-    delta_flux = 10.**(-0.4*delta_mag)
-
-    # use the color correction for pixels with sufficient SNR
-    data_r_to_Ha[usemask] = data_r_to_Ha[usemask] *delta_flux[usemask]
-
+        # use the color correction for pixels with sufficient SNR
+        data_r_to_Ha[usemask] = data_r_to_Ha[usemask] * delta_flux[usemask]
+    
     
     # QFM: what happens to mag_r_to_Ha -
     # this is the array that has the correct filter transformation, I think
@@ -847,6 +854,52 @@ if __name__ == '__main__':
     cnu_NB  = 3.631E3*data_r_to_Ha*1E-12
     clam_NB = 2.99792458E-5*cnu_NB/(filter_lambda_c_AA[telescope]**2) *1E18 # change central wavelength
 
+    #############################################################
+    ## GAUTAM'S CODE FOR OPTIMIZING SCALE FACTOR
+    #############################################################    
+
+    rnu = cnu_NB / rscale
+    rflux = 2.99792458E-5*rnu/(filter_lambda_c_AA_R[telescope]**2) * 1E18 * filter_Rlambda_weff[telescope]
+
+    xpix, ypix = np.arange(wcs_NB._naxis[0]), np.arange(wcs_NB._naxis[1])
+    xx, yy = np.meshgrid(xpix, ypix, indexing='xy')
+    cond_ellipse = getEllipseAll(xx, yy, xpix[len(xpix)//2], ypix[len(ypix)//2], int(sma/np.average(pscale_NB)), ba, pa)
+
+    contscale_list = np.linspace(0.8, 1.3, 51)
+    corvals = np.zeros_like(contscale_list)
+    flamenorm = np.zeros_like(contscale_list)
+    flamenegs = np.zeros_like(contscale_list)
+    overall = np.zeros_like(contscale_list)
+    for i, cval in enumerate(contscale_list):
+        flam_test = filter_width_AA[telescope]*(halpha_continuum_oversubtraction[telescope]*halpha_filter_cor*flam_NB-cval*clam_NB)
+        flame = flam_test[cond_ellipse]
+        corvals[i] = np.linalg.norm(getCorrelation(flame, rflux[cond_ellipse]))
+        flamenorm[i] = np.linalg.norm(flame, 1)
+        flamenegs[i] = np.linalg.norm(flame[flame<0], 1)
+        # overall[i] = corvals[i] * flameneg
+        
+        if i%10==0: 
+            # clipped = stats.sigma_clip(flam_test, sigma=50)
+            # out = clipped.data[clipped.mask]
+            print(f"For contscale={cval:0.2f}, correlation value = {corvals[i]:0.3f}")
+            # print(f"For contscale={cval:0.2f}, fraction of negative H-alpha values is {flame[flame<0].size/flame.size}")
+            print(f"For contscale={cval:0.2f}, total negative norm over total norm of H-alpha is {flamenegs[i]/flamenorm[i]}")
+            # print(f"For contscale={cval:0.2f}, total H-alpha norm over total r-band norm is {np.linalg.norm(flame)/np.linalg.norm(rflux[cond_ellipse])}")
+            print(f"For contscale={cval:0.2f}, total norm of H-alpha is {flamenorm[i]} \n")
+            # flam_plot = flam_test * 1
+            # flam_plot[~cond_ellipse] = 0
+            # norm = simple_norm(flam_plot, stretch='asinh',max_percent=99.0,min_percent=1.0)
+            # plt.imshow(flam_plot, cmap='viridis', norm=norm)
+            # plt.show()
+            # breakpoint()
+    for i, fl in enumerate(flamenorm):
+        overall[i] = 0.5*corvals[i]/corvals.max() + 0.5*flamenorm[i]/flamenorm.max() + flamenegs[i]/flamenegs.max()
+    indcor1, indcor2, indcor = np.argmin(corvals), np.argmin(flamenorm), np.argmin(overall)
+    cs_use1, cs_use2 = contscale_list[indcor1], contscale_list[indcor2]
+    cs_use = contscale_list[indcor]
+    print(f"Minimum correlation / total norm / overall for contscale = {cs_use1:0.2f} / {cs_use2:0.2f} / {cs_use:0.2f}")
+    # cs_use = (cs_use1 + cs_use2) / 2.0
+    
     # TODONE - change width of the filter
     # QFM : in his code, there is a multiplicative factor of 1.03 on clam_NB
     # need to multiply by width of filter to convert from flux/A to flux
@@ -866,16 +919,18 @@ if __name__ == '__main__':
     NB_ABmag = NB_ABmag * halpha_extinction_correction    
 
 
-    ############################################################
-    ## COMMENTING OUT WRITING UNTIL I UNDERSTAND WHAT THESE ARE
-    ############################################################    
     # this should still be good to use the Halpha ZP
     hhdu[0].header['CONSCALE']=(float(f'{contscale:.3f}'),'Continuum scale factor')    
     hdu = fits.PrimaryHDU(NB_ABmag, header=hhdu[0].header)
 
     # outname is *CS-gr.fits
     hdu.writeto(outname, overwrite=True) #NB image in F_lambda units, before
-    plot_image(hdu.data)
+    #plot_image(hdu.data)
+
+    ############################################################
+    ## COMMENTING OUT WRITING UNTIL I UNDERSTAND WHAT THESE ARE
+    ############################################################    
+    
 
     # The rest are different version of the CS image that matteo saves
     # don't know if I need all of this...
@@ -885,57 +940,57 @@ if __name__ == '__main__':
 
     # add new field to header to track continuum scale factor
 
-    hdu = fits.PrimaryHDU(flam_NB, header=hhdu[0].header)
+    #hdu = fits.PrimaryHDU(flam_NB, header=hhdu[0].header)
     #hdu.writeto(fileroot+'-net-new.fits', overwrite=True) #NB image in F_lambda units, before
     # DONE: TODO - change output image name
-    hdu = fits.PrimaryHDU(clam_NB, header=hhdu[0].header)
+    #hdu = fits.PrimaryHDU(clam_NB, header=hhdu[0].header)
     #hdu.writeto(fileroot+'-cont-new.fits', overwrite=True)
     #hdu.close()
     
     #Calculate clipped statistic
     #stat is a tuple of mean, median, sigma
-    stat = stats.sigma_clipped_stats(flam_net,mask=mask)
+    #stat = stats.sigma_clipped_stats(flam_net,mask=mask)
 
     # RF - I implemented the sky subtraction of each cutout image in halphagui
     # would rather keep it there b/c it masks out the central galaxy
     #flam_net -= stat[1]
 
-    print('Unbinned SB limit 1sigma {0:3.2e} e-18'.format(stat[2]/(pscale_NB[0]**2)))
+    #print('Unbinned SB limit 1sigma {0:3.2e} e-18'.format(stat[2]/(pscale_NB[0]**2)))
 
     # DONE: TODO - change output image name
     # this is the continuum-subtracted image
-    hdu = fits.PrimaryHDU(flam_net, header=hhdu[0].header)
+    #hdu = fits.PrimaryHDU(flam_net, header=hhdu[0].header)
     #hdu.writeto(fileroot+'-net-flux.fits', overwrite=True)
     #hdu.writeto(outname, overwrite=True)    
     #hdu.close()
 
     # convert image to surface brightness units
     # DONE: TODO - change pixel scale
-    sblam_net = flam_net/(pscale_NB[0]**2)
+    #sblam_net = flam_net/(pscale_NB[0]**2)
     
     # DONE: TODO - change output image name
-    hdu = fits.PrimaryHDU(sblam_net, header=hhdu[0].header)
+    #hdu = fits.PrimaryHDU(sblam_net, header=hhdu[0].header)
     #hdu.writeto(fileroot+'-net-sb.fits', overwrite=True)
     #hdu.close()
 
-    print('Smoothing net image')
+    #print('Smoothing net image')
     # QFM: why are we doing this?
-    flam_net_smooth = convolution.convolve_fft(flam_net, convolution.Box2DKernel(15), allow_huge=True, nan_treatment='interpolate')
+    #flam_net_smooth = convolution.convolve_fft(flam_net, convolution.Box2DKernel(15), allow_huge=True, nan_treatment='interpolate')
 
-    hdu = fits.PrimaryHDU(flam_net_smooth, header=hhdu[0].header)
+    #hdu = fits.PrimaryHDU(flam_net_smooth, header=hhdu[0].header)
     # TODONE - change output image name
     #hdu.writeto(fileroot+'-net-smooth.fits', overwrite=True)
     #hdu.close()
     
-    stat_sm = stats.sigma_clipped_stats(flam_net_smooth,mask=mask)
+    #stat_sm = stats.sigma_clipped_stats(flam_net_smooth,mask=mask)
     # TODO - add this to image header
 
-    print('Smoothed {1}x{1} SB limit 1sigma {0:3.2e} e-18'.format(stat_sm[2]/(pscale_NB[0]**2), 15))
+    #print('Smoothed {1}x{1} SB limit 1sigma {0:3.2e} e-18'.format(stat_sm[2]/(pscale_NB[0]**2), 15))
 
     # close hdu files
     hhdu.close()
     rhdu.close()
-    
+    os.chdir(topdir)
 
 
 
