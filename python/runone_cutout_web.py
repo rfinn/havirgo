@@ -55,6 +55,10 @@ os.system(s)
 s = f"python ~/github/havirgo/python/subtract_continuum.py {cutout_dir}"
 os.system(s)
 
+# subtract continuum
+s = f"python ~/github/havirgo/python/subtract_continuum_auto.py {cutout_dir}"
+os.system(s)
+
 
 # build webpage
 s = f"python ~/github/havirgo/python/build_web_cutouts2.py --oneimage {cutout_dir}"
@@ -71,7 +75,7 @@ if syncfiles:
     print("syncing to facultyweb - enter Siena password when prompted...")
     print()
     os.chdir("/data-pool/Halpha/html_dev/")
-    os.system("rsync -avz cutouts facultyweb.siena.edu:public_html/virgo/. ")
+    os.system("rsync -avz cutouts fitsxfr.siena.edu:/var/www/html/fits/virgo/. ")
 
 # return to original directory
 os.chdir(startdir)
