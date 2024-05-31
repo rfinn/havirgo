@@ -380,7 +380,8 @@ class cutout_dir():
             self.galex_flag = False
         self.make_png_plots()
         self.make_cs_png()
-        self.make_cs_png(gr=True)        
+        self.make_cs_png(gr=True)
+        self.make_cs_png(grauto=True)                
         self.get_galfit_model()
         try:
             self.get_phot_tables()
@@ -395,7 +396,8 @@ class cutout_dir():
         self.rimage = t[0]
         self.haimage = glob.glob(os.path.join(self.cutoutdir,self.gname+'*-Ha.fits'))[0]
         self.csimage = glob.glob(os.path.join(self.cutoutdir,self.gname+'*-CS.fits'))[0]
-        self.csgrimage = glob.glob(os.path.join(self.cutoutdir,self.gname+'*-CS-gr.fits'))[0]        
+        self.csgrimage = glob.glob(os.path.join(self.cutoutdir,self.gname+'*-CS-gr.fits'))[0]
+        self.csgrimageauto = glob.glob(os.path.join(self.cutoutdir,self.gname+'*-CS-gr-auto.fits'))[0]                
         self.maskimage = self.rimage.replace('.fits','-mask.fits')
 
 
@@ -464,7 +466,7 @@ class cutout_dir():
     def make_png_plots(self):
         # fitsimages and pngimages should be dictionaries
         # so I am not relying on where they are in the list
-        imnames = ['r','ha','cs','csgr','legacy_g','legacy_r','legacy_z',\
+        imnames = ['r','ha','cs','csgr','csgr_auto','legacy_g','legacy_r','legacy_z',\
                    'w1','w2','w3','w4',\
                    'mask','nuv']
         self.image_keys = imnames
@@ -473,18 +475,18 @@ class cutout_dir():
         self.fitsimages = {i:None for i in imnames}
         self.pngimages = {i:None for i in imnames}
         keys = imnames[0:4]
-        imlist = [self.rimage,self.haimage,self.csimage,self.csgrimage]
+        imlist = [self.rimage,self.haimage,self.csimage,self.csgrimage,self.csgrimageauto]
         for i,k in enumerate(keys):
             self.fitsimages[k] = imlist[i]
         
         if self.legacy_flag:
-            keys = imnames[4:7]
+            keys = imnames[5:8]
             imlist = [self.legacy_g,self.legacy_r,self.legacy_z]
             for i,k in enumerate(keys):
                 self.fitsimages[k] = imlist[i]
             
         if self.wise_flag:
-            keys = imnames[7:11]            
+            keys = imnames[8:12]            
             imlist = [self.w1,self.w2,self.w3,self.w4]
             for i,k in enumerate(keys):
                 self.fitsimages[k] = imlist[i]
@@ -520,9 +522,12 @@ class cutout_dir():
                 print('WARNING: problem making png for ',self.fitsimages[f])
 
 
-    def make_cs_png(self,gr=False):
+    def make_cs_png(self,gr=False,grauto=False):
         if gr:
             csdata,csheader = fits.getdata(self.csgrimage,header=True)
+            imx,imy,keepflag = get_galaxies_fov(self.csimage,vfmain['RA'],vfmain['DEC'])
+        elif grauto:
+            csdata,csheader = fits.getdata(self.csgrimageauto,header=True)
             imx,imy,keepflag = get_galaxies_fov(self.csimage,vfmain['RA'],vfmain['DEC'])
         else:
             csdata,csheader = fits.getdata(self.csimage,header=True)
@@ -549,6 +554,8 @@ class cutout_dir():
             suffix = "-{}.png".format(p2[i])
             if gr:
                 pngfile = os.path.join(self.outdir,os.path.basename(self.csgrimage).replace('.fits',suffix))
+            if grauto:
+                pngfile = os.path.join(self.outdir,os.path.basename(self.csgrimageauto).replace('.fits',suffix))
             else:
                 pngfile = os.path.join(self.outdir,os.path.basename(self.csimage).replace('.fits',suffix))
             plt.xlabel('RA (deg)',fontsize=16)
@@ -558,11 +565,15 @@ class cutout_dir():
             if i == 0:
                 if gr:
                     self.csgr_png1 = pngfile
+                elif grauto:
+                    self.csgrauto_png1 = pngfile
                 else:
                     self.cs_png1 = pngfile
             elif i == 1:
                 if gr:
                     self.csgr_png2 = pngfile
+                elif grauto:
+                    self.csgrauto_png2 = pngfile
                 else:
                     self.cs_png2 = pngfile 
     def get_galfit_model(self):
@@ -943,7 +954,7 @@ class build_html_cutout():
         '''  r, halpha, cs, and mask images '''
         self.html.write('<h2>Halpha Images</h2>\n')        
         #images = [self.cutout.pngimages['r'],self.cutout.pngimages['ha'],self.cutout.cs_png1,self.cutout.cs_png2]
-        images = [self.cutout.pngimages['r'],self.cutout.pngimages['ha'],self.cutout.cs_png1,self.cutout.csgr_png1]
+        images = [self.cutout.pngimages['r'],self.cutout.pngimages['ha'],self.cutout.cs_png1,self.cutout.csgr_png1,self.cutout.csgrauto_png1]
         # just changing order to see if halpha image is still the biggest in the table, re issue #15
         # the second was still the biggest
         # so what if we also change the label
