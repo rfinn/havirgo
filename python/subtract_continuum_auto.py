@@ -919,20 +919,20 @@ if __name__ == '__main__':
     # can adjust factor of 1.03 to scale the continuum
     # in vestige, they check the star subtraction and then adjust the factor to make the stars go away
     # even with same telescope/filter, this factor can vary
-    flam_net = filter_width_AA[telescope]*(halpha_continuum_oversubtraction[telescope]*halpha_filter_cor*flam_NB-contscale*clam_NB) # matteo comment: 106 is the width of the filter
+    flam_net = filter_width_AA[telescope]*(halpha_continuum_oversubtraction[telescope]*halpha_filter_cor*flam_NB-cs_use*clam_NB) # matteo comment: 106 is the width of the filter
 
     # correct for extinction
     flam_net = flam_net * halpha_extinction_correction
 
     # TODONE - I would like to save a version in AB mag for compatibility with my photometry programs
-    NB_ABmag = (halpha_continuum_oversubtraction[telescope]*halpha_filter_cor*data_NB - contscale*data_r_to_Ha)
+    NB_ABmag = (halpha_continuum_oversubtraction[telescope]*halpha_filter_cor*data_NB - cs_use*data_r_to_Ha)
 
     # correct for extinction
     NB_ABmag = NB_ABmag * halpha_extinction_correction    
 
 
     # this should still be good to use the Halpha ZP
-    hhdu[0].header['CONSCALE']=(float(f'{contscale:.3f}'),'Continuum scale factor')    
+    hhdu[0].header['CONSCALE']=(float(f'{cs_use:.3f}'),'Continuum scale factor')    
     hdu = fits.PrimaryHDU(NB_ABmag, header=hhdu[0].header)
 
     # outname is *CS-gr.fits
