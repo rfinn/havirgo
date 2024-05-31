@@ -83,6 +83,10 @@ from astropy.table import Table
 import glob
 from reproject import reproject_interp
 
+
+# from reproject import reproject_interp
+from cv2 import filter2D
+
 import warnings
 warnings.filterwarnings('ignore')
 
