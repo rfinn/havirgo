@@ -42,7 +42,7 @@ if len(sys.argv) > 2:
     syncfiles=False
 else:
     syncfiles=True
-
+syncfiles = False
 # download cutouts
 s = f"python ~/github/HalphaImaging/python3/generate_all_cutout_plots.py --onegal {cutout_dir}"
 os.system(s)
