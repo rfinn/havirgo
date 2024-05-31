@@ -56,6 +56,8 @@ if __name__ == '__main__':
 
         jpg_path = os.path.join(outdir,g)
         search_path = os.path.join(jpg_path,'*legacy*.jpg')
+
+
         #print(search_path)
         #legacy_jpg = glob.glob(search_path)[0]            
         try:
@@ -67,14 +69,32 @@ if __name__ == '__main__':
         except:
             legacy_flag = False
             legacy_jpg = None
-            print('WARNING: no legacy image for ',g)
+            print('WARNING: no legacy jpg image for ',g)
             nmissing += 1
             # run runone_cutout_web.py but without syncing
             os.system(f"python ~/github/havirgo/python/runone_cutout_web.py {g} nosync")
             #print(f"run: python ~/github/havirgo/python/runone_cutout_web.py {g} nosync")
             #break
 
-            
+        # need to also check for missing fits images
+
+        search_path = os.path.join(jpg_path,'*legacy*.fits')
+        try:
+            #print()
+            #print("looking for legacy image")
+            #print(glob.glob(search_path))
+            legacy_fits = glob.glob(search_path)
+            if len(legacy_fits) == 3:
+                legacy_flag = True                
+        except:
+            legacy_flag = False
+            legacy_jpg = None
+            print('WARNING: no legacy fits image for ',g)
+            nmissing += 1
+            # run runone_cutout_web.py but without syncing
+            os.system(f"python ~/github/havirgo/python/runone_cutout_web.py {g} nosync")
+
+        
 print(f"\nnumber of galaxies with missing legacy images = {nmissing}\n")
 # sync files to faculty web when done
 # sync to web
