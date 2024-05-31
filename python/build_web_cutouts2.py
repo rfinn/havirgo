@@ -400,7 +400,11 @@ class cutout_dir():
         self.csgrimageauto = glob.glob(os.path.join(self.cutoutdir,self.gname+'*-CS-gr-auto.fits'))[0]                
         self.maskimage = self.rimage.replace('.fits','-mask.fits')
 
-
+        try:
+            self.conscale_auto = fits.getheader(self.csgrimageauto)['CONSCALE']
+        except:
+            self.conscale_auto = -99
+                                            
     def get_ellipse_params(self):
         """ get ellipse parameters from the header of the mask image  """
         try:
@@ -964,7 +968,7 @@ class build_html_cutout():
 
         #labels = ['R-band Image','H&alpha;+Cont','CS, stretch 1','CS, stretch 2']
 
-        labels = ['R-band Image','H&alpha;+Cont','CS from ZP ratio','CS from ZP and g-r cor','CS from g-r auto']
+        labels = ['R-band Image','H&alpha;+Cont','CS from ZP ratio','CS from ZP and g-r cor',f'CS g-r auto scale={self.cutout.conscale_auto:.2f}']
         #labels = ['Halpha+Cont','R','CS, stretch 1','CS, stretch 2']        
         write_table(self.html,images=images,labels=labels)
 
