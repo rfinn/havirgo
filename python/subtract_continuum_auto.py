@@ -96,11 +96,16 @@ filter_width_AA = {'BOK':80.48,'HDI':80.48,'INT':95,'MOS':80.48,'INT6657':80}
 # central wavelength in angstroms
 filter_lambda_c_AA = {'BOK':6620.52,'HDI':6620.52,'INT':6568,'MOS':6620.52,'INT6657':6657}
 
+filter_lambda_c_AA_R = {'BOK':6390.20, 'HDI':6244.52, 'INT':6486.63, 'MOS':6550.59, 'INT6557':6486.63}
+
 
 # integral of filter transmission
 # calculated in Halpha-paper1.ipynb
 filter_Rlambda = {"KPNO_Ha+4nm": 78.58, "WFC_Ha": 84.21, "WFC_Ha6657": 71.96,\
                   "KPNO_R" : 1341.54, "KPNO_r" : 1283.47, "BASS_r": 1042.18, "WFC_r": 1097.07}
+
+filter_Rlambda_weff = {"MOS" : 1551.10, "HDI" : 1382.58, "BOK": 1311.48, "INT": 1591.92, \
+                       "INT6657": 1591.92}
 
 # from oversubtraction of continuum, a la Gavazzi+2006
 # take telescope as the key
