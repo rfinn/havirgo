@@ -119,7 +119,8 @@ class galaxy():
         self.R = self.dirname+'-R.fits'
         # our gr-CS image (halpha image using color-based subtraction)
 
-        self.ha = self.dirname+'-CS-gr.fits'
+        # updating to use Gautam's auto cont sub image
+        self.ha = self.dirname+'-CS-gr-auto.fits'
 
         # define the mask file
         maskfile = self.R.replace('-R.fits','-R-mask.fits')
