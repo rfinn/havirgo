@@ -964,7 +964,7 @@ class build_html_cutout():
 
         #labels = ['R-band Image','H&alpha;+Cont','CS, stretch 1','CS, stretch 2']
 
-        labels = ['R-band Image','H&alpha;+Cont','CS from ZP ratio','CS from ZP and g-r cor']        
+        labels = ['R-band Image','H&alpha;+Cont','CS from ZP ratio','CS from ZP and g-r cor','CS from g-r auto']
         #labels = ['Halpha+Cont','R','CS, stretch 1','CS, stretch 2']        
         write_table(self.html,images=images,labels=labels)
 
