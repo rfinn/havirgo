@@ -576,10 +576,11 @@ if __name__ == '__main__':
 
     # get ellipse data to use when optimizing continuum subtraction
     ellip_dat = fits.getdata(tabledir+'vf_v2_legacy_ephot.fits')
-    sma, pa, ba = ellip_dat['sma_moment'][gindex], ellip_dat['pa_moment'][gindex], ellip_dat['ba_moment'][gindex]
+
     
     gindex = np.arange(len(vhalpha))[vhalpha['VFID'] == vfid][0]
-
+    sma, pa, ba = ellip_dat['sma_moment'][gindex], ellip_dat['pa_moment'][gindex], ellip_dat['ba_moment'][gindex]
+    
     # correction for the variation in the halpha filter transmission
     halpha_filter_cor = vhalpha['FILT_COR'][gindex]
     print(f"{vfid}: halpha filter correction = {halpha_filter_cor:.3f}")
