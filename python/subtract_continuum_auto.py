@@ -553,7 +553,9 @@ if __name__ == '__main__':
     if len(sys.argv) > 2:
         coloruse = int(sys.argv[2])
     else:
-        coloruse = 0
+        # RF - changing from Gautam's version to automatically use color,
+        # rather than have the default as false
+        coloruse = True
 
     #print("\nIn subtract continuum, continuum scale factor = ",contscale,"\n")
     # get current directory
