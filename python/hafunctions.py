@@ -14,7 +14,7 @@ from readtablesv2 import vtables
 import os
 import numpy as np
 from matplotlib import pyplot as plt
-from matplotlib.patches import Ellipse
+from matplotlib.patches import Ellipse, Rectangle
 
 from astropy.io import fits
 from astropy.io import ascii
@@ -25,6 +25,8 @@ from astropy.table import Table
 from astropy.nddata import Cutout2D
 from astropy import stats as apstats
 from astropy import units as u
+
+from scipy.stats import spearmanr
 
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 
@@ -134,12 +136,18 @@ def plot_HI_contours(ax,HIfilename,xmin=None,xmax=None,ymin=None,ymax=None,level
 
     hdu = fits.open(HIfilename)[0]
     HI_WCS = WCS(hdu.header)
-
+    #ncontour = np.array([1,4,15,29])
+    #ncontour
+    ncontour = np.array([0,1,2.25,3.5,4])
     if levels is None:
-        levels = 3**np.arange(ncontour)+1
+        #levels = 3**np.arange(ncontour+1)+1
+        levels = 3**np.arange(1,5)+1
+    #levels = np.append(levels,43)
+    #levels = np.append(levels,50)
+    #levels = np.append(levels,80)        
     ax.contour(hdu.data,transform=ax.get_transform(HI_WCS),levels=levels,colors=color,alpha=.4,lw=1)
 
-def plot_HI_beam(ax,HIfilename,hostim_header,color='white'):
+def plot_HI_beam(ax,HIfilename,hostim_header,color='white',expandBox=False):
     ###
     # get size of the host image
     ###
@@ -165,11 +173,19 @@ def plot_HI_beam(ax,HIfilename,hostim_header,color='white'):
     patch_width = b/image_y    
     patch = {'width': patch_width, 'height': patch_height}
     print(a,image_x,patch['height'], patch['width'], PA)
-    ax.add_patch(Ellipse((0.92, 0.9), height=patch['height'], width=patch['width'], angle=PA,\
-                         transform=ax.transAxes, edgecolor=color,facecolor=color, linewidth=1))    
+    ax.add_patch(Ellipse((0.9, 0.9), height=patch['height'], width=patch['width'], angle=PA,\
+                         transform=ax.transAxes, edgecolor=color,facecolor=color, linewidth=1,alpha=.8))    
 
-        
-        
+    # add white box to highlight position of beam
+    dx = 0.1
+    dy = 0.1
+    if expandBox:
+        dx=.15
+        dy=.15
+    xc = .9
+    yc = 0.9
+    rect = Rectangle((xc-0.5*dx,yc-0.5*dy),dx,dy,transform=ax.transAxes,edgecolor=color,facecolor='None',lw=1,alpha=.8)
+    ax.add_patch(rect)
     
 
 def plot_sfr_contours(dirname,ax,legwcs=None,xmin=None,xmax=None,ymin=None,ymax=None,levels=None):
@@ -235,29 +251,206 @@ def add_spine(ax,color='c'):
     spine  = Table.read(spinedir+'filament_spine_VirgoIII.fits')
     ax.plot(spine['ra'],spine['dec'],'c--',color=color,transform=ax.get_transform('world'))#, ,label='Filament Spine')
 
-def plot_spines():
+def plot_spines(multicolor=True,colorone=None,color=None,legend=True):
     import glob
     sfiles = glob.glob(homedir+'/research/Virgo/tables-north/spines/filament*.fits')
     ncolor = 0
     for i,f in enumerate(sfiles):
         spine  = Table.read(f)
-        plt.plot(spine['ra'],spine['dec'],c=mycolors[ncolor],label=os.path.basename(f).replace('filament_spine_','').replace('.fits','').replace('_Filament',''),lw=3)
-        ncolor += 1
-        if ncolor > len(mycolors)-1:
-            ncolor = 0
+        if legend:
+            mylabel = os.path.basename(f).replace('filament_spine_','').replace('.fits','').replace('_Filament','')
+        else:
+            mylabel = None
+        
+        if multicolor:
+            plt.plot(spine['ra'],spine['dec'],c=mycolors[ncolor],label=mylabel,lw=3)
+        
+            ncolor += 1
+            if ncolor > len(mycolors)-1:
+                ncolor = 0
+        else:
+            if colorone is not None:
+                if colorone in f:
+                    plt.plot(spine['ra'],spine['dec'],c=color,label=mylabel,lw=3,alpha=.6)
+                else:
+                    plt.plot(spine['ra'],spine['dec'],c='0.5',label=mylabel,lw=3)
+            else:
+                plt.plot(spine['ra'],spine['dec'],c='0.5',label=mylabel,lw=3)
     
 def update_ngc5348_mask():
     imname = ''
     hdu = fits.open()
 
     # mask out all columns with with x > 1290
-    flag 
+    
 
     # mask out rows with y > 1680
 
         
+def plot_sfr_mstar():
+
+    plt.figure(figsize=(8,6))
+    plt.subplots_adjust(bottom=.15)
+
+    x = v.magphys['logMstar_med']
+    y = v.magphys['logSFR_med']
+
+    HIdef = v.a100['HIdef_bos']
+    magflag = x > 4
+    flag = magflag    
+    HIflag = magflag & (v.a100['logMH'] > 0)
+    
+    ##################################
+    # plot the main sequence
+    ##################################    
+    plt.plot(x[flag],y[flag],'k.',alpha=.01,label='All VFS Galaxies')
+
+    ##################################
+    # plot the main sequence
+    ##################################    
+    xmin = 7
+    xmax = 11.1
+    xline = np.linspace(xmin,xmax,100)
+    yline = 0.8*xline-8.32
+    plt.plot(xline,yline,'k-',label='MS (Conger+2024)',alpha=.5)
+    plt.plot(xline,yline+0.3,'k--',alpha=.5)
+    plt.plot(xline,yline-0.3,'k--',alpha=.5)
+    
+    
+    # plot the group members
+    nha = 0
+    nnha = 0
+    for vf in np.arange(len(v.main))[groupMembs]:
+        if vf == 5851:
+            print(vf,v.main['VFID'][vf])
+            xp = v.magphys['logMstar_best'][int(vf)]
+            yp = v.magphys['logSFR_best'][int(vf)]
 
 
+        else:
+            print(vf,v.main['VFID'][vf])
+            xp, yp = x[int(vf)],y[int(vf)]
+        if v.main['HAobsflag'][vf]:
+            if nha == 0:
+                label = r"$Group \ Members \ In \ H\alpha \ FOV$"
+                nha += 1
+            else:
+                label = "_nolegend_"
+            #plt.plot(xp,yp,'bs',markersize=12,c='magenta',label=label)
+            # add scatter for those with HIdef values
+            if HIflag[vf]:
+                plotflag = HIflag[vf]
+                print(f"HIdef[vf] = {HIdef[vf]}")
+                plt.scatter(xp,yp,c=HIdef[vf],s=120,marker='s',label=label,vmin=-0.5,vmax=0.8)
+            else:
+                plt.plot(xp,yp,'bs',markersize=12,c='0.5')
+            plt.text(xp,yp+.2,v.main['VFID'][vf],horizontalalignment='center')
+        else:
+            if nnha == 0:
+                label = r"$All \ members$"
+                nnha += 1
+            else:
+                label = "_nolegend_"
+            if HIflag[vf]:
+                plotflag = HIflag[vf]
+                print(f"HIdef[vf] = {HIdef[vf]}")
+                #plt.scatter(xp,yp,c=HIdef[vf],s=120,marker='8',label=label,vmin=-0.5,vmax=0.8)
+            else:
+                pass
+                #plt.plot(xp,yp,'bo',markersize=12,c='0.5',label=label)
+
+            #plt.plot(xp,yp,'bo',c=mycolors[0],label=label)
+        
+    cb = plt.colorbar()
+    cb.set_label('HI Def',fontsize=16)
+    plt.xlabel("$\log(M_\star/M_\odot)$",fontsize=22)
+    plt.ylabel("$\log(SFR/(M_\odot/yr))$",fontsize=22)
+    plt.xticks(fontsize=16)
+    plt.yticks(fontsize=16)
+    
+
+    plt.xlim(xmin+.2,xmax)
+    plt.ylim(-5.1,.2)
+    plt.legend()
+    plt.savefig(plotdir+'/NGC5364-sfr-mstar.png')    
+
+
+def plot_HIdef_sizeratio():
+    """
+    galaxies with HI detections: VFID5859, VFID5892, VFID5855, VFID5842, VFID5889
+
+    #VFID5851: R90_mstar=81.2, R90_sfr=9.3, ratio=0.11 
+    #VFID5851: R50_mstar=20.6, R50_sfr=6.9, ratio=0.33
+
+    VFID5842: R90_mstar=80.8, R90_sfr=48.5, ratio=0.60 
+    VFID5842: R50_mstar=36.6, R50_sfr=31.1, ratio=0.85
+    
+    VFID5859: R90_mstar=14.8, R90_sfr=8.9, ratio=0.60 
+    VFID5859: R50_mstar=8.1, R50_sfr=4.8, ratio=0.59
+
+    VFID5892: R90_mstar=59.3, R90_sfr=21.0, ratio=0.35 
+    VFID5892: R50_mstar=25.8, R50_sfr=8.4, ratio=0.33
+
+    VFID5855: R90_mstar=106.5, R90_sfr=138.4, ratio=1.30 
+    VFID5855: R50_mstar=44.5, R50_sfr=50.1, ratio=1.12
+
+    VFID5889: R90_mstar=163.8, R90_sfr=181.2, ratio=1.11 
+    VFID5889: R50_mstar=51.3, R50_sfr=112.7, ratio=2.19
+
+    #VFID5879: R90_mstar=15.2, R90_sfr=2.3, ratio=0.15 
+    #VFID5879: R50_mstar=7.5, R50_sfr=1.6, ratio=0.22
+
+    #VFID5844: R90_mstar=17.3, R90_sfr=9.9, ratio=0.57 
+    #VFID5844: R50_mstar=8.1, R50_sfr=6.9, ratio=0.86 
+
+    """
+
+    # this is super clunky but going with it for now...
+    sizeratio90 = np.zeros(len(v.a100))
+
+    vfids = [5859,5892,5855,5842,5889,5851]
+    ratio90 = [0.6,0.35,1.3,0.6,1.11,0.11]
+
+
+    for i,vf in enumerate(vfids):
+        sizeratio90[vf] = ratio90[i]
+
+
+    vfids = [5859,5892,5855,5842,5889]
+    plotflag = np.zeros(len(v.main),'bool')        
+    for i,vf in enumerate(vfids):
+        plotflag[vf] = True
+    # now plot HIdef vs sizeratio90
+
+    plt.figure(figsize=(8,6))
+    plt.subplots_adjust(bottom=.15)
+    
+    x = sizeratio90[plotflag]
+    y = v.a100['HIdef_bos'][plotflag]
+    c = v.magphys['logMstar_med'][plotflag]
+    plt.scatter(x,y,c=c,s=120,marker='s')
+    plt.xlabel("$R_{90}(SFR)/R_{90}(M_\star)$",fontsize=22)
+    plt.ylabel("$HI \ Deficiency$",fontsize=22)
+
+    cb = plt.colorbar()
+    cb.set_label("$\log(M_\star/M_\odot)$",fontsize=16)
+
+    for vf in vfids:
+        xp = sizeratio90[vf]
+        yp = v.a100['HIdef_bos'][vf]        
+        plt.text(xp,yp+.05,v.main['VFID'][vf],horizontalalignment='center')
+
+    plt.ylim(-.5,1.02)
+    plt.xlim(0.22,1.39)
+
+    #######################################
+    # calculate spearman rank coeff
+    #######################################
+    r,pvalue = spearmanr(x,y)
+    print(f"Spearman rank correlation coeff = {r:.2f}, pvalue = {pvalue:.3f}")
+
+    plt.savefig(plotdir+'/NGC5364-HIdef-sizeratio90.png')        
+    
 def get_rad_fluxfrac(pfit,frac=0.9,verbose=False):
     from scipy.interpolate import interp1d
     N = 10
@@ -585,7 +778,10 @@ def plot_mstar_sfr_profiles(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xtic
             if HIfilename is not None:
                 print("HIfilename = ",HIfilename)
                 plot_HI_contours(ax2,HIfilename,color='steelblue')
-                plot_HI_beam(ax2,HIfilename,hdu.header,color='steelblue') 
+                if vfid == 'VFID5859':
+                    plot_HI_beam(ax2,HIfilename,hdu.header,color='steelblue',expandBox=True)
+                else:
+                    plot_HI_beam(ax2,HIfilename,hdu.header,color='steelblue') 
 
         #############################################################
         # add contours from stellar mass image
@@ -1254,17 +1450,17 @@ def plot_phase_space(sepmax=15):
     plt.savefig(plotdir+'/NGC5364_Virgo_phasespace.png')
 
 
-def plot_sky_positions_with_filaments():
+def plot_sky_positions_with_filaments(multicolor=True,plotlegend=True):
 
-    plt.figure(figsize=(9,5.5))
+    plt.figure(figsize=(11,5))
     plt.subplots_adjust(right=.95,top=.95)
-    plot_spines()
+    plot_spines(multicolor=multicolor,colorone='VirgoIII',color='m',legend=plotlegend)
     plt.plot(v.main['RA'],v.main['DEC'],'k.',alpha=.1,label='Virgo Filament Catalog')
     # plot CO sources
     flag = v.main['HAobsflag'] #& ~v.main['COflag']
     #plt.plot(v.main['RA'][flag],v.main['DEC'][flag],'cs',alpha=.5,mfc='None',label=r'$H\alpha$',markersize=8)
     flag = v.groupMembs
-    plt.plot(v.main['RA'][flag],v.main['DEC'][flag],'mo',alpha=.7,label=r'$NGC5364~Group$',markersize=6)    
+    plt.plot(v.main['RA'][flag],v.main['DEC'][flag],'co',alpha=.8,label=r'$\rm NGC5364~Group$',markersize=5)    
 
 
     
@@ -1273,8 +1469,8 @@ def plot_sky_positions_with_filaments():
     #plt.plot(v.main['RA'][flag],v.main['DEC'][flag],'bo',color='purple',markersize=8,alpha=.7,label=r'$CO, No \ H\alpha$',mec='0.5')
     #flag = v.main['COflag'] & v.main['HAobsflag']
     #plt.plot(v.main['RA'][flag],v.main['DEC'][flag],'co',markersize=5,alpha=.7,label=r'$CO + H\alpha$',mec='0.5')
-    plt.axis([118,262,-1,65])    
-    plt.legend(loc='upper left')#bbox_to_anchor=(1.01,1),loc='upper left')
+    plt.axis([118,262,-1,65])
+    plt.legend(loc='lower right')#bbox_to_anchor=(1.01,1),loc='upper left')
 
 
 
