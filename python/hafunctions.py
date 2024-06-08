@@ -79,6 +79,19 @@ HI_file = {'VFID5889':HIdir+'ngc5363_ngc5364_ngc5360.fits',\
 }
 
 
+COdir = homedir+'/research/Virgo/alma/combes_data/'
+CO_file = {'VFID5889':None,\
+           'VFID5851':None,\
+           #'VFID5851':None, \
+           'VFID5855':COdir+'n5348-co10-mean.fits',\
+           'VFID5842':COdir+'n5356-co10-mean.fits',\
+           'VFID5859':None,\
+           'VFID5892':None,\
+           'VFID5879':None,\
+           'VFID5844':None 
+}
+
+
 zoom_coords_HDI = {'VFID5889':[250,1200,750,1700],\
                    'VFID5842':[400,1300,550,1130],\
                    'VFID5892':[200,600,190,550],\
@@ -187,6 +200,25 @@ def plot_HI_beam(ax,HIfilename,hostim_header,color='white',expandBox=False):
     rect = Rectangle((xc-0.5*dx,yc-0.5*dy),dx,dy,transform=ax.transAxes,edgecolor=color,facecolor='None',lw=1,alpha=.8)
     ax.add_patch(rect)
     
+def plot_CO_contours(ax,COfilename,xmin=None,xmax=None,ymin=None,ymax=None,levels=None,color='white',addbeam=False,ncontour=3):
+    """ plot CO contours, given current axis + reference image header """
+    # borrowing from alma 2023 proposal
+    #ncontour=3
+
+    hdu = fits.open(COfilename)
+    CO_WCS = WCS(hdu[0].header)
+    #ncontour = np.array([1,4,15,29])
+    #ncontour
+    print(CO_WCS)
+    ncontour = np.array([0,1,2.25,3.5,4])
+    ncontour = np.array([0,1,2.25,3.5,4])
+    if levels is None:
+        #levels = 3**np.arange(ncontour+1)+1
+        levels = np.linspace(.07,1.4,5)
+    #levels = np.append(levels,43)
+    #levels = np.append(levels,50)
+    #levels = np.append(levels,80)        
+    ax.contour(hdu[0].data[0,:,:],transform=ax.get_transform(CO_WCS),slices=('x', 'y', 1),levels=levels,colors=color,alpha=.4,lw=1)
 
 def plot_sfr_contours(dirname,ax,legwcs=None,xmin=None,xmax=None,ymin=None,ymax=None,levels=None):
     from astropy import convolution
@@ -681,7 +713,8 @@ def plot_mstar_sfr_profiles(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xtic
     
     ssfrim = dirname+"-ssfr.fits"
     mask = dirname+'-R-mask.fits'
-    titles = [r'$\log_{10}(M_\star/M_\odot)$',r'$H\alpha \ SFR$','log sSFR']
+    #titles = [r'$\log_{10}(M_\star/M_\odot)$',r'$H\alpha \ SFR$','log sSFR']
+    titles = [r'$\log_{10}(\Sigma_\star)$',r'$\Sigma_{SFR}$','log sSFR']
     vmin = [2,0e-5,-11.5]
     vmax = [6,.6e-5,-9]
     allim = [massim,sfrim,ssfrim]
@@ -718,12 +751,14 @@ def plot_mstar_sfr_profiles(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xtic
     mycbfrac=acbfrac[vfid]
     myclevels=alevels[vfid]
 
-    if 'VFID5892' in dirname:
-        cbaspect = 10
         
     fig = plt.figure(figsize=(myfigsize[0],myfigsize[1]))
 
     plt.subplots_adjust(wspace=0.01,bottom=.15)
+
+    if 'VFID5892' in dirname:
+        cbaspect = 10
+        plt.subplots_adjust(wspace=0.01,bottom=.2)
     maskdat = fits.getdata(mask)
 
     if contourFlag:
@@ -961,7 +996,334 @@ def plot_mstar_sfr_profiles(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xtic
 
 
     return ax1
+
+
+def plot_mstar_sfr_CO(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xticks=True,figsize=[16,6],\
+                            cbfrac=.08,cbaspect=20,clevels=[4],contourFlag=True,rmax=None,\
+                            logMstar=None,cmap='magma_r',markGroupCenter=False):
+    """
+    same plot as mstar_sfr, but swap out ssfr for radial profiles in the 4th panel
+
+    """
+    #%matplotlib inline
+    os.chdir(homedir+'/research/Virgo-dev/cont-sub-gr')
+    # add scale factor for continuue after the directory name
+
+
+    cwd = os.getcwd()
+    os.chdir(dirname)
+    massim = dirname+"-logmstar-vr.fits"
+    sfrim = dirname+"-sfr-vr.fits"
+
     
+    ssfrim = dirname+"-ssfr.fits"
+    mask = dirname+'-R-mask.fits'
+    #titles = [r'$\log_{10}(M_\star/M_\odot)$',r'$H\alpha \ SFR$','log sSFR']
+    titles = [r'$\log_{10}(\Sigma_\star)$',r'$\Sigma_{SFR}$','log sSFR']
+    vmin = [2,0e-5,-11.5]
+    vmax = [6,.6e-5,-9]
+    allim = [massim,sfrim,ssfrim]
+    allim = [massim,sfrim]
+    allim = [massim,sfrim,sfrim] # show halpha with HI and CO    
+    cblabels = [r'$\rm \log_{10}(M_\star/M_\odot)/pixel$',r'$\rm SFR(M_\star/yr)/pixel$']
+    
+    vfid = dirname.split('-')[0]
+    print("VFID = ",vfid)
+    if 'INT' in dirname:
+        try:
+            xmin,xmax,ymin,ymax = zoom_coords_INT[vfid]
+        except KeyError:
+            # use the full image
+            # read in massim
+            data = fits.getdata(massim)
+            ymax,xmax = data.shape
+            xmin=1
+            ymin=1
+
+    else:
+        try:
+            xmin,xmax,ymin,ymax = zoom_coords_HDI[vfid]
+        except KeyError:
+            # use the full image
+            # read in massim
+            data = fits.getdata(massim)
+            ymax,xmax = data.shape
+            xmin=1
+            ymin=1
+    
+
+
+    myfigsize=afigsize[vfid]
+    mycbfrac=acbfrac[vfid]
+    myclevels=alevels[vfid]
+
+        
+    fig = plt.figure(figsize=(myfigsize[0],myfigsize[1]))
+
+    plt.subplots_adjust(wspace=0.01,bottom=.15)
+
+    if 'VFID5892' in dirname:
+        cbaspect = 10
+        plt.subplots_adjust(wspace=0.01,bottom=.2)
+    maskdat = fits.getdata(mask)
+
+    if contourFlag:
+        # get contours from logmstar image
+        hdu = fits.open(massim)
+        contour_data = hdu[0].data
+        contour_header = hdu[0].header
+        contour_WCS = WCS(contour_header)
+        hdu.close()
+        mcontour_data = np.ma.array(contour_data,mask=maskdat)
+
+    
+    allax = []
+    for i, im in enumerate(allim):
+        hdu = fits.open(im)[0]
+        dat = fits.getdata(im)
+        imwcs = WCS(fits.getheader(im))
+
+        dat = hdu.data
+        imwcs = WCS(hdu.header)
+        #if i == 2:
+        #    ax2=plt.subplot(1,4,i+2,projection=imwcs,slices=('x','y',1))
+        #else:
+        ax2=plt.subplot(1,4,i+2,projection=imwcs)
+        
+                        
+
+
+        mdat = np.ma.array(dat,mask=maskdat)
+        #if xmin is None:
+        #    mdat = mdat
+        #else:
+        #    mdat = mdat[ymin:ymax,xmin:xmax]
+        if i == 2:
+            plt.imshow(mdat,vmin=vmin[i],vmax=vmax[i],origin='lower',interpolation='nearest',cmap=cmap)
+
+        else:
+            #display_image(mdat,percent=99.5,cmap='viridis')#,vmin=vmin[i],vmax=vmax[i])
+            plt.imshow(mdat,vmin=vmin[i],vmax=vmax[i],cmap=cmap)#cmap='viridis'
+        
+            lon = ax2.coords[0]
+            lat = ax2.coords[1]
+            lon.set_ticklabel_visible(False)
+            lon.set_ticks_visible(False)            
+            lat.set_ticklabel_visible(False)
+            lat.set_ticks_visible(False)            
+        
+        #plt.colorbar(fraction=mycbfrac,aspect=cbaspect)
+        # plot contours from mass
+
+        #############################################################
+        # add HI contour to halpha image
+        #############################################################
+        if i == 1:
+            # check if HI moment zero map is available
+            HIfilename = HI_file[vfid]
+            if HIfilename is not None:
+                print("HIfilename = ",HIfilename)
+                plot_HI_contours(ax2,HIfilename,color='steelblue')
+                if vfid == 'VFID5859':
+                    plot_HI_beam(ax2,HIfilename,hdu.header,color='steelblue',expandBox=True)
+                else:
+                    plot_HI_beam(ax2,HIfilename,hdu.header,color='steelblue') 
+
+        #############################################################
+        # add CO contour to halpha image
+        #############################################################
+        if i == 2:
+            # check if HI moment zero map is available
+            COfilename = CO_file[vfid]
+            if COfilename is not None:
+                print("COfilename = ",COfilename)
+                plot_CO_contours(ax2,COfilename,color='steelblue')
+                #if vfid == 'VFID5859':
+                #    plot_HI_beam(ax2,HIfilename,hdu.header,color='steelblue',expandBox=True)
+                #else:
+                #    plot_HI_beam(ax2,HIfilename,hdu.header,color='steelblue') 
+
+
+                    
+        #############################################################
+        # add contours from stellar mass image
+        #############################################################    
+        if contourFlag:
+            ax = plt.gca()
+            ax.contour(mcontour_data,levels=myclevels, colors='k',linestyles='-',linewidths=1,transform=ax.get_transform(contour_WCS))
+
+                
+        plt.title(titles[i],fontsize=18)
+
+
+
+        if xmin is not None:
+            plt.axis([xmin,xmax,ymin,ymax])
+        if i in [0,1]:
+            plt.xticks([],[])
+            plt.yticks([],[])
+
+        elif not xticks: 
+            plt.xticks([],[])
+            plt.yticks([],[])
+        
+        allax.append(plt.gca())
+
+        #if i in [1,2]:
+        cbaxes = inset_axes(ax2, width="80%", height="3%", loc=8) 
+        cb = plt.colorbar(cax=cbaxes, orientation='horizontal')
+        cb.set_label(label=cblabels[i],fontsize=12)
+
+    
+    # read in header from legacy r-band image
+    legacyr = glob.glob("legacy/*r.fits")[0]
+    #print(legacyr)
+    legacy_jpg = legacyr.replace('-r.fits','.jpg')
+    jpeg_data = Image.open(legacy_jpg)
+    legwcs = WCS(fits.getheader(legacyr))
+    # plot jpg as projection of legacy r-band
+
+    
+    ax1 = plt.subplot(1,4,1,projection=legwcs)
+    plt.imshow(jpeg_data)
+
+    if xmin is not None:
+        # plot the legacy image in panel 1
+        xcoords = np.array([xmin,xmax])
+        ycoords = np.array([ymin,ymax])
+    
+        # get ramin,ramax and decmin,decmax from SFR image
+        sfrim = dirname+"-sfr-vr.fits"
+        header = fits.getheader(sfrim)
+        #print(header)
+        wcs = WCS(header)
+        sky = wcs.pixel_to_world(xcoords,ycoords)
+    
+        # set limits in ra,dec
+        x,y = legwcs.world_to_pixel(sky)
+        # convert ramin,ramax and decmin,decmax to (x,y)
+        #print(sky)
+        plt.axis([x[0],x[1],y[0],y[1]])
+    t = dirname.split('-')
+    #plt.text(.05,.02,t[0],fontsize=20,transform=plt.gca().transAxes,horizontalalignment='left',color='white')
+    
+
+    plt.title(f"{t[0]} Legacy grz",fontsize=18)
+
+    #############################################################
+    # add arrow showing direction to group center
+    # TODO : figure out how to make this smaller in smaller images
+    #############################################################
+    print("VFID = ",vfid)
+
+    if (vfid == 'VFID5855') | (vfid == 'VFID5859'):
+        print('hi')
+        # get coords of galaxy
+        vflag = v.main['VFID'] == vfid
+        print(np.sum(vflag))
+        x = v.main['RA'][vflag][0]
+        y = v.main['DEC'][vflag][0]      
+        dRA = v.mw_RAcenter - x
+        dDEC = v.mw_DECcenter - y        
+        norm = np.sqrt(dRA**2+dDEC**2)
+
+        if  (vfid == 'VFID5855'):
+            scale = 0.02
+            mylw = 0.05
+            dx = dRA/norm*scale
+            dy = dDEC/norm*scale
+
+            plt.arrow(x,y,dx,dy,color='c',transform=ax1.get_transform('world'),lw=mylw,alpha=.7)
+        elif (vfid == 'VFID5859'):
+            scale = 0.0025
+            mylw=.5
+            dx = dRA/norm*scale
+            dy = dDEC/norm*scale
+            width=.001
+            plt.arrow(x,y,dx,dy,color='c',transform=ax1.get_transform('world'),linewidth=mylw,alpha=.7,head_width=2.5*width,head_length=2.5*width)
+        print(x,y)
+        #plt.plot(x*u.deg,y*u.deg,'bo',markersize=20,color='c',transform=ax1.get_transform('world'))
+        
+
+    #print(x[0],x[1],y[0],y[1])
+    #############################################################
+    # add HI contour to legacy image
+    #############################################################    
+    # check if HI moment zero map is available
+    HIfilename = HI_file[vfid]
+    if HIfilename is not None:
+        print("HIfilename = ",HIfilename)
+        plot_HI_contours(plt.gca(),HIfilename,color='lightsteelblue')
+        plot_HI_beam(plt.gca(),HIfilename,fits.getheader(legacyr),color='steelblue') 
+        
+    #############################################################
+    # add stellar mass from magphys to the legacy image
+    #############################################################    
+    if logMstar is not None:
+        print("adding logMstar = ",logMstar)
+        plt.text(0.05,0.05,logMstar,fontsize=16,color='white',transform=plt.gca().transAxes,horizontalalignment='left')
+    
+    
+
+    #################################################################
+    # plot profiles in the 4th panel
+    #################################################################    
+    plt.subplot(1,4,4)
+    #photometry files
+    massphot = massim.replace('.fits','_phot.fits')
+    sfrphot = sfrim.replace('.fits','_phot.fits')
+    mtab = Table.read(massphot)
+    stab = Table.read(sfrphot)    
+    tables = [mtab,stab]
+    labels = ['$M_\star$',r'$H\alpha \ SFR$']    
+    colors = ['navy','mediumvioletred']
+    markers = ['s','o']
+    for i,t in enumerate(tables):
+        x = t['sma_arcsec']
+        y = t['sb']
+        yerr = t['sb_err']
+        if (i == 1) & (('VFID5844' in dirname) | ('VFID5879' in dirname)):
+            continue
+        if ('VFID5859' in dirname) | ('VFID5892' in dirname):
+            norm_factor = np.median(y[0:5])
+        else:
+            norm_factor = np.median(y[0:15])
+        
+        plt.plot(x,y/norm_factor,'bo',c=colors[i],label=labels[i],marker=markers[i])
+        #plt.fill_between(x,(y+yerr)/norm_factor,y2=(y-yerr)/norm_factor,color=mycolors[i],alpha=.5)
+    # add R50 if it's provided
+    if Re_mstar is not None:
+        plt.axvline(x=Re_mstar,ls='--',lw=2,color=colors[0],label='$R_e$')#,label='$R_e(M_\star)$')
+    if R90_mstar is not None:
+        plt.axvline(x=R90_mstar,ls='-',lw=2,color=colors[0],label='$R_{90}$')#,label='$R_{90}(M_\star)$')
+
+    if (('VFID5844' in dirname) | ('VFID5879' in dirname)):
+        print("not adding halpha radii")
+    else:
+        if Re_sfr is not None:
+            plt.axvline(x=Re_sfr,ls='--',color=colors[1])#,label='$R_e(SFR)$')
+            if R90_sfr is not None:
+                plt.axvline(x=R90_sfr,ls='-',color=colors[1])#,label='$R_{90}(SFR)$')
+        
+    plt.legend()#bbox_to_anchor=(1.02,0.95))
+    plt.gca().set_yscale('log')
+    plt.gca().yaxis.tick_right()
+    plt.ylim(.003,3.5)
+    #print("rmax = ",rmax)    
+    if rmax is not None:
+        
+        plt.xlim(-1,rmax)
+
+    #plt.ylim(-.1,1.5)
+    plt.xlabel("SMA (arcsec)",fontsize=16)
+    plt.savefig(os.path.join(plotdir,dirname)+'-mstar-sfr-profiles-4panel.png')
+
+
+    os.chdir(cwd)
+
+
+    return ax1
+
 
 def fit_profiles(rp,hp,weights=None,rmax=None,fixN=False,labels = ['logMstar','logSFR'],log1Flag=False):
     """
@@ -1408,7 +1770,7 @@ def plot_phase_space(sepmax=15):
     dv = (v.main['vr'])
 
     dr = np.sqrt((RAvirgo-v.main['RA'])**2 + (DECvirgo - v.main['DEC'])**2)
-
+    
     plt.figure(figsize=(8,6))
 
     x = dr
@@ -1450,6 +1812,78 @@ def plot_phase_space(sepmax=15):
     plt.savefig(plotdir+'/NGC5364_Virgo_phasespace.png')
 
 
+def plot_phase_space_normalized(sepmax=15):
+    # like Fig 3 in Castignani+2022b
+
+    # virgo cluster
+    RAvirgo,DECvirgo = 187.697083, 12.336944
+    vr = 1150
+    sigma=600
+    # phase space
+
+    dv = (v.main['vr'] - v.mw_vrcenter)/v.bw_scale
+
+    dr = np.sqrt((v.mw_RAcenter-v.main['RA'])**2 + (v.mw_DECcenter - v.main['DEC'])**2)/v.rvirial_deg
+    
+    plt.figure(figsize=(8,6))
+
+    x = dr
+    y = dv
+    c = v.dist3dVirgo
+    c = v.combinedMass
+    plt.scatter(x[v.groupMembs],y[v.groupMembs],c='k',alpha=.3,vmin=1,vmax=10,s=20)
+
+    #plt.scatter(x[v.env['cluster_member']],y[v.env['cluster_member']],c=c[v.env['cluster_member']],alpha=.4,vmin=1,vmax=10,s=50,marker='*',label='Cluster member')
+    #plt.scatter(x[v.env['cluster_member']],y[v.env['cluster_member']],alpha=.4,vmin=1,vmax=10,s=50,marker='*',label='Virgo Cluster members')
+    #flag = v.groupMembs & ~v.groupMembsHA
+    #plt.scatter(x[v.groupMembsHA],y[v.groupMembsHA],c=c[v.groupMembsHA],marker='s',alpha=1,vmin=8,vmax=10,s=100,label=r'$\rm On H\alpha \ FOV$')    
+    #plt.scatter(x[flag],y[flag],c=c[flag],marker='o',alpha=1,vmin=8,vmax=10,s=50,label='Other Members')
+
+    #plt.scatter(x[v.groupMembs],y[v.groupMembs],c='c',alpha=1,vmin=1,vmax=10,s=100,label='NGC 5364 Group')
+
+
+    vfids = ['VFID5842','VFID5892','VFID5889','VFID5855','VFID5859']#,'VFID5851','VFID5844','VFID5879']
+    for i,vf in enumerate(vfids):
+        flag = v.main['VFID'] == vf
+        plt.plot(x[flag],y[flag],'bs',c=mycolors[i],label=vf,markersize=12)#marker='s',alpha=1,vmin=8,vmax=10,s=100,label=r'$\rm On H\alpha \ FOV$')
+
+
+    vfids = ['VFID5851','VFID5844','VFID5879']
+    for i,vf in enumerate(vfids):
+        flag = v.main['VFID'] == vf
+        plt.plot(x[flag],y[flag],'bv',c='k',alpha=.6,label=vf,markersize=12)#marker='s',alpha=1,vmin=8,vmax=10,s=100,label=r'$\rm On H\alpha \ FOV$')
+        
+    #plot_gianluca_caustics(sepmax=sepmax)
+    ids =  np.arange(len(v.main))[v.groupMembsHA]
+    #for i in ids:
+    #    plt.text(dr[i]-.01,dv[i]+.1,v.main['VFID'][i])    
+    #plt.colorbar(label="$\log (M/M_\odot)$")
+    plt.xlabel(r"$\rm \Delta r/R_{virial}$",fontsize=16)
+    plt.ylabel(r"$\rm \Delta v/\sigma_{bw}$",fontsize=16)
+    plt.axis([0,1,-1.4,2.1])
+    plt.legend()#loc='center right')
+    plt.axhline(y=0,ls='--',color='k',alpha=.5)
+
+
+
+    from astropy.cosmology import WMAP9 as cosmo
+
+    H0 = cosmo.H0.value
+
+    DA = cosmo.angular_diameter_distance(1100/3.e5)
+    DAperdeg = DA*np.pi/180
+    x1,x2 = plt.xlim()
+    print(x1,x2)
+
+    #ax2 = plt.gca().twiny()
+
+    #ax2.set_xlim(x1*DAperdeg.value,x2*DAperdeg.value)
+    #ax2.set_xlabel("Angular Separation (Mpc)",fontsize=16)
+    
+    plt.savefig(plotdir+'/NGC5364_Virgo_phasespace_normalized.png')
+    plt.savefig(plotdir+'/NGC5364_Virgo_phasespace_normalized.pdf')    
+
+
 def plot_sky_positions_with_filaments(multicolor=True,plotlegend=True):
 
     plt.figure(figsize=(11,5))
@@ -1487,20 +1921,42 @@ class grouptables(vtables):
     def get_group_members(self):
         self.groupMembs = self.kt['PGC1'] == 49547
         print(f"number of Kourkchi group members = {np.sum(self.groupMembs)}")
+        self.groupMembsHA = (self.kt['PGC1'] == 49547) & (self.main['HAobsflag'])
     def get_mass_weighted_center(self):
         """get RA and DEC of mass weighted center  """
 
         # create a combined mass that uses the best fit magphys mass for those with bad med values
         badMassFlag = v.magphys['logMstar_med'] < 2
         combinedMass = v.magphys['logMstar_med'] * ~badMassFlag + v.magphys['logMstar_best'] * badMassFlag
-
+        self.combinedMass = combinedMass
         # calculate the mass-weighted center
         self.mw_RAcenter = np.sum(v.main['RA'][self.groupMembs]*10.**combinedMass[self.groupMembs])/np.sum(10.**combinedMass[self.groupMembs])
 
         self.mw_DECcenter = np.sum(v.main['DEC'][self.groupMembs]*10.**combinedMass[self.groupMembs])/np.sum(10.**combinedMass[self.groupMembs])
 
         self.mw_vrcenter = np.sum(v.main['vr'][self.groupMembs]*10.**combinedMass[self.groupMembs])/np.sum(10.**combinedMass[self.groupMembs])
+        self.mw_Vcosmic_center = np.sum(v.env['Vcosmic'][self.groupMembs]*10.**combinedMass[self.groupMembs])/np.sum(10.**combinedMass[self.groupMembs])
 
+    def get_dr_rvirial(self):
+        self.rvirial = 222. # kpc
+
+        # projected distance from group center
+        dRA = np.abs(v.main['RA'][self.groupMembsHA] - self.mw_RAcenter)
+        dDEC = np.abs(v.main['DEC'][self.groupMembsHA] - self.mw_DECcenter)
+        dtheta_deg = np.sqrt(dRA**2 + dDEC**2)
+
+        # convert to kpc
+        from astropy.cosmology import WMAP9 as cosmo
+        H0 = cosmo.H0.value
+
+        redshift = self.mw_Vcosmic_center/3.e5
+        
+        DA = cosmo.angular_diameter_distance(redshift) # Mpc per radian
+        self.rvirial_deg = np.degrees(self.rvirial/1000/DA.value)
+        
+        dr_kpc = np.radians(np.mean(dtheta_deg))*DA*1000
+        print(f"average separation of Halpha FOV galaxies from center is {dr_kpc.value/self.rvirial:.3f} Rvirial")
+        
     def write_latex_table(self):
         self.get_distance_Virgo()
         flag = self.groupMembs & self.main['HAobsflag']
@@ -1569,4 +2025,5 @@ if __name__ == '__main__':
     v.get_mass_weighted_center()    
     v.get_distance_Virgo()
     v.get_biweight_location_scale()
+    v.get_dr_rvirial()
     groupMembs = v.kt['PGC1'] == 49547
