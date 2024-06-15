@@ -11,7 +11,7 @@ import plot_cutouts_ha as pch
 sys.path.append(homedir+'/github/Virgo/programs/')
 from readtablesv2 import vtables
 
-import os
+
 import numpy as np
 from matplotlib import pyplot as plt
 from matplotlib.patches import Ellipse, Rectangle
@@ -34,7 +34,6 @@ from PIL import Image
 
 import glob
 
-homedir = os.getenv("HOME")
 
 import warnings
 warnings.filterwarnings('ignore')
@@ -42,6 +41,11 @@ warnings.filterwarnings('ignore')
 
 mycolors = plt.rcParams['axes.prop_cycle'].by_key()['color']
 plotdir = homedir+'/research/Virgo/plots/halpha/'
+
+
+
+
+
 
 zoom_coords_INT = {'VFID5889':[100,1300,850,2100],\
                    'VFID5851':[255,1500,740,2120],\
@@ -142,6 +146,36 @@ HIfiles = {'VFID5859':'research/Virgo/alma/2023/MeerKAT_ALMA_target_list/J1355_f
 ###########################################
 ## FUNCTIONS
 ###########################################
+
+def convert_alma_header(inheader,outheader):
+    """ remove all the header keywords that relate to 3rd axis """
+    
+    delcards = ['CTYPE','CRVAL','CDELT','CRPIX','CROTA','CUNIT']
+
+    #for c in outheader.cards:
+    for c in delcards:
+        for i in range(2):
+            ci = c+str(i+1)
+            outheader.set(ci,inheader[ci])
+    
+    #outheader['NAXIS'] = 2
+    #outheader['Number of WCS axes'] = 2
+    return outheader
+
+
+def convert_alma3d_alma2d(alma3d_image):
+    hdu = fits.open(alma3d_image)
+
+   
+
+    outdata = hdu[0].data[0]
+
+    newhdu = fits.PrimaryHDU(outdata)
+    
+    outheader = convert_alma_header(hdu[0].header,newhdu.header)
+    newhdu.header = outheader
+    return outdata, outheader
+
 def plot_HI_contours(ax,HIfilename,xmin=None,xmax=None,ymin=None,ymax=None,levels=None,color='white',addbeam=False,ncontour=3):
     """ plot HI contours, given current axis + reference image header """
     # borrowing from alma 2023 proposal
@@ -204,9 +238,11 @@ def plot_CO_contours(ax,COfilename,xmin=None,xmax=None,ymin=None,ymax=None,level
     """ plot CO contours, given current axis + reference image header """
     # borrowing from alma 2023 proposal
     #ncontour=3
-
-    hdu = fits.open(COfilename)
-    CO_WCS = WCS(hdu[0].header)
+    
+    #hdu = fits.open(COfilename)
+    codata, coheader = convert_alma3d_alma2d(COfilename)
+    print(coheader)
+    CO_WCS = WCS(coheader)
     #ncontour = np.array([1,4,15,29])
     #ncontour
     print(CO_WCS)
@@ -214,11 +250,11 @@ def plot_CO_contours(ax,COfilename,xmin=None,xmax=None,ymin=None,ymax=None,level
     ncontour = np.array([0,1,2.25,3.5,4])
     if levels is None:
         #levels = 3**np.arange(ncontour+1)+1
-        levels = np.linspace(.07,1.4,5)
+        levels = np.linspace(.1,1.4,3)
     #levels = np.append(levels,43)
     #levels = np.append(levels,50)
     #levels = np.append(levels,80)        
-    ax.contour(hdu[0].data[0,:,:],transform=ax.get_transform(CO_WCS),slices=('x', 'y', 1),levels=levels,colors=color,alpha=.4,lw=1)
+    ax.contour(codata,transform=ax.get_transform(CO_WCS),slices=('x', 'y', 1),levels=levels,colors=color,alpha=.4,lw=1)
 
 def plot_sfr_contours(dirname,ax,legwcs=None,xmin=None,xmax=None,ymin=None,ymax=None,levels=None):
     from astropy import convolution
@@ -279,7 +315,7 @@ def plot_sfr_contours(dirname,ax,legwcs=None,xmin=None,xmax=None,ymin=None,ymax=
     
 def add_spine(ax,color='c'):
     from astropy.table import Table
-    spinedir = '/home/rfinn/research/Virgo/tables-north/v2/spines/'
+    spinedir = homedir+'/research/Virgo/tables-north/v2/spines/'
     spine  = Table.read(spinedir+'filament_spine_VirgoIII.fits')
     ax.plot(spine['ra'],spine['dec'],'c--',color=color,transform=ax.get_transform('world'))#, ,label='Filament Spine')
 
@@ -694,7 +730,7 @@ def plot_mstar_sfr(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xticks=True,f
 
 
 def plot_mstar_sfr_profiles(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xticks=True,figsize=[16,6],\
-                            cbfrac=.08,cbaspect=20,clevels=[4],contourFlag=True,rmax=None,\
+                            cbfrac=.08,cbaspect=20,clevels=[4],contourFlag=True,rmax=None,harmax=None,\
                             Re_mstar=None,Re_sfr=None,R90_mstar=None,R90_sfr=None,logMstar=None,cmap='magma_r',markGroupCenter=False):
     """
     same plot as mstar_sfr, but swap out ssfr for radial profiles in the 4th panel
@@ -882,6 +918,9 @@ def plot_mstar_sfr_profiles(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xtic
     
 
     plt.title(f"{t[0]} Legacy grz",fontsize=18)
+    #plt.sca(ax1)
+    plt.xlabel("RA (hr)",fontsize=14)
+    plt.ylabel("DEC (deg)",fontsize=14)
 
     #############################################################
     # add arrow showing direction to group center
@@ -961,8 +1000,12 @@ def plot_mstar_sfr_profiles(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xtic
             norm_factor = np.median(y[0:5])
         else:
             norm_factor = np.median(y[0:15])
-        
-        plt.plot(x,y/norm_factor,'bo',c=colors[i],label=labels[i],marker=markers[i])
+
+        pflag = x < rmax
+        if i == 1:
+            if harmax is not None:
+                pflag = x < harmax
+        plt.plot(x[pflag],y[pflag]/norm_factor,'bo',c=colors[i],label=labels[i],marker=markers[i])
         #plt.fill_between(x,(y+yerr)/norm_factor,y2=(y-yerr)/norm_factor,color=mycolors[i],alpha=.5)
     # add R50 if it's provided
     if Re_mstar is not None:
@@ -989,6 +1032,8 @@ def plot_mstar_sfr_profiles(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xtic
 
     #plt.ylim(-.1,1.5)
     plt.xlabel("SMA (arcsec)",fontsize=16)
+
+    
     plt.savefig(os.path.join(plotdir,dirname)+'-mstar-sfr-profiles-4panel.png')
 
 
@@ -1019,13 +1064,13 @@ def plot_mstar_sfr_CO(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xticks=Tru
     ssfrim = dirname+"-ssfr.fits"
     mask = dirname+'-R-mask.fits'
     #titles = [r'$\log_{10}(M_\star/M_\odot)$',r'$H\alpha \ SFR$','log sSFR']
-    titles = [r'$\log_{10}(\Sigma_\star)$',r'$\Sigma_{SFR}$','log sSFR']
-    vmin = [2,0e-5,-11.5]
-    vmax = [6,.6e-5,-9]
+    titles = [r'$\log_{10}(\Sigma_\star)$',r'$\Sigma_{SFR} \ w/HI$',r'$\Sigma_{SFR} \ w/CO$']
+    vmin = [2,0e-5,0e-5]
+    vmax = [6,.6e-5,.6e-5]
     allim = [massim,sfrim,ssfrim]
     allim = [massim,sfrim]
     allim = [massim,sfrim,sfrim] # show halpha with HI and CO    
-    cblabels = [r'$\rm \log_{10}(M_\star/M_\odot)/pixel$',r'$\rm SFR(M_\star/yr)/pixel$']
+    cblabels = [r'$\rm \log_{10}(M_\star/M_\odot)/pixel$',r'$\rm SFR(M_\star/yr)/pixel$',r'$\rm SFR(M_\star/yr)/pixel$']
     
     vfid = dirname.split('-')[0]
     print("VFID = ",vfid)
@@ -1137,7 +1182,8 @@ def plot_mstar_sfr_CO(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xticks=Tru
             COfilename = CO_file[vfid]
             if COfilename is not None:
                 print("COfilename = ",COfilename)
-                plot_CO_contours(ax2,COfilename,color='steelblue')
+
+                plot_CO_contours(ax2,COfilename,color='blue')
                 #if vfid == 'VFID5859':
                 #    plot_HI_beam(ax2,HIfilename,hdu.header,color='steelblue',expandBox=True)
                 #else:
@@ -1186,6 +1232,9 @@ def plot_mstar_sfr_CO(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xticks=Tru
     
     ax1 = plt.subplot(1,4,1,projection=legwcs)
     plt.imshow(jpeg_data)
+
+    #ax1.set_xlabel("RA",fontsize=16)
+    #ax1.set_ylabel("DEC",fontsize=16)    
 
     if xmin is not None:
         # plot the legacy image in panel 1
@@ -1264,59 +1313,13 @@ def plot_mstar_sfr_CO(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xticks=Tru
         plt.text(0.05,0.05,logMstar,fontsize=16,color='white',transform=plt.gca().transAxes,horizontalalignment='left')
     
     
+    ax1.update({'xlabel': 'RA', 'ylabel': 'DEC'})
 
-    #################################################################
-    # plot profiles in the 4th panel
-    #################################################################    
-    plt.subplot(1,4,4)
-    #photometry files
-    massphot = massim.replace('.fits','_phot.fits')
-    sfrphot = sfrim.replace('.fits','_phot.fits')
-    mtab = Table.read(massphot)
-    stab = Table.read(sfrphot)    
-    tables = [mtab,stab]
-    labels = ['$M_\star$',r'$H\alpha \ SFR$']    
-    colors = ['navy','mediumvioletred']
-    markers = ['s','o']
-    for i,t in enumerate(tables):
-        x = t['sma_arcsec']
-        y = t['sb']
-        yerr = t['sb_err']
-        if (i == 1) & (('VFID5844' in dirname) | ('VFID5879' in dirname)):
-            continue
-        if ('VFID5859' in dirname) | ('VFID5892' in dirname):
-            norm_factor = np.median(y[0:5])
-        else:
-            norm_factor = np.median(y[0:15])
-        
-        plt.plot(x,y/norm_factor,'bo',c=colors[i],label=labels[i],marker=markers[i])
-        #plt.fill_between(x,(y+yerr)/norm_factor,y2=(y-yerr)/norm_factor,color=mycolors[i],alpha=.5)
-    # add R50 if it's provided
-    if Re_mstar is not None:
-        plt.axvline(x=Re_mstar,ls='--',lw=2,color=colors[0],label='$R_e$')#,label='$R_e(M_\star)$')
-    if R90_mstar is not None:
-        plt.axvline(x=R90_mstar,ls='-',lw=2,color=colors[0],label='$R_{90}$')#,label='$R_{90}(M_\star)$')
 
-    if (('VFID5844' in dirname) | ('VFID5879' in dirname)):
-        print("not adding halpha radii")
-    else:
-        if Re_sfr is not None:
-            plt.axvline(x=Re_sfr,ls='--',color=colors[1])#,label='$R_e(SFR)$')
-            if R90_sfr is not None:
-                plt.axvline(x=R90_sfr,ls='-',color=colors[1])#,label='$R_{90}(SFR)$')
-        
-    plt.legend()#bbox_to_anchor=(1.02,0.95))
-    plt.gca().set_yscale('log')
-    plt.gca().yaxis.tick_right()
-    plt.ylim(.003,3.5)
-    #print("rmax = ",rmax)    
-    if rmax is not None:
-        
-        plt.xlim(-1,rmax)
-
-    #plt.ylim(-.1,1.5)
-    plt.xlabel("SMA (arcsec)",fontsize=16)
-    plt.savefig(os.path.join(plotdir,dirname)+'-mstar-sfr-profiles-4panel.png')
+    plt.sca(ax1)
+    plt.xlabel("RA (hr)",fontsize=14)
+    plt.ylabel("DEC (deg)",fontsize=14)
+    plt.savefig(os.path.join(plotdir,dirname)+'-mstar-sfr-profiles-CO.png')
 
 
     os.chdir(cwd)
@@ -1330,7 +1333,7 @@ def fit_profiles(rp,hp,weights=None,rmax=None,fixN=False,labels = ['logMstar','l
     PARAMS: 
     * rp = r-band photometry file
     * hp = halpha photometry file
-    
+    * rmax = max radius to use for fitting
     RETURN:
     * rfit = r-band model
     * hfit = halpha model
