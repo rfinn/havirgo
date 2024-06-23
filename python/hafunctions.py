@@ -147,6 +147,54 @@ HIfiles = {'VFID5859':'research/Virgo/alma/2023/MeerKAT_ALMA_target_list/J1355_f
 ## FUNCTIONS
 ###########################################
 
+def add_scale(ax,vr=1100,pscale=.331,barsize=5.,color='k',fontsize=16):
+    '''
+    ax = axis for drawing on
+    vr = cosmic recession velocity
+    pscale = pixel scale, in arcsec/pix
+    barsize = size of marker in kpc
+    fontisize = fontsize for the text
+    '''
+
+    from astropy.cosmology import WMAP9 as cosmo
+        
+    H0 = cosmo.H0.value
+
+    z = vr/3.e5
+    # get Mpc/radians
+    add = cosmo.angular_diameter_distance(z)
+
+    # convert to kpc/arcsec
+    
+    add_kpc_arcsec = add.value*1000*np.pi/(180*3600)
+    
+    # convert barsize from kpc to arcsec
+    barsize_arcsec = barsize/add_kpc_arcsec
+    
+    # convert barsize from arcsec to pixels
+    barsize_pixels = barsize_arcsec/pscale
+    
+    # get size of image
+    x1,x2 = plt.gca().get_xlim()
+    xline1 = x1 + 0.09*(x2-x1)
+    y1,y2 = plt.gca().get_ylim()
+    yline1 = y1 + 0.9*(y2-y1)
+    # for size label
+    xtext = xline1 + 0.5*barsize_pixels
+    ytext = yline1 - 0.08*(y2-y1)
+    
+    # set up arrays for reference line
+    xbar = np.array([xline1,xline1+barsize_pixels])
+    ybar = np.array([yline1,yline1])  
+    # plot line
+    plt.plot(xbar,ybar,'r-',lw=2,color=color)
+    
+    # label line
+    plt.text(xtext,ytext,'{:.0f} kpc'.format(barsize),horizontalalignment='center',fontsize=fontsize,c=color)
+    #plt.arrow(xline1,yline1,barsize_pixels,0)
+    # draw line to show size of barsize
+
+
 def convert_alma_header(inheader,outheader):
     """ remove all the header keywords that relate to 3rd axis """
     
@@ -176,7 +224,45 @@ def convert_alma3d_alma2d(alma3d_image):
     newhdu.header = outheader
     return outdata, outheader
 
-def plot_HI_contours(ax,HIfilename,xmin=None,xmax=None,ymin=None,ymax=None,levels=None,color='white',addbeam=False,ncontour=3):
+
+def get_kpc_per_arcsec(vr):
+    """
+    PARAMS:
+    * vr = recession velocity to use in distance calculation
+
+    RETURN:
+    * kpc_arcsec : physical scale corresponding to 1 arcsec
+
+    """
+    z = vr/3.e5
+    
+    from astropy.cosmology import WMAP9 as cosmo
+    # get Mpc/radians
+    add = cosmo.angular_diameter_distance(z)
+
+    # convert to kpc/arcsec
+    add_kpc_arcsec = add.value*1000*np.pi/(180*3600)
+    
+    return add_kpc_arcsec
+
+def get_kpc_per_pixel(imwcs,vr):
+    """
+    PARAMS:
+    * imwcs :  WCS for image
+    * vr : recession velocity to use in angular diameter distance
+
+    RETURN:
+    * kpc_per_pixel : kpc per pixel at distance of H0*vr
+
+    """
+    pscale = wcs.utils.proj_plane_pixel_scales(imwcs) # in deg per pixel
+    arcsec_per_pixel = pscale[0]*3600 #arcsec per pixel
+
+    kpc_per_arcsec = get_kpc_per_arcsec(vr) # kpc/arcsec
+
+    return arcsec_per_pixel*kpc_per_arcsec
+    
+def plot_HI_contours(ax,HIfilename,xmin=None,xmax=None,ymin=None,ymax=None,levels=None,color='white',addbeam=False,ncontour=5):
     """ plot HI contours, given current axis + reference image header """
     # borrowing from alma 2023 proposal
     #ncontour=3
@@ -185,10 +271,11 @@ def plot_HI_contours(ax,HIfilename,xmin=None,xmax=None,ymin=None,ymax=None,level
     HI_WCS = WCS(hdu.header)
     #ncontour = np.array([1,4,15,29])
     #ncontour
-    ncontour = np.array([0,1,2.25,3.5,4])
+    #ncontour = np.array([0,1,2.25,3.5,4])
+    print("levels = ",levels)
     if levels is None:
         #levels = 3**np.arange(ncontour+1)+1
-        levels = 3**np.arange(1,5)+1
+        levels = 3**np.arange(1,ncontour+1)+1
     #levels = np.append(levels,43)
     #levels = np.append(levels,50)
     #levels = np.append(levels,80)        
@@ -227,8 +314,8 @@ def plot_HI_beam(ax,HIfilename,hostim_header,color='white',expandBox=False):
     dx = 0.1
     dy = 0.1
     if expandBox:
-        dx=.15
-        dy=.15
+        dx=.25
+        dy=.25
     xc = .9
     yc = 0.9
     rect = Rectangle((xc-0.5*dx,yc-0.5*dy),dx,dy,transform=ax.transAxes,edgecolor=color,facecolor='None',lw=1,alpha=.8)
@@ -256,6 +343,44 @@ def plot_CO_contours(ax,COfilename,xmin=None,xmax=None,ymin=None,ymax=None,level
     #levels = np.append(levels,80)        
     ax.contour(codata,transform=ax.get_transform(CO_WCS),slices=('x', 'y', 1),levels=levels,colors=color,alpha=.4,lw=1)
 
+
+def plot_INT_footprint(center_ra,center_dec,plotguide=False):
+    #using full detector sizes for now because 
+    detector_dra = 4100.*0.33/3600.*1.05 # 2154 pixels * 0.33"/pix, /3600 to get deg
+    detector_ddec = 2048.*0.33/3600. # 2154 pixels * 0.33"/pix, /3600 to get deg
+    # draw footprint of chip 4
+    rect= plt.Rectangle((center_ra-detector_dra/2.,center_dec-detector_ddec/2.), detector_dra, detector_ddec,fill=False, color='k')
+    plt.gca().add_artist(rect)
+    # draw footprint of chip 3
+    # assuming chip 3 is NORTH and a smidge WEST of chip 4
+    offset_dec = detector_ddec+17./3600. # 17 arcsec gap in RA between 
+    offset_ra = -9.5/3600. # 9.5 arcsec offset toward N
+    rect= plt.Rectangle((center_ra+offset_ra-detector_dra/2.,center_dec+offset_dec-detector_ddec/2.), detector_dra, detector_ddec,fill=False, color='k')
+    plt.gca().add_artist(rect)
+
+    # draw footprint of chip 1
+    # assuming chip 1 is SOUTH and a smidge EAST of chip 4
+    offset_dec = -1*detector_ddec-22.7/3600. # 17 arcsec gap in RA between 
+    offset_ra = +3.18/3600. # 9.5 arcsec offset toward N
+    rect= plt.Rectangle((center_ra+offset_ra-detector_dra/2.,center_dec+offset_dec-detector_ddec/2.), detector_dra, detector_ddec,fill=False, color='k')
+    plt.gca().add_artist(rect)
+
+    # draw footprint of chip 2
+    # assuming chip 2 is WEST of chip 4
+    offset_dec = detector_ddec/2.-detector_dra-19.2/3600. # hard to explain
+    offset_ra =  -.5*detector_dra-23.8/3600.# hard to explain
+    # this chip is rotated 90 deg, so detecter_dra and detector_ddec are interchanged
+    rect= plt.Rectangle((center_ra+offset_ra,center_dec+offset_dec), -1.*detector_ddec, detector_dra,fill=False, color='k',label='WFC Footprint')
+    plt.gca().add_artist(rect)
+
+    if plotguide:
+        # adding guide camera
+        offset_dec = -2*detector_ddec-(22.7+98.1)/3600. # hard to explain
+        offset_ra =  detector_dra/2-(3.18+649.9)/3600.# hard to explain
+        # this chip is rotated 90 deg, so detecter_dra and detector_ddec are interchanged
+        rect= plt.Rectangle((center_ra+offset_ra,center_dec+offset_dec), -7./60., 7./60,fill=False, color='k')
+        plt.gca().add_artist(rect)
+    
 def plot_sfr_contours(dirname,ax,legwcs=None,xmin=None,xmax=None,ymin=None,ymax=None,levels=None):
     from astropy import convolution
     topdir = homedir+'/research/Virgo-dev/cont-sub-gr/'+dirname+'/'
@@ -440,7 +565,7 @@ def plot_sfr_mstar():
     plt.xlim(xmin+.2,xmax)
     plt.ylim(-5.1,.2)
     plt.legend()
-    plt.savefig(plotdir+'/NGC5364-sfr-mstar.png')    
+    plt.savefig(plotdir+'/NGC5364-sfr-mstar.png',dpi=300,bbox_inches="tight")    
 
 
 def plot_HIdef_sizeratio():
@@ -517,7 +642,7 @@ def plot_HIdef_sizeratio():
     r,pvalue = spearmanr(x,y)
     print(f"Spearman rank correlation coeff = {r:.2f}, pvalue = {pvalue:.3f}")
 
-    plt.savefig(plotdir+'/NGC5364-HIdef-sizeratio90.png')        
+    plt.savefig(plotdir+'/NGC5364-HIdef-sizeratio90.png',dpi=300,bbox_inches="tight")        
     
 def get_rad_fluxfrac(pfit,frac=0.9,verbose=False):
     from scipy.interpolate import interp1d
@@ -723,7 +848,7 @@ def plot_mstar_sfr(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xticks=True,f
     #plt.contour(contour_data[y[0]:y[1],x[0]:x[1]],levels = [4,5,6],colors='c',alpha=0.5)
     plt.title("Legacy grz",fontsize=20)
    
-    plt.savefig(os.path.join(plotdir,dirname)+'-mstar-sfr-ssfr.png')
+    plt.savefig(os.path.join(plotdir,dirname)+'-mstar-sfr-ssfr.png',dpi=300,bbox_inches="tight")
 
 
     os.chdir(cwd)
@@ -731,9 +856,14 @@ def plot_mstar_sfr(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xticks=True,f
 
 def plot_mstar_sfr_profiles(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xticks=True,figsize=[16,6],\
                             cbfrac=.08,cbaspect=20,clevels=[4],contourFlag=True,rmax=None,harmax=None,\
-                            Re_mstar=None,Re_sfr=None,R90_mstar=None,R90_sfr=None,logMstar=None,cmap='magma_r',markGroupCenter=False):
+                            Re_mstar=None,Re_sfr=None,R90_mstar=None,R90_sfr=None,logMstar=None,\
+                            vr=None,\
+                            cmap='magma_r',markGroupCenter=False):
     """
     same plot as mstar_sfr, but swap out ssfr for radial profiles in the 4th panel
+
+    PARAMS:
+    vr = recession velocity to use for DA when converting flux/pixel to flux/kpc^2
 
     """
     #%matplotlib inline
@@ -755,7 +885,8 @@ def plot_mstar_sfr_profiles(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xtic
     vmax = [6,.6e-5,-9]
     allim = [massim,sfrim,ssfrim]
     allim = [massim,sfrim]    
-    cblabels = [r'$\rm \log_{10}(M_\star/M_\odot)/pixel$',r'$\rm SFR(M_\star/yr)/pixel$']
+    #cblabels = [r'$\rm \log_{10}(M_\star/M_\odot)/pixel$',r'$\rm SFR(M_\star/yr)/pixel$']
+    cblabels = [r'$\rm \log_{10}(M_\star/M_\odot/kpc^2)$',r'$\rm SFR(M_\star/yr)/kpc^2$']
     
     vfid = dirname.split('-')[0]
     print("VFID = ",vfid)
@@ -818,17 +949,34 @@ def plot_mstar_sfr_profiles(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xtic
         ax2=plt.subplot(1,4,i+2,projection=imwcs)
 
 
+        v1 = vmin[i] 
+        v2 = vmax[i]       
+        if vr is not None:
+            # scale data to convert to flux/kpc^2
+            kpc_per_pixel = get_kpc_per_pixel(imwcs,vr)
+            if i == 0:
+                dat = np.log10(10**dat/(kpc_per_pixel**2))
+                v1 = vmin[i]-2.*np.log10(kpc_per_pixel) 
+                v2 = vmax[i]-2.*np.log10(kpc_per_pixel)           
+                #myclevels = myclevels-2.*np.log10(kpc_per_pixel)
+                print("\nmass contour",myclevels-2.*np.log10(kpc_per_pixel))
+            else:
+                dat = dat/(kpc_per_pixel**2)
+                v1 = vmin[i]/kpc_per_pixel**2 
+                v2 = vmax[i]/kpc_per_pixel**2
+                #myclevels = myclevels/kpc_per_pixel**2
+                
         mdat = np.ma.array(dat,mask=maskdat)
         #if xmin is None:
         #    mdat = mdat
         #else:
         #    mdat = mdat[ymin:ymax,xmin:xmax]
         if i == 2:
-            plt.imshow(mdat,vmin=vmin[i],vmax=vmax[i],origin='lower',interpolation='nearest',cmap=cmap)
+            plt.imshow(mdat,origin='lower',interpolation='nearest',cmap=cmap,vmin=v1,vmax=v2)
 
         else:
             #display_image(mdat,percent=99.5,cmap='viridis')#,vmin=vmin[i],vmax=vmax[i])
-            plt.imshow(mdat,vmin=vmin[i],vmax=vmax[i],cmap=cmap)#cmap='viridis'
+            plt.imshow(mdat,cmap=cmap,vmin=v1,vmax=v2)#cmap='viridis'
         
             lon = ax2.coords[0]
             lat = ax2.coords[1]
@@ -905,8 +1053,8 @@ def plot_mstar_sfr_profiles(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xtic
         sfrim = dirname+"-sfr-vr.fits"
         header = fits.getheader(sfrim)
         #print(header)
-        wcs = WCS(header)
-        sky = wcs.pixel_to_world(xcoords,ycoords)
+        imwcs = WCS(header)
+        sky = imwcs.pixel_to_world(xcoords,ycoords)
     
         # set limits in ra,dec
         x,y = legwcs.world_to_pixel(sky)
@@ -917,10 +1065,21 @@ def plot_mstar_sfr_profiles(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xtic
     #plt.text(.05,.02,t[0],fontsize=20,transform=plt.gca().transAxes,horizontalalignment='left',color='white')
     
 
-    plt.title(f"{t[0]} Legacy grz",fontsize=18)
+    #plt.title(f"{t[0]} Legacy grz",fontsize=18)
+    plt.title(f"{t[0]}",fontsize=18)    
     #plt.sca(ax1)
     plt.xlabel("RA (hr)",fontsize=14)
     plt.ylabel("DEC (deg)",fontsize=14)
+
+
+    ###############################################
+    # add a physical scale
+    ###############################################
+    pscale = wcs.utils.proj_plane_pixel_scales(legwcs) # in deg -> arcsec
+    pscale_arcsec = pscale[0]*3600
+    add_scale(ax1,vr=v.mw_vrcenter,pscale=pscale_arcsec,color='w',barsize=2)    
+
+    
 
     #############################################################
     # add arrow showing direction to group center
@@ -966,7 +1125,11 @@ def plot_mstar_sfr_profiles(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xtic
     if HIfilename is not None:
         print("HIfilename = ",HIfilename)
         plot_HI_contours(plt.gca(),HIfilename,color='lightsteelblue')
-        plot_HI_beam(plt.gca(),HIfilename,fits.getheader(legacyr),color='steelblue') 
+        if vfid == 'VFID5859':
+            plot_HI_beam(ax1,HIfilename,hdu.header,color='steelblue',expandBox=True)
+        else:
+            plot_HI_beam(ax1,HIfilename,hdu.header,color='steelblue') 
+        
         
     #############################################################
     # add stellar mass from magphys to the legacy image
@@ -1034,7 +1197,7 @@ def plot_mstar_sfr_profiles(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xtic
     plt.xlabel("SMA (arcsec)",fontsize=16)
 
     
-    plt.savefig(os.path.join(plotdir,dirname)+'-mstar-sfr-profiles-4panel.png')
+    plt.savefig(os.path.join(plotdir,dirname)+'-mstar-sfr-profiles-4panel.png',dpi=300,bbox_inches="tight")
 
 
     os.chdir(cwd)
@@ -1319,7 +1482,7 @@ def plot_mstar_sfr_CO(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xticks=Tru
     plt.sca(ax1)
     plt.xlabel("RA (hr)",fontsize=14)
     plt.ylabel("DEC (deg)",fontsize=14)
-    plt.savefig(os.path.join(plotdir,dirname)+'-mstar-sfr-profiles-CO.png')
+    plt.savefig(os.path.join(plotdir,dirname)+'-mstar-sfr-profiles-CO.png',dpi=300,bbox_inches="tight")
 
 
     os.chdir(cwd)
@@ -1483,10 +1646,10 @@ def fit1profile(dirname='VFID5842-NGC5356-INT-20190206-p120',rmax=None):
     print("in fit1profile, rmax = ",rmax)
     mfit,sfit = fit_profiles(rp,hp,rmax=rmax,labels=['logMstar','logSFR'],log1Flag=False)
     vfid = dirname.split('-')[0]
-    plt.savefig(vfid+'-mstar-sfr-profiles.png')
+    plt.savefig(vfid+'-mstar-sfr-profiles.png',dpi=300,bbox_inches="tight")
         
     radii50 = plot_cog(rp,hp,mfit,sfit,rmax=rmax,labels=['logMstar','logSFR'])
-    plt.savefig(vfid+'-mstar-sfr-cog.png')    
+    plt.savefig(vfid+'-mstar-sfr-cog.png',dpi=300,bbox_inches="tight")    
     # use this to run on R and CS Halpha
     rphot = dirname+'-R_phot.fits'
     haphot = dirname+'-CS-gr_phot.fits'
@@ -1499,7 +1662,7 @@ def fit1profile(dirname='VFID5842-NGC5356-INT-20190206-p120',rmax=None):
         rp = Table.read(rphot)
         hp = Table.read(haphot)
     rfit,hfit = fit_profiles(rp,hp,rmax=rmax,labels=['r','halpha'])
-    plt.savefig(vfid+'-r-halpha-profiles.png')    
+    plt.savefig(vfid+'-r-halpha-profiles.png',dpi=300,bbox_inches="tight")    
     return mfit,sfit,rfit,hfit
 
 
@@ -1638,7 +1801,7 @@ def plot_sfr_indicators(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xticks=T
     #plt.contour(contour_data[y[0]:y[1],x[0]:x[1]],levels = [4,5,6],colors='c',alpha=0.5)
     plt.title("Legacy grz",fontsize=20)
     # read in the
-    plt.savefig(os.path.join(plotdir,dirname)+'-sfr-indicators.png')
+    plt.savefig(os.path.join(plotdir,dirname)+'-sfr-indicators.png',dpi=300,bbox_inches="tight")
     plt.show()
 
     os.chdir(cwd)
@@ -1759,7 +1922,7 @@ def plot_sky_positions():
     ax2.set_ylim((y1-DECvirgo)*DAperdeg.value,(y2-DECvirgo)*DAperdeg.value)
     ax2.set_ylabel("Angular Separation (Mpc)",fontsize=16,rotation=270,labelpad=20)
     plt.grid()
-    plt.savefig(plotdir+'/NGC5364_Virgo_sky_positions.png')
+    plt.savefig(plotdir+'/NGC5364_Virgo_sky_positions.png',dpi=300,bbox_inches="tight")
 
 def plot_phase_space(sepmax=15):
     # like Fig 3 in Castignani+2022b
@@ -1812,7 +1975,7 @@ def plot_phase_space(sepmax=15):
     ax2.set_xlim(x1*DAperdeg.value,x2*DAperdeg.value)
     ax2.set_xlabel("Angular Separation (Mpc)",fontsize=16)
     
-    plt.savefig(plotdir+'/NGC5364_Virgo_phasespace.png')
+    plt.savefig(plotdir+'/NGC5364_Virgo_phasespace.png',dpi=300,bbox_inches="tight")
 
 
 def plot_phase_space_normalized(sepmax=15):
@@ -1883,7 +2046,7 @@ def plot_phase_space_normalized(sepmax=15):
     #ax2.set_xlim(x1*DAperdeg.value,x2*DAperdeg.value)
     #ax2.set_xlabel("Angular Separation (Mpc)",fontsize=16)
     
-    plt.savefig(plotdir+'/NGC5364_Virgo_phasespace_normalized.png')
+    plt.savefig(plotdir+'/NGC5364_Virgo_phasespace_normalized.png',dpi=300,bbox_inches="tight")
     plt.savefig(plotdir+'/NGC5364_Virgo_phasespace_normalized.pdf')    
 
 
@@ -1918,7 +2081,7 @@ def plot_sky_positions_with_filaments(multicolor=True,plotlegend=True):
     plt.yticks(fontsize=14)
     #plt.legend(loc='upper right')
     #plt.title('Filamentary Structures Surrounding the Virgo Cluster',fontsize=18)
-    plt.savefig(plotdir+'/ngc5364_positions_filaments.png')
+    plt.savefig(plotdir+'/ngc5364_positions_filaments.png',dpi=300,bbox_inches="tight")
     plt.savefig(plotdir+'/ngc5364_positions_filaments.pdf')
 class grouptables(vtables):
     def get_group_members(self):
