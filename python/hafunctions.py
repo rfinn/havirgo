@@ -537,7 +537,7 @@ def plot_sfr_mstar():
                 plt.scatter(xp,yp,c=HIdef[vf],s=120,marker='s',label=label,vmin=-0.5,vmax=0.8)
             else:
                 plt.plot(xp,yp,'bs',markersize=12,c='0.5')
-            plt.text(xp,yp+.2,v.main['VFID'][vf],horizontalalignment='center')
+            plt.text(xp-.02,yp+.2,v.main['VFID'][vf],horizontalalignment='center',fontsize=14)
         else:
             if nnha == 0:
                 label = r"$All \ members$"
@@ -556,8 +556,8 @@ def plot_sfr_mstar():
         
     cb = plt.colorbar()
     cb.set_label('HI Def',fontsize=16)
-    plt.xlabel("$\log(M_\star/M_\odot)$",fontsize=22)
-    plt.ylabel("$\log(SFR/(M_\odot/yr))$",fontsize=22)
+    plt.xlabel(r"$\rm \log_{10}(M_\star/M_\odot)$",fontsize=22)
+    plt.ylabel(r"$\rm \log_{10}(SFR/(M_\odot/yr))$",fontsize=22)
     plt.xticks(fontsize=16)
     plt.yticks(fontsize=16)
     
@@ -565,7 +565,8 @@ def plot_sfr_mstar():
     plt.xlim(xmin+.2,xmax)
     plt.ylim(-5.1,.2)
     plt.legend()
-    plt.savefig(plotdir+'/NGC5364-sfr-mstar.png',dpi=300,bbox_inches="tight")    
+    plt.savefig(plotdir+'/NGC5364-sfr-mstar.png',dpi=300,bbox_inches="tight")
+    plt.savefig(plotdir+'/NGC5364-sfr-mstar.pdf',bbox_inches="tight")        
 
 
 def plot_HIdef_sizeratio():
@@ -620,10 +621,11 @@ def plot_HIdef_sizeratio():
     
     x = sizeratio90[plotflag]
     y = v.a100['HIdef_bos'][plotflag]
+    #y = v.a100['HIdef'][plotflag]
     c = v.magphys['logMstar_med'][plotflag]
     plt.scatter(x,y,c=c,s=120,marker='s')
-    plt.xlabel("$R_{90}(SFR)/R_{90}(M_\star)$",fontsize=22)
-    plt.ylabel("$HI \ Deficiency$",fontsize=22)
+    plt.xlabel(r"$\rm R_{90}(SFR)/R_{90}(M_\star)$",fontsize=22)
+    plt.ylabel(r"$\rm HI \ Deficiency$",fontsize=22)
 
     cb = plt.colorbar()
     cb.set_label("$\log(M_\star/M_\odot)$",fontsize=16)
@@ -631,18 +633,35 @@ def plot_HIdef_sizeratio():
     for vf in vfids:
         xp = sizeratio90[vf]
         yp = v.a100['HIdef_bos'][vf]        
-        plt.text(xp,yp+.05,v.main['VFID'][vf],horizontalalignment='center')
+        plt.text(xp-.01,yp+.05,v.main['VFID'][vf],horizontalalignment='center',fontsize=14)
 
     plt.ylim(-.5,1.02)
     plt.xlim(0.22,1.39)
-
+    plt.axhline(ls='-',c='k',alpha=.5)
+    plt.axhline(y=0.25,ls='--',c='k',alpha=.5)
+    plt.axhline(y=-0.25,ls='--',c='k',alpha=.5)
+    
     #######################################
     # calculate spearman rank coeff
     #######################################
     r,pvalue = spearmanr(x,y)
     print(f"Spearman rank correlation coeff = {r:.2f}, pvalue = {pvalue:.3f}")
 
-    plt.savefig(plotdir+'/NGC5364-HIdef-sizeratio90.png',dpi=300,bbox_inches="tight")        
+
+    plotflag[v.main['VFID']=='VFID5859'] = False
+    x = sizeratio90[plotflag]
+    y = v.a100['HIdef_bos'][plotflag]
+    r,pvalue = spearmanr(x,y)
+    print()
+    print("removing VFID5859")
+    print(f"Spearman rank correlation coeff = {r:.2f}, pvalue = {pvalue:.3f}")
+    
+    # now plot HIdef vs sizeratio90
+    plt.xticks(fontsize=16)
+    plt.yticks(fontsize=16)    
+
+    plt.savefig(plotdir+'/NGC5364-HIdef-sizeratio90.png',dpi=300,bbox_inches="tight")
+    plt.savefig(plotdir+'/NGC5364-HIdef-sizeratio90.pdf',bbox_inches="tight")     
     
 def get_rad_fluxfrac(pfit,frac=0.9,verbose=False):
     from scipy.interpolate import interp1d
