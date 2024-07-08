@@ -856,6 +856,7 @@ class build_html_cutout():
         telescope,dateobs,pointing = get_params_from_name(self.cutout.cutoutdir+".fits")
 
         # find matching rows
+        
         vfid_match_index = np.arange(len(fullha))[fullha['VFID'] == self.cutout.vfid]
         if len(vfid_match_index) > 1:
             print("found duplicate",telescope,dateobs)
@@ -1115,6 +1116,8 @@ if __name__ == '__main__':
     parser.add_argument('--cutoutdir',dest = 'cutoutdir', default=None, help='set to cutout directory. default is the current directory, like you are running from the cutouts/ directory')
     parser.add_argument('--oneimage',dest = 'oneimage',default=None, help='give directory for one image')
     parser.add_argument('--outdir',dest = 'outdir',default='/data-pool/Halpha/html_dev/cutouts/', help='output directory.  default is /data-pool/Halpha/html_dev/cutouts/')
+    parser.add_argument('--verbose',dest = 'verbose', action='store_true',default=False,help='set this for extra print statements')        
+
     parser.add_argument('--hacat',dest = 'hacat',default='../halphagui-output-combined-2024-Jul-08.fits')   
      
     args = parser.parse_args()
