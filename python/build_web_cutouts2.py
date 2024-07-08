@@ -857,7 +857,8 @@ class build_html_cutout():
 
         # find matching rows
         print("TESTING!")
-        print('self.cutout.vfid = ',self.cutout.vfid,fullha['VFID'][0])
+        print('self.cutout.vfid = ',self.cutout.vfid)
+        print(fullha['VFID'][0])
         if args.verbose:
             print('self.cutout.vfid = ',self.cutout.vfid,fullha['VFID'][0])
         vfid_match_index = np.arange(len(fullha))[fullha['VFID'] == self.cutout.vfid]
@@ -1134,7 +1135,7 @@ if __name__ == '__main__':
 
     # need to update this automatically - find the most recent version in the directory
     #fullha = fits.getdata('../halphagui-output-combined-2024-May-30.fits')
-    fullha = args.hacat
+    fullha = fits.getdata(args.hacat)
     
     if args.cutoutdir is not None:
         os.chdir(args.cutoutdir)
