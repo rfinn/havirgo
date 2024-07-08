@@ -624,17 +624,17 @@ class cutout_dir():
 
 
         # open data files
-        cs_galfit_phot = self.csimage.replace('.fits','-GAL-phot.fits')
+        cs_galfit_phot = self.csimage.replace('.fits','-GAL_phot.fits')
         cs_gphot = fits.getdata(cs_galfit_phot)
         #cs_phot = self.csimage.replace('.fits','-phot.fits')        
-        r_galfit_phot = self.rimage.replace('.fits','-GAL-phot.fits')
+        r_galfit_phot = self.rimage.replace('.fits','-GAL_phot.fits')
         r_gphot = fits.getdata(r_galfit_phot)
 
         # photutils flux
-        cs_galfit_phot = self.csimage.replace('.fits','-phot.fits')
+        cs_galfit_phot = self.csimage.replace('.fits','_phot.fits')
         cs_phot = fits.getdata(cs_galfit_phot)
         #cs_phot = self.csimage.replace('.fits','-phot.fits')        
-        r_galfit_phot = self.rimage.replace('.fits','-phot.fits')
+        r_galfit_phot = self.rimage.replace('.fits','_phot.fits')
         r_phot = fits.getdata(r_galfit_phot)
         
 
@@ -857,6 +857,7 @@ class build_html_cutout():
 
         # find matching rows
         print("TESTING!")
+        print('self.cutout.vfid = ',self.cutout.vfid,fullha['VFID'][0])
         if args.verbose:
             print('self.cutout.vfid = ',self.cutout.vfid,fullha['VFID'][0])
         vfid_match_index = np.arange(len(fullha))[fullha['VFID'] == self.cutout.vfid]
