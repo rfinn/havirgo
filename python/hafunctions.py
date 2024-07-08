@@ -38,6 +38,11 @@ import glob
 import warnings
 warnings.filterwarnings('ignore')
 
+UNWISE_PIXSCALE = 2.75
+
+# why am I using 1 arcsec for the legacy images???
+LEGACY_PIXSCALE = 0.262
+
 
 mycolors = plt.rcParams['axes.prop_cycle'].by_key()['color']
 plotdir = homedir+'/research/Virgo/plots/halpha/'
@@ -225,6 +230,21 @@ def convert_alma3d_alma2d(alma3d_image):
     return outdata, outheader
 
 
+def get_cutouts(ra,dec,vfid,imsize):
+    """
+    imsize = size of cutout in arcsec
+
+    """
+    imsize_pixels = np.int(np.round(imsize/LEGACY_PIXSCALE))
+    get_legacy_images(ra,dec,galid='VFID0',pixscale=0.262,imsize=imsize_pixels,band='r',makeplots=False,subfolder=None)
+
+
+    
+    get_wise_images(ra,dec,size=imsize)
+
+    #get_unwise_image(ra,dec,galid=vfid,pixscale=2.75,imsize='60',bands='34',makeplots=False,subfolder=None):
+    get_galex_images(ra,dec,size=imsize)    
+    
 def get_kpc_per_arcsec(vr):
     """
     PARAMS:
@@ -262,6 +282,8 @@ def get_kpc_per_pixel(imwcs,vr):
 
     return arcsec_per_pixel*kpc_per_arcsec
     
+
+
 def plot_HI_contours(ax,HIfilename,xmin=None,xmax=None,ymin=None,ymax=None,levels=None,color='white',addbeam=False,ncontour=5):
     """ plot HI contours, given current axis + reference image header """
     # borrowing from alma 2023 proposal
@@ -479,7 +501,8 @@ def update_ngc5348_mask():
 
     # mask out rows with y > 1680
 
-        
+
+    
 def plot_sfr_mstar():
 
     plt.figure(figsize=(8,6))
@@ -565,7 +588,7 @@ def plot_sfr_mstar():
     plt.xlim(xmin+.2,xmax)
     plt.ylim(-5.1,.2)
     plt.legend()
-    plt.savefig(plotdir+'/NGC5364-sfr-mstar.png',dpi=300,bbox_inches="tight")
+    plt.savefig(plotdir+'/NGC5364-sfr-mstar.png',dpi=150,bbox_inches="tight")
     plt.savefig(plotdir+'/NGC5364-sfr-mstar.pdf',bbox_inches="tight")        
 
 
@@ -660,7 +683,7 @@ def plot_HIdef_sizeratio():
     plt.xticks(fontsize=16)
     plt.yticks(fontsize=16)    
 
-    plt.savefig(plotdir+'/NGC5364-HIdef-sizeratio90.png',dpi=300,bbox_inches="tight")
+    plt.savefig(plotdir+'/NGC5364-HIdef-sizeratio90.png',dpi=150,bbox_inches="tight")
     plt.savefig(plotdir+'/NGC5364-HIdef-sizeratio90.pdf',bbox_inches="tight")     
     
 def get_rad_fluxfrac(pfit,frac=0.9,verbose=False):
@@ -867,7 +890,7 @@ def plot_mstar_sfr(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xticks=True,f
     #plt.contour(contour_data[y[0]:y[1],x[0]:x[1]],levels = [4,5,6],colors='c',alpha=0.5)
     plt.title("Legacy grz",fontsize=20)
    
-    plt.savefig(os.path.join(plotdir,dirname)+'-mstar-sfr-ssfr.png',dpi=300,bbox_inches="tight")
+    plt.savefig(os.path.join(plotdir,dirname)+'-mstar-sfr-ssfr.png',dpi=150,bbox_inches="tight")
 
 
     os.chdir(cwd)
@@ -1216,7 +1239,7 @@ def plot_mstar_sfr_profiles(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xtic
     plt.xlabel("SMA (arcsec)",fontsize=16)
 
     
-    plt.savefig(os.path.join(plotdir,dirname)+'-mstar-sfr-profiles-4panel.png',dpi=300,bbox_inches="tight")
+    plt.savefig(os.path.join(plotdir,dirname)+'-mstar-sfr-profiles-4panel.png',dpi=150,bbox_inches="tight")
 
 
     os.chdir(cwd)
@@ -1501,7 +1524,7 @@ def plot_mstar_sfr_CO(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xticks=Tru
     plt.sca(ax1)
     plt.xlabel("RA (hr)",fontsize=14)
     plt.ylabel("DEC (deg)",fontsize=14)
-    plt.savefig(os.path.join(plotdir,dirname)+'-mstar-sfr-profiles-CO.png',dpi=300,bbox_inches="tight")
+    plt.savefig(os.path.join(plotdir,dirname)+'-mstar-sfr-profiles-CO.png',dpi=150,bbox_inches="tight")
 
 
     os.chdir(cwd)
@@ -1665,10 +1688,10 @@ def fit1profile(dirname='VFID5842-NGC5356-INT-20190206-p120',rmax=None):
     print("in fit1profile, rmax = ",rmax)
     mfit,sfit = fit_profiles(rp,hp,rmax=rmax,labels=['logMstar','logSFR'],log1Flag=False)
     vfid = dirname.split('-')[0]
-    plt.savefig(vfid+'-mstar-sfr-profiles.png',dpi=300,bbox_inches="tight")
+    plt.savefig(vfid+'-mstar-sfr-profiles.png',dpi=150,bbox_inches="tight")
         
     radii50 = plot_cog(rp,hp,mfit,sfit,rmax=rmax,labels=['logMstar','logSFR'])
-    plt.savefig(vfid+'-mstar-sfr-cog.png',dpi=300,bbox_inches="tight")    
+    plt.savefig(vfid+'-mstar-sfr-cog.png',dpi=150,bbox_inches="tight")    
     # use this to run on R and CS Halpha
     rphot = dirname+'-R_phot.fits'
     haphot = dirname+'-CS-gr_phot.fits'
@@ -1681,7 +1704,7 @@ def fit1profile(dirname='VFID5842-NGC5356-INT-20190206-p120',rmax=None):
         rp = Table.read(rphot)
         hp = Table.read(haphot)
     rfit,hfit = fit_profiles(rp,hp,rmax=rmax,labels=['r','halpha'])
-    plt.savefig(vfid+'-r-halpha-profiles.png',dpi=300,bbox_inches="tight")    
+    plt.savefig(vfid+'-r-halpha-profiles.png',dpi=150,bbox_inches="tight")    
     return mfit,sfit,rfit,hfit
 
 
@@ -1779,9 +1802,6 @@ def plot_sfr_indicators(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xticks=T
             plt.yticks([],[])
         plt.title(titles[i],fontsize=20)
         plt.colorbar(fraction=cbfrac,aspect=cbaspect)
-        if i == 1:
-            t = dirname.split('-')
-            plt.xlabel(t[0]+' '+t[1],fontsize=20)
         # plot contours from mass
         allax.append(plt.gca())
     # plot the legacy image in panel 1
@@ -1818,13 +1838,126 @@ def plot_sfr_indicators(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xticks=T
         for ax in allax:
             ax.contour((mcontour_data[ymin:ymax,xmin:xmax]),levels=clevels, colors='k',linestyles='-',linewidths=1)#,transform=ax.get_transform(WCS(contour_header))
     #plt.contour(contour_data[y[0]:y[1],x[0]:x[1]],levels = [4,5,6],colors='c',alpha=0.5)
-    plt.title("Legacy grz",fontsize=20)
+    #plt.title("Legacy grz",fontsize=20)
+    t = dirname.split('-')
+    plt.title(t[0],fontsize=20)
+    plt.xlabel('RA (deg)',fontsize=20)
+    plt.ylabel('DEC (deg)',fontsize=20)
+    
     # read in the
-    plt.savefig(os.path.join(plotdir,dirname)+'-sfr-indicators.png',dpi=300,bbox_inches="tight")
+    plt.savefig(os.path.join(plotdir,dirname)+'-sfr-indicators.png',dpi=150,bbox_inches="tight")
     plt.show()
 
     os.chdir(cwd)
 
+
+def plot_sfr_indicators_nohalpha(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xticks=True,figsize=[16,6],cbfrac=.08,cbaspect=20,clevels=[4,5],contourFlag=False,logMstar=None):
+    #%matplotlib inline
+    #os.chdir(homedir+'/research/Virgo-dev/cont-sub-gr')
+    # add scale factor for continuue after the directory name
+
+    print()
+    cwd = os.getcwd()
+    os.chdir(dirname)
+    #massim = dirname+"-logmstar-vr.fits"
+    #sfrim = dirname+"-sfr-vr.fits"
+    #ssfrim = dirname+"-ssfr.fits"
+    #mask = dirname+'-R-mask.fits'
+    vfid = dirname.split('-')[0]
+    print(dirname+'/galex/*nuv*.fits')
+    #print("sfrim = ",sfrim)
+    try:
+        nuvim = glob.glob('galex/*nuv*.fits')[0]
+    except IndexError:
+        nuvim = None
+        print("problem getting nuv image ",dirname)
+    # look for coadded image first
+    t = glob.glob('unwise/*w3-coadd.fits')
+    if len(t) > 0:
+        w3im = t[0]
+    else:
+        t = glob.glob('unwise/*w3-img-m.fits')
+        w3im = t[0]
+        
+        
+    titles = ['NUV',r'$unWISE \ 12\mu m$']
+    #vmin = [2,0,-11.5]
+    #vmax = [6,1.e-6,-9]
+    allim = [nuvim,w3im]
+    vmins = [0.002,0]
+    vmaxs = [.03,14000]    
+    #print(nuvim,w3im)
+    
+        
+    plt.figure(figsize=(figsize[0],figsize[1]))
+
+    plt.subplots_adjust(wspace=0.15)
+    allax = []
+    for i, im in enumerate(allim):
+        plt.subplot(1,3,i+2)
+        dat = fits.getdata(im)
+        
+            
+        if i == 1:
+            plt.imshow(dat,cmap='magma_r',origin='lower',vmin=vmins[i],vmax=vmaxs[i])
+        else:
+            plt.imshow(dat,vmin=vmins[i],vmax=vmaxs[i],cmap='magma_r',origin='lower')
+        if not xticks: 
+            plt.xticks([],[])
+            plt.yticks([],[])
+        plt.title(titles[i],fontsize=20)
+        plt.colorbar(fraction=cbfrac,aspect=cbaspect)
+        if i == 1:
+            t = dirname.split('-')
+            if len(t) == 1:
+                s = t[0]
+            elif len(t) == 2:
+                s = t[0]+' '+t[1]
+            #plt.xlabel(s,fontsize=20)
+        allax.append(plt.gca())
+    # plot the legacy image in panel 1
+    
+    # read in header from legacy r-band image
+    legacyr = glob.glob("legacy/*r.fits")[0]
+    #print(legacyr)
+    legacy_jpg = legacyr.replace('-r.fits','.jpg')
+    jpeg_data = Image.open(legacy_jpg)
+    legwcs = WCS(fits.getheader(legacyr))
+    # plot jpg as projection of legacy r-band
+    plt.subplot(1,3,1,projection=legwcs)
+    ax1 = plt.gca()
+    plt.imshow(jpeg_data)
+    # set limits in ra,dec
+    #x,y = legwcs.world_to_pixel(sky)
+    # convert ramin,ramax and decmin,decmax to (x,y)
+    #plt.title("Legacy grz",fontsize=20)
+    plt.title(vfid,fontsize=20)
+    # read in the
+    plt.xlabel("RA (hr)",fontsize=18)
+    plt.ylabel("DEC (deg)",fontsize=18)
+
+    # add stellar mass
+    #############################################################
+    # add stellar mass from magphys to the legacy image
+    #############################################################    
+    if logMstar is not None:
+        print("adding logMstar = ",logMstar)
+        plt.text(0.05,0.05,f"{logMstar:.1f}",fontsize=18,color='white',transform=plt.gca().transAxes,horizontalalignment='left')
+    
+    ###############################################
+    # add a physical scale
+    ###############################################
+    pscale = wcs.utils.proj_plane_pixel_scales(legwcs) # in deg -> arcsec
+    pscale_arcsec = pscale[0]*3600
+    add_scale(ax1,vr=v.mw_vrcenter,pscale=pscale_arcsec,color='w',barsize=2)    
+    
+    
+    plt.savefig(os.path.join(plotdir,dirname)+'-sfr-indicators-nohalpha.png',dpi=150,bbox_inches="tight")
+    plt.savefig(os.path.join(plotdir,dirname)+'-sfr-indicators-nohalpha.pdf',dpi=150,bbox_inches="tight")    
+    plt.show()
+
+    os.chdir(cwd)
+    
 def Jaffe15_phase_space_region(c=2.8,sigma=1.,M200=1e+14,R200=1.55):
     """                                                                                                                                               
     PURPOSE:                                                                                                                                          
@@ -1941,7 +2074,7 @@ def plot_sky_positions():
     ax2.set_ylim((y1-DECvirgo)*DAperdeg.value,(y2-DECvirgo)*DAperdeg.value)
     ax2.set_ylabel("Angular Separation (Mpc)",fontsize=16,rotation=270,labelpad=20)
     plt.grid()
-    plt.savefig(plotdir+'/NGC5364_Virgo_sky_positions.png',dpi=300,bbox_inches="tight")
+    plt.savefig(plotdir+'/NGC5364_Virgo_sky_positions.png',dpi=150,bbox_inches="tight")
 
 def plot_phase_space(sepmax=15):
     # like Fig 3 in Castignani+2022b
@@ -1994,7 +2127,7 @@ def plot_phase_space(sepmax=15):
     ax2.set_xlim(x1*DAperdeg.value,x2*DAperdeg.value)
     ax2.set_xlabel("Angular Separation (Mpc)",fontsize=16)
     
-    plt.savefig(plotdir+'/NGC5364_Virgo_phasespace.png',dpi=300,bbox_inches="tight")
+    plt.savefig(plotdir+'/NGC5364_Virgo_phasespace.png',dpi=150,bbox_inches="tight")
 
 
 def plot_phase_space_normalized(sepmax=15):
@@ -2065,7 +2198,7 @@ def plot_phase_space_normalized(sepmax=15):
     #ax2.set_xlim(x1*DAperdeg.value,x2*DAperdeg.value)
     #ax2.set_xlabel("Angular Separation (Mpc)",fontsize=16)
     
-    plt.savefig(plotdir+'/NGC5364_Virgo_phasespace_normalized.png',dpi=300,bbox_inches="tight")
+    plt.savefig(plotdir+'/NGC5364_Virgo_phasespace_normalized.png',dpi=150,bbox_inches="tight")
     plt.savefig(plotdir+'/NGC5364_Virgo_phasespace_normalized.pdf')    
 
 
@@ -2100,7 +2233,7 @@ def plot_sky_positions_with_filaments(multicolor=True,plotlegend=True):
     plt.yticks(fontsize=14)
     #plt.legend(loc='upper right')
     #plt.title('Filamentary Structures Surrounding the Virgo Cluster',fontsize=18)
-    plt.savefig(plotdir+'/ngc5364_positions_filaments.png',dpi=300,bbox_inches="tight")
+    plt.savefig(plotdir+'/ngc5364_positions_filaments.png',dpi=150,bbox_inches="tight")
     plt.savefig(plotdir+'/ngc5364_positions_filaments.pdf')
 class grouptables(vtables):
     def get_group_members(self):

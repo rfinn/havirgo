@@ -1114,7 +1114,8 @@ if __name__ == '__main__':
     #parser.add_argument('--table-path', dest = 'tablepath', default = '/Users/rfinn/github/Virgo/tables/', help = 'path to github/Virgo/tables')
     parser.add_argument('--cutoutdir',dest = 'cutoutdir', default=None, help='set to cutout directory. default is the current directory, like you are running from the cutouts/ directory')
     parser.add_argument('--oneimage',dest = 'oneimage',default=None, help='give directory for one image')
-    parser.add_argument('--outdir',dest = 'outdir',default='/data-pool/Halpha/html_dev/cutouts/', help='output directory.  default is /data-pool/Halpha/html_dev/cutouts/')    
+    parser.add_argument('--outdir',dest = 'outdir',default='/data-pool/Halpha/html_dev/cutouts/', help='output directory.  default is /data-pool/Halpha/html_dev/cutouts/')
+    parser.add_argument('--hacat',dest = 'hacat',default='../halphagui-output-combined-2024-Jul-08.fits')   
      
     args = parser.parse_args()
 
@@ -1126,8 +1127,8 @@ if __name__ == '__main__':
     #fullha = fits.getdata('../halphagui-output-combined-2024-Jan-04.fits')
 
     # need to update this automatically - find the most recent version in the directory
-    fullha = fits.getdata('../halphagui-output-combined-2024-May-30.fits')
-
+    #fullha = fits.getdata('../halphagui-output-combined-2024-May-30.fits')
+    fullha = args.hacat
     
     if args.cutoutdir is not None:
         os.chdir(args.cutoutdir)
