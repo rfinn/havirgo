@@ -363,7 +363,7 @@ def plot_CO_contours(ax,COfilename,xmin=None,xmax=None,ymin=None,ymax=None,level
     #levels = np.append(levels,43)
     #levels = np.append(levels,50)
     #levels = np.append(levels,80)        
-    ax.contour(codata,transform=ax.get_transform(CO_WCS),slices=('x', 'y', 1),levels=levels,colors=color,alpha=.4,lw=1)
+    ax.contour(codata,transform=ax.get_transform(CO_WCS),slices=('x', 'y', 1),levels=levels,colors=color,alpha=.7,lw=1)
 
 
 def plot_INT_footprint(center_ra,center_dec,plotguide=False):
@@ -519,7 +519,7 @@ def plot_sfr_mstar():
     ##################################
     # plot the main sequence
     ##################################    
-    plt.plot(x[flag],y[flag],'k.',alpha=.01,label='All VFS Galaxies')
+    plt.plot(x[flag],y[flag],'k.',alpha=.05,label='All VFS Galaxies')
 
     ##################################
     # plot the main sequence
@@ -1250,7 +1250,7 @@ def plot_mstar_sfr_profiles(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xtic
 
 def plot_mstar_sfr_CO(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xticks=True,figsize=[16,6],\
                             cbfrac=.08,cbaspect=20,clevels=[4],contourFlag=True,rmax=None,\
-                            logMstar=None,cmap='magma_r',markGroupCenter=False):
+                            logMstar=None,cmap='magma_r',markGroupCenter=False,COcolor='white'):
     """
     same plot as mstar_sfr, but swap out ssfr for radial profiles in the 4th panel
 
@@ -1273,7 +1273,7 @@ def plot_mstar_sfr_CO(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xticks=Tru
     vmin = [2,0e-5,0e-5]
     vmax = [6,.6e-5,.6e-5]
     allim = [massim,sfrim,ssfrim]
-    allim = [massim,sfrim]
+    #allim = [massim,sfrim]
     allim = [massim,sfrim,sfrim] # show halpha with HI and CO    
     cblabels = [r'$\rm \log_{10}(M_\star/M_\odot)/pixel$',r'$\rm SFR(M_\star/yr)/pixel$',r'$\rm SFR(M_\star/yr)/pixel$']
     
@@ -1326,7 +1326,7 @@ def plot_mstar_sfr_CO(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xticks=Tru
         hdu.close()
         mcontour_data = np.ma.array(contour_data,mask=maskdat)
 
-    
+
     allax = []
     for i, im in enumerate(allim):
         hdu = fits.open(im)[0]
@@ -1349,18 +1349,19 @@ def plot_mstar_sfr_CO(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xticks=Tru
         #else:
         #    mdat = mdat[ymin:ymax,xmin:xmax]
         if i == 2:
-            plt.imshow(mdat,vmin=vmin[i],vmax=vmax[i],origin='lower',interpolation='nearest',cmap=cmap)
+            plt.imshow(mdat,vmin=vmin[i],vmax=vmax[i],origin='lower',interpolation='nearest',cmap='gray_r')
+
 
         else:
             #display_image(mdat,percent=99.5,cmap='viridis')#,vmin=vmin[i],vmax=vmax[i])
             plt.imshow(mdat,vmin=vmin[i],vmax=vmax[i],cmap=cmap)#cmap='viridis'
         
-            lon = ax2.coords[0]
-            lat = ax2.coords[1]
-            lon.set_ticklabel_visible(False)
-            lon.set_ticks_visible(False)            
-            lat.set_ticklabel_visible(False)
-            lat.set_ticks_visible(False)            
+        lon = ax2.coords[0]
+        lat = ax2.coords[1]
+        lon.set_ticklabel_visible(False)
+        lon.set_ticks_visible(False)            
+        lat.set_ticklabel_visible(False)
+        lat.set_ticks_visible(False)            
         
         #plt.colorbar(fraction=mycbfrac,aspect=cbaspect)
         # plot contours from mass
@@ -1388,7 +1389,7 @@ def plot_mstar_sfr_CO(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xticks=Tru
             if COfilename is not None:
                 print("COfilename = ",COfilename)
 
-                plot_CO_contours(ax2,COfilename,color='blue')
+                plot_CO_contours(ax2,COfilename,color=COcolor)
                 #if vfid == 'VFID5859':
                 #    plot_HI_beam(ax2,HIfilename,hdu.header,color='steelblue',expandBox=True)
                 #else:
@@ -1859,7 +1860,7 @@ def plot_sfr_indicators_nohalpha(dirname,xmin=None,xmax=None,ymin=None,ymax=None
     print()
     cwd = os.getcwd()
     os.chdir(dirname)
-    #massim = dirname+"-logmstar-vr.fits"
+    massim = dirname+"-logmstar-vr.fits"
     #sfrim = dirname+"-sfr-vr.fits"
     #ssfrim = dirname+"-ssfr.fits"
     #mask = dirname+'-R-mask.fits'
@@ -1891,7 +1892,7 @@ def plot_sfr_indicators_nohalpha(dirname,xmin=None,xmax=None,ymin=None,ymax=None
         
     plt.figure(figsize=(figsize[0],figsize[1]))
 
-    plt.subplots_adjust(wspace=0.15)
+    plt.subplots_adjust(wspace=0.05)
     allax = []
     for i, im in enumerate(allim):
         plt.subplot(1,3,i+2)
@@ -1906,7 +1907,7 @@ def plot_sfr_indicators_nohalpha(dirname,xmin=None,xmax=None,ymin=None,ymax=None
             plt.xticks([],[])
             plt.yticks([],[])
         plt.title(titles[i],fontsize=20)
-        plt.colorbar(fraction=cbfrac,aspect=cbaspect)
+        #plt.colorbar(fraction=cbfrac,aspect=cbaspect)
         if i == 1:
             t = dirname.split('-')
             if len(t) == 1:
@@ -1943,6 +1944,22 @@ def plot_sfr_indicators_nohalpha(dirname,xmin=None,xmax=None,ymin=None,ymax=None
     if logMstar is not None:
         print("adding logMstar = ",logMstar)
         plt.text(0.05,0.05,f"{logMstar:.1f}",fontsize=18,color='white',transform=plt.gca().transAxes,horizontalalignment='left')
+
+    #############################################################
+    # add stellar mass contours
+    #############################################################    
+    if contourFlag:
+        # get contours from logmstar image
+        hdu = fits.open(massim)
+        contour_data = hdu[0].data
+        contour_header = hdu[0].header
+        contour_WCS = WCS(contour_header)
+        hdu.close()
+        mcontour_data = np.ma.array(contour_data,mask=maskdat)
+        
+        ax = plt.gca()
+        myclevels = [4]
+        ax.contour(mcontour_data,levels=myclevels, colors='k',linestyles='-',linewidths=1,transform=ax.get_transform(contour_WCS))
     
     ###############################################
     # add a physical scale
@@ -2300,6 +2317,32 @@ class grouptables(vtables):
         self.paperTab = paperTab
         pass
 
+
+    def write_latex_table_nohalpha(self):
+        self.get_distance_Virgo()
+        flag = self.groupMembs & ~self.main['HAobsflag']
+        col_names = ['VFID','NED Name','vr (km/s)','Virgo $d_{3d}$ (Mpc)','logMstar','logSFR','logsSFR','H2 def','HI def', 'HI def Bos']
+        col_formats={'logMstar': '%5.2f',\
+                     'logSFR': '%5.2f',\
+                     'logsSFR': '%5.2f',\
+                     'H2 def': '%5.2f',\
+                     'HI def': '%5.2f',\
+                     'HI def Bos': '%5.2f',\
+                     'Virgo $d_{3d}$':'%5.1f'}
+        latexdict={'preamble': r'\begin{center}',\
+                   'tablefoot': r'\end{center}',\
+                   'tabletype': 'table*',\
+                   'header_start': '\\hline \\hline',\
+                   'header_end': '\\hline',\
+                   'data_end': '\\hline',\
+                   'caption': 'NGC~5364 Group Members outside of \\ha \\ footprint \\label{tab:nohalpha}'}
+        paperTab = Table([self.main['VFID'],self.main['NEDname'],self.main['vr'],self.dist3dVirgo,self.magphys['logMstar_med'],self.magphys['logSFR_med'],self.magphys['logsSFR_med'],self.paper1['H2def'],self.paper1['HIdef'],self.a100['HIdef_bos']])[flag]
+        paperTab.write(plotdir+'/NGC5364_tab2.tex',format='latex',names=col_names,formats=col_formats,latexdict=latexdict,\
+                       fill_values=[(ascii.masked,'\\nodata')])#,(np.ma.masked,'no data')])
+        #paperTab.write(plotdir+'/NGC5364_tab1.tex',format='latex',names=col_names,formats=col_formats,latexdict=ascii.latex.latexdicts['ApJ'])
+        self.paperTab_nohalpha = paperTab
+        pass
+    
     def get_distance_Virgo(self):
         """ calculate 3D distance to Virgo for group members """
         # environment table has distSGX_Virgo, SGY, SGZ
