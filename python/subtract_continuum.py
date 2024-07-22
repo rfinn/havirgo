@@ -134,6 +134,22 @@ def getPixLength(fits_image):
         return 3600.0 * abs(hdr['CDELT1']), 3600.0 * abs(hdr['CDELT2'])
 
 
+def get_params_from_name(image_name):
+    #print(t)
+    tels = ['BOK','HDI','INT','MOS']
+    for t in tels:
+        if t in image_name:
+            telescope = t
+            break
+    t = os.path.basename(image_name).split('-')
+    for item in t:
+        if item.startswith('20'):
+            dateobs = item
+            break
+    pointing = t[-1]
+
+    return telescope,dateobs,pointing
+    
 def filter_transformation(telescope,rfilter, gr_col):
     
     """
@@ -224,7 +240,7 @@ def get_gr(gfile,rfile,mask=None):
     # gradients too much - specific example is
 
     # Testing to remove smoothing on M109
-    gr_col = convolution.convolve_fft(gr_col, convolution.Box2DKernel(10), allow_huge=True, nan_treatment='interpolate')
+    #gr_col = convolution.convolve_fft(gr_col, convolution.Box2DKernel(10), allow_huge=True, nan_treatment='interpolate')
 
     # set the pixel with SNR < 10 to nan - don't use these for color correction
     gr_col[np.logical_not(usemask)] = np.nan
@@ -246,11 +262,13 @@ def plot_image(data):
     #from scipy.stats import scoreatpercentile
     from astropy.visualization import simple_norm
     
-    plt.figure()
+
+    plt.ion()
+    fig = plt.figure()    
     norm = simple_norm(data, stretch='asinh',max_percent=99,min_percent=.5)
     plt.imshow(data, norm=norm,origin='lower',interpolation='nearest')#,vmin=v1,vmax=v2)
     #plt.show()
-
+    #plt.draw()
 
 # def subtract_continuum(Rfile, Hfile, gfile, rfile, mask=None,overwrite=False,testing=False):
 #     """
@@ -551,7 +569,6 @@ if __name__ == '__main__':
     else:
         contscale = 1.
 
-    print("\nIn subtract continuum, continuum scale factor = ",contscale,"\n")
     # get current directory
     topdir = os.getcwd()
 
@@ -566,17 +583,94 @@ if __name__ == '__main__':
     # get the halpha filter correction from the vf_v2_halpha.fits table
     # need to do this until I update halphamain to add it to the image header
     tabledir = os.getenv("HOME")+'/research/Virgo/tables-north/v2/'
-    vhalpha = Table.read(tabledir+'vf_v2_halpha.fits')
+    #vhalpha = Table.read(tabledir+'vf_v2_halpha.fits')
 
-    gindex = np.arange(len(vhalpha))[vhalpha['VFID'] == vfid][0]
+    # this will need updating for other uses
+    # the correct approach is to fix halphagui so that the FILT_COR is in the header...
 
+    # this table has information for all duplicates
+    halphagui_table = os.path.join(os.getenv("HOME"),'research/Virgo/halpha-tables/halphagui-output-combined-2024-Jul-08.fits')
+    
+    vhalpha = Table.read(halphagui_table)
+        
+    allgindex = np.arange(len(vhalpha))[vhalpha['VFID'] == vfid]
+    if len(allgindex) == 1:
+        gindex = allgindex[0]
+    else: # enter here for galaxies with duplicate observations
+        telescope,dateobs,pointing = get_params_from_name(dirname)
+        print()
+        print("return from get_params_from_name = ",telescope,dateobs,pointing)
+        print()
+        nmatch = 0
+        allpointing = []
+        for j in allgindex:
+            # need to match on telescope, dateobs and pointing
+            tpointing = vhalpha['POINTING'][j].split('-')[-1]
+            allpointing.append(tpointing)
+            if (telescope == vhalpha['TEL'][j]):
+                print("found a match to telescope ",telescope)
+                if (pointing == tpointing):
+                    print("found a match to dateobs ",tpointing)
+                    print(dateobs, vhalpha['DATE-OBS'][j])
+                    print(int(dateobs) == int(vhalpha['DATE-OBS'][j]))                    
+                    if (int(dateobs) == int(vhalpha['DATE-OBS'][j])):
+                        print("found a match to dateobs ",dateobs)                    
+                        gindex = j
+                        # just adding this to make sure we don't match to multiple galaxies
+                        # checking to make sure the code works
+                
+                        nmatch += 1
+
+        if nmatch > 1:
+            print("WARNING: found multiple matches in halphagui-output file when should have only one")
+            print("")
+            print("exiting subtract_continuum.py")
+            print()
+            sys.exit()
+        elif nmatch == 0:
+            print("WARNING: no match found in halphagui-output when should have one")
+            print("dirname = ",dirname)
+            print("telecope options: ",vhalpha['TEL'][allgindex])
+            print("dateobs options: ",vhalpha['DATE-OBS'][allgindex])
+            print("pointing options: ",allpointing)            
+            print("")
+            print("exiting subtract_continuum.py")
+            print()
+            sys.exit()
+            
+                
+                
     
     # correction for the variation in the halpha filter transmission
+    # shit - this is wrong b/c we have duplicate observations!!!!!!!!!
+    #
+    # need to get this from halphagui-output-combined-2024-Jul-08.fits
+    #
+    # shit, shit, shit!
+    #
+    # DONE - need to write a program to find galaxies with a different filter_cor
+    # in vf_v2_halpha.fits vs halphagui-output-combined-2024-Jul-08.fits
+    #
+    # then either redo these, or backout the correct ratio given the correct
+    # filter_cor
+    #
+    # this is a good reason to apply any corrections AFTER continuum subtraction
+    # maybe make a programs:
+    #  - correct_filter_transmission.py
+    #  - correct_continuum_oversubtraction.py
+    #
+    # the down side is that this could proliferate even more images...
+    #
+    # just going to fix it here
+    
     halpha_filter_cor = vhalpha['FILT_COR'][gindex]
     print(f"{vfid}: halpha filter correction = {halpha_filter_cor:.3f}")
     if halpha_filter_cor == 0:
         print("resetting filter correction to 1")
         halpha_filter_cor = 1
+
+    print("\nIn subtract continuum, continuum scale factor = ",contscale,"\n")
+    print("\nIn subtract continuum, filter correction = ",halpha_filter_cor,"\n")    
 
     # table with extinction values
     vext = Table.read(tabledir+'vf_v2_extinction.fits')
@@ -854,24 +948,50 @@ if __name__ == '__main__':
     # can adjust factor of 1.03 to scale the continuum
     # in vestige, they check the star subtraction and then adjust the factor to make the stars go away
     # even with same telescope/filter, this factor can vary
-    flam_net = filter_width_AA[telescope]*(halpha_continuum_oversubtraction[telescope]*halpha_filter_cor*flam_NB-contscale*clam_NB) # matteo comment: 106 is the width of the filter
+    
+    #flam_net = filter_width_AA[telescope]*(halpha_continuum_oversubtraction[telescope]*halpha_filter_cor*flam_NB-contscale*clam_NB) # matteo comment: 106 is the width of the filter
 
-    # correct for extinction
+    # or add the corrections after subtracting continuum
+    flam_net = filter_width_AA[telescope]*(flam_NB-contscale*clam_NB) # matteo comment: 106 is the width of the filter
+
+    # correct CS flux for variations in filter transmission and oversubtraction due to halpha in r-band filter
+    #flam_net = flam_net * halpha_continuum_oversubtraction[telescope]
+    flam_net = flam_net * halpha_continuum_oversubtraction[telescope] * halpha_filter_cor
+    
+    # correct for Milky Way extinction
     flam_net = flam_net * halpha_extinction_correction
 
     # TODONE - I would like to save a version in AB mag for compatibility with my photometry programs
-    NB_ABmag = (halpha_continuum_oversubtraction[telescope]*halpha_filter_cor*data_NB - contscale*data_r_to_Ha)
 
+    # RF - removing filter and oversubtraction correction for now.
+    #NB_ABmag = (halpha_continuum_oversubtraction[telescope] * halpha_filter_cor *data_NB - contscale*data_r_to_Ha)
+
+    NB_ABmag = (data_NB - contscale*data_r_to_Ha)
+    
+    # correct for filter transmission variations and for halpha emission in the continuum filter
+    NB_ABmag = NB_ABmag * halpha_continuum_oversubtraction[telescope] * halpha_filter_cor
+    
     # correct for extinction
     NB_ABmag = NB_ABmag * halpha_extinction_correction    
 
 
+    
     ############################################################
     ## COMMENTING OUT WRITING UNTIL I UNDERSTAND WHAT THESE ARE
     ############################################################    
     # this should still be good to use the Halpha ZP
-    hhdu[0].header['CONSCALE']=(float(f'{contscale:.3f}'),'Continuum scale factor')    
+    hhdu[0].header['CONSCALE']=(float(f'{contscale:.3f}'),'Continuum scale factor')
+
+    # add to header the
+    # - extinction correction
+    # - filter correction
+    # - continuum oversubtraction correction
+    hhdu[0].header.set('MWEXTCOR', float(f"{halpha_extinction_correction:.4f}"), 'MW EXTINCTION COR')
+    hhdu[0].header.set('FILT_COR', float(f"{halpha_filter_cor:.4f}"), 'FILTER TRANS COR')
+    hhdu[0].header.set('CONTOSUB', float(f"{halpha_continuum_oversubtraction[telescope]:.4f}"), 'CONT OVERSUB COR')        
+    
     hdu = fits.PrimaryHDU(NB_ABmag, header=hhdu[0].header)
+
 
     # outname is *CS-gr.fits
     hdu.writeto(outname, overwrite=True) #NB image in F_lambda units, before
@@ -936,7 +1056,7 @@ if __name__ == '__main__':
     hhdu.close()
     rhdu.close()
     
-
+    #plt.show()
 
 
     # move back to the top directory

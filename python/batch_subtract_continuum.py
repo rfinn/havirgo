@@ -48,7 +48,8 @@ if __name__ == '__main__':
             print()
             print('############################')
             print(f"{d} ({j}/{ngal})")
-            print('############################')            
+            print('############################')
+            display_results(d)
             scale = 1.1
             adjust_scale = True
             finished = False
@@ -85,7 +86,9 @@ if __name__ == '__main__':
                     pass
                 else:
                     command_string = f"python ~/github/havirgo/python/subtract_continuum.py {d} {scale}"
-                    print(command_string)
+                    #print()
+                    #print(command_string)
+                    #print()
                     os.system(command_string)
                     plt.show()
                     display_results(d)
