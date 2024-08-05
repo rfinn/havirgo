@@ -565,7 +565,7 @@ if __name__ == '__main__':
     # directory to analyze is specified on the command line
     # this makes the program easy to run with gnu parallel
 
-    print("running subtract_continuuum.py ",sys.argv)
+    #print("running subtract_continuuum.py ",sys.argv)
     dirname = sys.argv[1]
 
     # check to see if additional scale factor for continuum is provided
