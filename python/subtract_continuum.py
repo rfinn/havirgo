@@ -1000,7 +1000,7 @@ if __name__ == '__main__':
 
     # outname is *CS-gr.fits
     hdu.writeto(outname, overwrite=True) #NB image in F_lambda units, before
-    plot_image(hdu.data)
+    #plot_image(hdu.data)
 
     # The rest are different version of the CS image that matteo saves
     # don't know if I need all of this...
