@@ -628,7 +628,7 @@ if __name__ == '__main__':
             print()
             sys.exit()
         elif nmatch == 0:
-            print("WARNING: no match found in halphagui-output when should have one")
+            print("WARNING: no match found in halphagui-output when we should have one")
             print("dirname = ",dirname)
             print("telecope options: ",vhalpha['TEL'][allgindex])
             print("dateobs options: ",vhalpha['DATE-OBS'][allgindex])
