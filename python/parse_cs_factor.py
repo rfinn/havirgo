@@ -112,8 +112,8 @@ if __name__ == '__main__':
     allobservation = []
     allcontosub = np.zeros(len(hagals))
     newcs2 = hagals['CS2'].copy()
-    print("i   CS   OSUB  FILT  CS2")
-    print("---------------------------")    
+    #print("i   CS   OSUB  FILT  CS2")
+    #print("---------------------------")    
     for i in range(len(hagals)):
         dirname = hagals['galid'][i]
         
@@ -164,9 +164,10 @@ newcs2 = newcs2[goodflag]
 ##################################################################        
 
 outfile = open(homedir+'/research/Virgo/halpha-tables/conscale_factors.txt','w')
-
 for i in range(len(hagals)):
-    s = f"{hagals['galid'][i]} {newcs2[i]} \n"
+    s = f"{hagals['galid'][i]} \t {newcs2[i]:.4f} \n"
     outfile.write(s)
-
 outfile.close()
+
+#newtab = Table([hagals,newcs2])
+#newtab.write(homedir+'/research/Virgo/halpha-tables/conscale_factors.txt',overwrite=True,format='tsv')

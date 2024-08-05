@@ -240,6 +240,9 @@ def get_gr(gfile,rfile,mask=None):
     # gradients too much - specific example is
 
     # Testing to remove smoothing on M109
+
+    # going to add this back in once I have the legacy images at the native pixel scale...
+    
     #gr_col = convolution.convolve_fft(gr_col, convolution.Box2DKernel(10), allow_huge=True, nan_treatment='interpolate')
 
     # set the pixel with SNR < 10 to nan - don't use these for color correction
@@ -561,6 +564,8 @@ if __name__ == '__main__':
 
     # directory to analyze is specified on the command line
     # this makes the program easy to run with gnu parallel
+
+    print("running subtract_continuuum.py ",sys.argv)
     dirname = sys.argv[1]
 
     # check to see if additional scale factor for continuum is provided
