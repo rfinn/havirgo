@@ -42,7 +42,7 @@ if __name__ == '__main__':
         if d.startswith('VFID') and os.path.isdir(d):
             ngal += 1
             
-    print("only {ngal} galaxies to go!")
+    print(f"only {ngal} galaxies to go!")
     for j,d in enumerate(dirlist):
         if d.startswith('VFID') and os.path.isdir(d):
             print()
