@@ -73,6 +73,26 @@ zoom_coords_INT = {'VFID5889':[100,1300,850,2100],\
                    
                    
                    }
+    # create a dictionary
+allratio90 = {'VFID5859':.6,\
+              'VFID5892':.35,\
+              'VFID5855':1.3,\
+              'VFID5842':.6,\
+              'VFID5889':1.11,\
+              'VFID5851':.11,\
+              'VFID5844':0,\
+              'VFID5879':0}
+
+
+# HI masses from Gautam, sent over slack on 6/3/2024
+meerkat_HI_mass = {'VFID5859':7.84,\
+                   'VFID5892':7.65,\
+                   'VFID5855':8.98,\
+                   'VFID5842':8.79,\
+                   'VFID5889':9.43,\
+                   'VFID5851':np.nan,\
+                   'VFID5844':np.nan,\
+                   'VFID5879':np.nan}
 
 #'VFID5851': 
 HIdir = homedir+'/research/Virgo/alma/2023/MeerKAT_ALMA_target_list/'
@@ -88,12 +108,29 @@ HI_file = {'VFID5889':HIdir+'ngc5363_ngc5364_ngc5360.fits',\
 }
 
 
+
 COdir = homedir+'/research/Virgo/alma/combes_data/'
+COmaskdir = homedir+'/research/Virgo/alma/combes_data/masked/'
 CO_file = {'VFID5889':None,\
            'VFID5851':None,\
            #'VFID5851':None, \
            'VFID5855':COdir+'n5348-co10-mean.fits',\
+           #'VFID5855':COmaskdir+'n5348_intensity_COmap_masked.fits',\
            'VFID5842':COdir+'n5356-co10-mean.fits',\
+           #'VFID5842':COmaskdir+'n5356-co10-mean.fits',\
+           'VFID5859':None,\
+           'VFID5892':None,\
+           'VFID5879':None,\
+           'VFID5844':None 
+}
+
+CO_mask = {'VFID5889':None,\
+           'VFID5851':None,\
+           #'VFID5851':None, \
+           'VFID5855':COmaskdir+'n5348_mask.fits',\
+           #'VFID5855':COmaskdir+'n5348_intensity_COmap_masked.fits',\
+           'VFID5842':None,\
+           #'VFID5842':COmaskdir+'n5356-co10-mean.fits',\
            'VFID5859':None,\
            'VFID5892':None,\
            'VFID5879':None,\
@@ -152,7 +189,7 @@ HIfiles = {'VFID5859':'research/Virgo/alma/2023/MeerKAT_ALMA_target_list/J1355_f
 ## FUNCTIONS
 ###########################################
 
-def add_scale(ax,vr=1100,pscale=.331,barsize=5.,color='k',fontsize=16):
+def add_scale(ax,vr=1100,pscale=.331,barsize=5.,color='k',fontsize=16,xscale=.09,yscale=.9,dytext=.08):
     '''
     ax = axis for drawing on
     vr = cosmic recession velocity
@@ -181,12 +218,12 @@ def add_scale(ax,vr=1100,pscale=.331,barsize=5.,color='k',fontsize=16):
     
     # get size of image
     x1,x2 = plt.gca().get_xlim()
-    xline1 = x1 + 0.09*(x2-x1)
+    xline1 = x1 + xscale*(x2-x1)
     y1,y2 = plt.gca().get_ylim()
-    yline1 = y1 + 0.9*(y2-y1)
+    yline1 = y1 + yscale*(y2-y1)
     # for size label
     xtext = xline1 + 0.5*barsize_pixels
-    ytext = yline1 - 0.08*(y2-y1)
+    ytext = yline1 - dytext*(y2-y1)
     
     # set up arrays for reference line
     xbar = np.array([xline1,xline1+barsize_pixels])
@@ -343,18 +380,18 @@ def plot_HI_beam(ax,HIfilename,hostim_header,color='white',expandBox=False):
     rect = Rectangle((xc-0.5*dx,yc-0.5*dy),dx,dy,transform=ax.transAxes,edgecolor=color,facecolor='None',lw=1,alpha=.8)
     ax.add_patch(rect)
     
-def plot_CO_contours(ax,COfilename,xmin=None,xmax=None,ymin=None,ymax=None,levels=None,color='white',addbeam=False,ncontour=3):
+def plot_CO_contours(ax,COfilename,mask=None,xmin=None,xmax=None,ymin=None,ymax=None,levels=None,color='white',addbeam=False,ncontour=3):
     """ plot CO contours, given current axis + reference image header """
     # borrowing from alma 2023 proposal
     #ncontour=3
     
     #hdu = fits.open(COfilename)
     codata, coheader = convert_alma3d_alma2d(COfilename)
-    print(coheader)
+    #print(coheader)
     CO_WCS = WCS(coheader)
     #ncontour = np.array([1,4,15,29])
     #ncontour
-    print(CO_WCS)
+    #print(CO_WCS)
     ncontour = np.array([0,1,2.25,3.5,4])
     ncontour = np.array([0,1,2.25,3.5,4])
     if levels is None:
@@ -362,7 +399,18 @@ def plot_CO_contours(ax,COfilename,xmin=None,xmax=None,ymin=None,ymax=None,level
         levels = np.linspace(.1,1.4,3)
     #levels = np.append(levels,43)
     #levels = np.append(levels,50)
-    #levels = np.append(levels,80)        
+    #levels = np.append(levels,80)
+    if mask is not None:
+        print()
+        print("FYI: using a mask for CO data")
+        # read in the mask data
+        dat = fits.getdata(mask)
+
+        # gianluca has an image with good values are 1
+        # and bad values are nan
+        
+        # create a masked array
+        codata = codata * dat
     ax.contour(codata,transform=ax.get_transform(CO_WCS),slices=('x', 'y', 1),levels=levels,colors=color,alpha=.7,lw=1)
 
 
@@ -536,6 +584,15 @@ def plot_sfr_mstar():
     # plot the group members
     nha = 0
     nnha = 0
+
+    sizeratio90 = np.zeros(len(v.a100))
+    vfids = [5859,5892,5855,5842,5889,5851,5844,5879]
+    ratio90 = [0.6,0.35,1.3,0.6,1.11,0.11,0,0]
+                  
+
+    for i,vf in enumerate(vfids):
+        sizeratio90[vf] = ratio90[i]
+    
     for vf in np.arange(len(v.main))[groupMembs]:
         if vf == 5851:
             print(vf,v.main['VFID'][vf])
@@ -548,20 +605,30 @@ def plot_sfr_mstar():
             xp, yp = x[int(vf)],y[int(vf)]
         if v.main['HAobsflag'][vf]:
             if nha == 0:
-                label = r"$Group \ Members \ In \ H\alpha \ FOV$"
+                label = r"$\rm Group \ Members \ In \ H\alpha \ FOV$"
                 nha += 1
             else:
                 label = "_nolegend_"
             #plt.plot(xp,yp,'bs',markersize=12,c='magenta',label=label)
             # add scatter for those with HIdef values
-            if HIflag[vf]:
-                plotflag = HIflag[vf]
-                print(f"HIdef[vf] = {HIdef[vf]}")
-                plt.scatter(xp,yp,c=HIdef[vf],s=120,marker='s',label=label,vmin=-0.5,vmax=0.8)
-            else:
-                plt.plot(xp,yp,'bs',markersize=12,c='0.5')
+            #if HIflag[vf]:
+            plotflag = HIflag[vf]
+            #print(f"HIdef[vf] = {HIdef[vf]}")
+            # use R90 as the color
+            vfid = 'VFID'+str(vf)
+            mycolor = allratio90[vfid]
+            print(f"vfid = {vfid}, ratio = {mycolor}")
+            #print(f"HIdef[vf] = {HIdef[vf]}")            
+            #plt.scatter(xp,yp,c=HIdef[vf],s=120,marker='s',label=label,vmin=0,vmax=1.3)
+            plt.scatter(xp,yp,c=mycolor,s=160,marker='s',label=label,vmin=0.1,vmax=1.2,alpha=.9)
+            # use HI def as the color
+            #plt.scatter(xp,yp,c=HIdef[vf],s=120,marker='s',label=label,vmin=-0.5,vmax=0.8)
+            #else:
+            #    #plt.plot(xp,yp,'bs',markersize=12,c='0.5')
+                
             plt.text(xp-.02,yp+.2,v.main['VFID'][vf],horizontalalignment='center',fontsize=14)
         else:
+            
             if nnha == 0:
                 label = r"$All \ members$"
                 nnha += 1
@@ -576,9 +643,14 @@ def plot_sfr_mstar():
                 #plt.plot(xp,yp,'bo',markersize=12,c='0.5',label=label)
 
             #plt.plot(xp,yp,'bo',c=mycolors[0],label=label)
-        
+
+    xp = x[v.groupMembs & ~v.main['HAobsflag']]
+    yp = y[v.groupMembs & ~v.main['HAobsflag']]    
+    plt.scatter(xp,yp,c='0.55',s=160,marker='s',alpha=.9,label=r'$\rm Group \ Members /No \ H\alpha$')    
     cb = plt.colorbar()
-    cb.set_label('HI Def',fontsize=16)
+    # cb.set_label('HI Def',fontsize=16)
+    cb.set_label('$R_{90}(SFR)/R_{90}(M_\star)$',fontsize=16)
+    
     plt.xlabel(r"$\rm \log_{10}(M_\star/M_\odot)$",fontsize=22)
     plt.ylabel(r"$\rm \log_{10}(SFR/(M_\odot/yr))$",fontsize=22)
     plt.xticks(fontsize=16)
@@ -592,7 +664,106 @@ def plot_sfr_mstar():
     plt.savefig(plotdir+'/NGC5364-sfr-mstar.pdf',bbox_inches="tight")        
 
 
-def plot_HIdef_sizeratio():
+def plot_NUVr_mstar():
+
+    plt.figure(figsize=(8,6))
+    plt.subplots_adjust(bottom=.15)
+
+    xall = v.magphys['logMstar_med']
+
+    ##################################################
+    # get NUV-r mag from JM's elliptical photometry
+    # 
+    # NUV = 22.5 - 2.5*log10(flux_NUV)
+    # r = 22.5 - 2.5*log10(flux_r)
+    # NUV - r = 2.5*log10(flux_r/flux_NUV)
+    #
+    ##################################################    
+    yall = 2.5*np.log10(v.ephot['FLUX_AP06_R']/v.ephot['FLUX_AP06_NUV'])
+
+    ##################################################
+    # cut low-mass crap out of sample
+    ##################################################    
+    magflag = xall > 4
+    nuvflag = v.ephot['FLUX_AP06_NUV'] > .1
+    flag = magflag    & nuvflag
+    
+    ##################################################
+    # plot the full VFS sample
+    ##################################################
+    plt.plot(xall[flag],yall[flag],'k.',alpha=.05,label='All VFS Galaxies')
+
+    ##################################
+    # plot the main sequence
+    ##################################    
+    #xmin = 7
+    #xmax = 11.1
+    #xline = np.linspace(xmin,xmax,100)
+    #yline = 0.8*xline-8.32
+    #plt.plot(xline,yline,'k-',label='MS (Conger+2024)',alpha=.5)
+    #plt.plot(xline,yline+0.3,'k--',alpha=.5)
+    #plt.plot(xline,yline-0.3,'k--',alpha=.5)
+    
+    ##################################################    
+    # plot the group members
+    ##################################################    
+    nha = 0
+    nnha = 0
+
+    sizeratio90 = np.zeros(len(v.a100))
+    vfids = [5859,5892,5855,5842,5889,5851,5844,5879]
+    ratio90 = [0.6,0.35,1.3,0.6,1.11,0.11,0,0]
+                  
+
+    for i,vf in enumerate(vfids):
+        sizeratio90[vf] = ratio90[i]
+    
+    for vf in np.arange(len(v.main))[groupMembs]:
+        if vf == 5851:
+            print(vf,v.main['VFID'][vf])
+            xp = v.magphys['logMstar_best'][int(vf)]
+            yp = yall[int(vf)]
+
+
+        else:
+            print(vf,v.main['VFID'][vf])
+            xp, yp = xall[int(vf)],yall[int(vf)]
+        if v.main['HAobsflag'][vf]:
+            if nha == 0:
+                label = r"$\rm Group \ Members \ In \ H\alpha \ FOV$"
+                nha += 1
+            else:
+                label = "_nolegend_"
+            vfid = 'VFID'+str(vf)
+            mycolor = allratio90[vfid]
+            print(f"vfid = {vfid}, ratio = {mycolor}")
+            plt.scatter(xp,yp,c=mycolor,s=160,marker='s',label=label,vmin=0.1,vmax=1.2,alpha=.9)
+                
+            plt.text(xp-.02,yp+.2,v.main['VFID'][vf],horizontalalignment='center',fontsize=14)
+        else:
+            pass
+
+    xp = xall[v.groupMembs & ~v.main['HAobsflag'] & flag]
+    yp = yall[v.groupMembs & ~v.main['HAobsflag'] & flag]    
+    plt.scatter(xp,yp,c='0.55',s=160,marker='s',alpha=.9,label=r'$\rm Group \ Members /No \ H\alpha$')    
+    cb = plt.colorbar()
+    # cb.set_label('HI Def',fontsize=16)
+    cb.set_label('$R_{90}(SFR)/R_{90}(M_\star)$',fontsize=16)
+    
+    plt.xlabel(r"$\rm \log_{10}(M_\star/M_\odot)$",fontsize=22)
+    plt.ylabel(r"$\rm NUV-r$",fontsize=22)
+    plt.xticks(fontsize=16)
+    plt.yticks(fontsize=16)
+    
+
+    plt.xlim(7.2,11)
+    plt.ylim(0,7)
+    plt.legend()
+    plt.savefig(plotdir+'/NGC5364-NUVr-mstar.png',dpi=150,bbox_inches="tight")
+    plt.savefig(plotdir+'/NGC5364-NUVr-mstar.pdf',bbox_inches="tight")        
+
+
+def plot_HIdef_sizeratio(paper1=False):
     """
     galaxies with HI detections: VFID5859, VFID5892, VFID5855, VFID5842, VFID5889
 
@@ -643,8 +814,13 @@ def plot_HIdef_sizeratio():
     plt.subplots_adjust(bottom=.15)
     
     x = sizeratio90[plotflag]
+
+    
+    #y = v.a100['HIdef_bos'][plotflag]
+    
     y = v.a100['HIdef_bos'][plotflag]
-    #y = v.a100['HIdef'][plotflag]
+    if paper1:
+        y = v.paper1['HIdef'][plotflag]
     c = v.magphys['logMstar_med'][plotflag]
     plt.scatter(x,y,c=c,s=120,marker='s')
     plt.xlabel(r"$\rm R_{90}(SFR)/R_{90}(M_\star)$",fontsize=22)
@@ -655,10 +831,14 @@ def plot_HIdef_sizeratio():
 
     for vf in vfids:
         xp = sizeratio90[vf]
-        yp = v.a100['HIdef_bos'][vf]        
+        yp = v.a100['HIdef_bos'][vf]
+        if paper1:
+            yp = v.paper1['HIdef'][vf] 
         plt.text(xp-.01,yp+.05,v.main['VFID'][vf],horizontalalignment='center',fontsize=14)
 
     plt.ylim(-.5,1.02)
+    if paper1:
+        plt.ylim(-.5,1.2)
     plt.xlim(0.22,1.39)
     plt.axhline(ls='-',c='k',alpha=.5)
     plt.axhline(y=0.25,ls='--',c='k',alpha=.5)
@@ -685,12 +865,126 @@ def plot_HIdef_sizeratio():
 
     plt.savefig(plotdir+'/NGC5364-HIdef-sizeratio90.png',dpi=150,bbox_inches="tight")
     plt.savefig(plotdir+'/NGC5364-HIdef-sizeratio90.pdf',bbox_inches="tight")     
+
+
+def plot_MHI_Mstar_sizeratio(paper1=False):
+    """
+    galaxies with HI detections: VFID5859, VFID5892, VFID5855, VFID5842, VFID5889
+
+    #VFID5851: R90_mstar=81.2, R90_sfr=9.3, ratio=0.11 
+    #VFID5851: R50_mstar=20.6, R50_sfr=6.9, ratio=0.33
+
+    VFID5842: R90_mstar=80.8, R90_sfr=48.5, ratio=0.60 
+    VFID5842: R50_mstar=36.6, R50_sfr=31.1, ratio=0.85
+    
+    VFID5859: R90_mstar=14.8, R90_sfr=8.9, ratio=0.60 
+    VFID5859: R50_mstar=8.1, R50_sfr=4.8, ratio=0.59
+
+    VFID5892: R90_mstar=59.3, R90_sfr=21.0, ratio=0.35 
+    VFID5892: R50_mstar=25.8, R50_sfr=8.4, ratio=0.33
+
+    VFID5855: R90_mstar=106.5, R90_sfr=138.4, ratio=1.30 
+    VFID5855: R50_mstar=44.5, R50_sfr=50.1, ratio=1.12
+
+    VFID5889: R90_mstar=163.8, R90_sfr=181.2, ratio=1.11 
+    VFID5889: R50_mstar=51.3, R50_sfr=112.7, ratio=2.19
+
+    #VFID5879: R90_mstar=15.2, R90_sfr=2.3, ratio=0.15 
+    #VFID5879: R50_mstar=7.5, R50_sfr=1.6, ratio=0.22
+
+    #VFID5844: R90_mstar=17.3, R90_sfr=9.9, ratio=0.57 
+    #VFID5844: R50_mstar=8.1, R50_sfr=6.9, ratio=0.86 
+
+    """
+
+    # this is super clunky but going with it for now...
+    sizeratio90 = np.zeros(len(v.a100))
+
+    vfids = [5859,5892,5855,5842,5889,5851]
+    ratio90 = [0.6,0.35,1.3,0.6,1.11,0.11]
+
+
+    for i,vf in enumerate(vfids):
+        sizeratio90[vf] = ratio90[i]
+
+
+    vfids = [5859,5892,5855,5842,5889]
+    plotflag = np.zeros(len(v.main),'bool')        
+    for i,vf in enumerate(vfids):
+        plotflag[vf] = True
+    # now plot HIdef vs sizeratio90
+
+    #plt.figure(figsize=(8,6))
+    #plt.subplots_adjust(bottom=.15)
+    
+    plt.figure(figsize=(8,6))
+    plt.subplots_adjust(bottom=.15,right=.9)
+    
+    x = sizeratio90[plotflag]
+
+    
+
+    # updating to plot HImass / stellar mass
+    yall = np.zeros(len(v.main))
+    for i,vf in enumerate(vfids):
+        logMHI = meerkat_HI_mass['VFID'+str(vf)]
+        # convert masses to Vcosmic
+        logMstar = v.magphys['logMstar_best'][vf] + 2*np.log10(v.env['Vcosmic'][vf]/v.main['vr'][vf])
+        
+        yall[vf] = logMHI - logMstar
+        print(vf,logMHI,v.magphys['logMstar_best'][vf],logMstar,yall[vf])
+
+        
+    y = yall[plotflag]
+    c = v.magphys['logMstar_med'][plotflag]
+    plt.scatter(x,y,c=c,s=120,marker='s')
+    plt.xlabel(r"$\rm R_{90}(SFR)/R_{90}(M_\star)$",fontsize=22)
+    plt.ylabel(r"$\rm \log_{10}(M_{HI}/M_\star) $",fontsize=22)
+
+    cb = plt.colorbar()
+    cb.set_label("$\log(M_\star/M_\odot)$",fontsize=16)
+
+    for vf in vfids:
+        xp = sizeratio90[vf]
+        yp = yall[vf]
+        plt.text(xp-.01,yp+.08,v.main['VFID'][vf],horizontalalignment='center',fontsize=14)
+
+    plt.ylim(-2,1.2)
+    #if paper1:
+    #    plt.ylim(-.5,1.2)
+    plt.xlim(0.19,1.41)
+    #plt.axhline(ls='-',c='k',alpha=.5)
+    #plt.axhline(y=0.25,ls='--',c='k',alpha=.5)
+    #plt.axhline(y=-0.25,ls='--',c='k',alpha=.5)
+    
+    #######################################
+    # calculate spearman rank coeff
+    #######################################
+    r,pvalue = spearmanr(x,y)
+    print(f"Spearman rank correlation coeff = {r:.2f}, pvalue = {pvalue:.3f}")
+
+
+    plotflag[v.main['VFID']=='VFID5859'] = False
+    x = sizeratio90[plotflag]
+    y = yall[plotflag]
+    r,pvalue = spearmanr(x,y)
+    print()
+    print("removing VFID5859")
+    print(f"Spearman rank correlation coeff = {r:.2e}, pvalue = {pvalue:.3e}")
+    
+    # now plot HIdef vs sizeratio90
+    plt.xticks(fontsize=16)
+    plt.yticks(fontsize=16)    
+
+    plt.savefig(plotdir+'/NGC5364-MHI-Mstar-sizeratio90.png',dpi=150,bbox_inches="tight")
+    plt.savefig(plotdir+'/NGC5364-MHI-Mstar-sizeratio90.pdf',bbox_inches="tight")     
     
 def get_rad_fluxfrac(pfit,frac=0.9,verbose=False):
     from scipy.interpolate import interp1d
     N = 10
     x = np.linspace(0,N*pfit.r_eff.value,100*N)
     flux = pfit(x)*2*np.pi*x*(x[1]-x[0])
+        
     integral2 = np.cumsum(flux)
     
     interp_profile = interp1d(integral2,x)
@@ -900,7 +1194,7 @@ def plot_mstar_sfr_profiles(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xtic
                             cbfrac=.08,cbaspect=20,clevels=[4],contourFlag=True,rmax=None,harmax=None,\
                             Re_mstar=None,Re_sfr=None,R90_mstar=None,R90_sfr=None,logMstar=None,\
                             vr=None,\
-                            cmap='magma_r',markGroupCenter=False):
+                            cmap='magma_r',markGroupCenter=False,beamCorrected=False):
     """
     same plot as mstar_sfr, but swap out ssfr for radial profiles in the 4th panel
 
@@ -1035,7 +1329,15 @@ def plot_mstar_sfr_profiles(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xtic
         #############################################################
         if i == 1:
             # check if HI moment zero map is available
-            HIfilename = HI_file[vfid]
+            if beamCorrected:
+                # beam corrected version
+                HIfilename = homedir+'/research/Virgo/MeerKAT/2024Jul12-data/J1355_p_0512_pbcorr_mom0.fits'
+
+                # lower resolution version
+                #HIfilename = homedir+'/research/Virgo/MeerKAT/2024Jul12-data/J1355_p_0512_tp30_pbcorr_mom0.fits'
+
+            else:
+                HIfilename = HI_file[vfid]
             if HIfilename is not None:
                 print("HIfilename = ",HIfilename)
                 plot_HI_contours(ax2,HIfilename,color='steelblue')
@@ -1163,11 +1465,12 @@ def plot_mstar_sfr_profiles(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xtic
     # add HI contour to legacy image
     #############################################################    
     # check if HI moment zero map is available
-    HIfilename = HI_file[vfid]
+    #HIfilename = HI_file[vfid]
     if HIfilename is not None:
         print("HIfilename = ",HIfilename)
         plot_HI_contours(plt.gca(),HIfilename,color='lightsteelblue')
-        if vfid == 'VFID5859':
+        smallgals = ['VFID5859','VFID5879','VFID5844']
+        if vfid in smallgals:
             plot_HI_beam(ax1,HIfilename,hdu.header,color='steelblue',expandBox=True)
         else:
             plot_HI_beam(ax1,HIfilename,hdu.header,color='steelblue') 
@@ -1386,10 +1689,11 @@ def plot_mstar_sfr_CO(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xticks=Tru
         if i == 2:
             # check if HI moment zero map is available
             COfilename = CO_file[vfid]
+            COmask_filename = CO_mask[vfid]
             if COfilename is not None:
                 print("COfilename = ",COfilename)
 
-                plot_CO_contours(ax2,COfilename,color=COcolor)
+                plot_CO_contours(ax2,COfilename,color=COcolor,mask=COmask_filename)
                 #if vfid == 'VFID5859':
                 #    plot_HI_beam(ax2,HIfilename,hdu.header,color='steelblue',expandBox=True)
                 #else:
@@ -2292,56 +2596,90 @@ class grouptables(vtables):
         dr_kpc = np.radians(np.mean(dtheta_deg))*DA*1000
         print(f"average separation of Halpha FOV galaxies from center is {dr_kpc.value/self.rvirial:.3f} Rvirial")
         
-    def write_latex_table(self):
+    def write_latex_table(self,flag=None,outfile=None):
         self.get_distance_Virgo()
-        flag = self.groupMembs & self.main['HAobsflag']
-        col_names = ['VFID','NED Name','vr','Virgo $d_{3d}$','logMstar','logSFR','logsSFR','H2 def','HI def', 'HI def Bos']
-        col_formats={'logMstar': '%5.2f',\
-                     'logSFR': '%5.2f',\
-                     'logsSFR': '%5.2f',\
-                     'H2 def': '%5.2f',\
+        if flag is None:
+            flag = self.groupMembs & self.main['HAobsflag']
+        #col_names = ['VFID','NED Name','vr','Virgo $d_{3d}$','logMstar','logSFR','logsSFR','H2 def','HI def']#, 'HI def Bos']
+        #col_names = ['VFID','NED Name','$v_r$','Virgo $d_{3d}$','$\log(M_\star)$','$\log(SFR)$','$\log(sSFR)$','H2 def','HI def']#, 'HI def Bos']
+        tc = [r'\end{center} \\ \tablecomments{$^a$ Heliocentric recession velocity. \\']
+        tc.append(r'$^b$ 3D distance from center of Virgo Cluster \\')
+        tc.append(r'$^c$ Stellar mass from SED fitting. \\')
+        tc.append(r'$^d$ SFR from SED fitting. \\')
+        tc.append(r'$^e$ sSFR from SED fitting. \\')
+        tc.append(r'$^f$ $H_2$ deficiency from \citet{Castignani2022a}.\\')
+
+        # end table comments
+        tc.append(r'}\\')
+
+        print(tc)
+        col_names = ['VFID','NED Name','$v_r^{a}$','Virgo $d_{3d}^{b}$','$\log(M_\star)^c$',\
+                     '$\log(SFR)^d$','$\log(sSFR)^e$','H2 def$^f$']
+        col_formats={'$\log(M_\star)^c$': '%5.2f',\
+                     '$\log(SFR)^d$': '%5.2f',\
+                     '$\log(sSFR)^e$': '%5.2f',\
+                     'H2 def$^f$': '%5.2f',\
                      'HI def': '%5.2f',\
-                     'HI def Bos': '%5.2f',\
-                     'Virgo $d_{3d}$':'%5.1f'}
+                     #'HI def Bos': '%5.2f',\
+                     'Virgo $d_{3d}^{b}$':'%5.1f'}
         latexdict={'preamble': r'\begin{center}',\
-                   'tablefoot': r'\end{center}',\
+                   #'tablefoot': tc.append(r'\end{center}'),\
+                   'tablefoot': tc,\
                    'tabletype': 'table*',\
                    'header_start': '\\hline \\hline',\
                    'header_end': '\\hline',\
                    'data_end': '\\hline',\
-                   'caption': 'NGC~5364 Group Members within the \\ha \\ footprint \\label{tab:sample}'}
-        paperTab = Table([self.main['VFID'],self.main['NEDname'],self.main['vr'],self.dist3dVirgo,self.magphys['logMstar_med'],self.magphys['logSFR_med'],self.magphys['logsSFR_med'],self.paper1['H2def'],self.paper1['HIdef'],self.a100['HIdef_bos']])[flag]
-        paperTab.write(plotdir+'/NGC5364_tab1.tex',format='latex',names=col_names,formats=col_formats,latexdict=latexdict,\
+                   'caption': 'NGC~5364 Group Members within the \\ha \\ footprint \\label{tab:sample}',\
+                   }
+        if outfile is not None:
+            latexdict['caption'] = 'NGC~5364 Group Members outside the \\ha \\ footprint \\label{tab:nohalpha}'
+        #paperTab = Table([self.main['VFID'],self.main['NEDname'],self.main['vr'],self.dist3dVirgo,self.magphys['logMstar_med'],self.magphys['logSFR_med'],self.magphys['logsSFR_med'],self.paper1['H2def'],self.paper1['HIdef']])[flag]#,self.a100['HIdef_bos']])[flag]
+
+        # test if there is a meerkat HI mass
+        HIdef_column = self.paper1['HIdef']
+        vindex = np.arange(len(self.main))[flag]
+
+        for i in vindex:
+            try:
+                logMH = meerkat_HI_mass[v.main['VFID'][i]]
+                # get diff b/w 
+            except KeyError:
+                print(f"WARNING: no meerkat HI mass for {v.main['VFID'][i]}")
+                pass
+        #paperTab = Table([self.main['VFID'],self.main['NEDname'],self.main['vr'],self.dist3dVirgo,self.magphys['logMstar_med'],self.magphys['logSFR_med'],self.magphys['logsSFR_med'],self.paper1['H2def'],self.paper1['HIdef']],names=col_names)[flag]
+        paperTab = Table([self.main['VFID'],self.main['NEDname'],self.main['vr'],self.dist3dVirgo,self.magphys['logMstar_med'],self.magphys['logSFR_med'],self.magphys['logsSFR_med'],self.paper1['H2def']],names=col_names)[flag]        
+
+        ################################################
+        # specify units
+        ################################################        
+        paperTab['$v_r^{a}$'].unit = u.km/u.s
+        paperTab['Virgo $d_{3d}^{b}$'].unit = u.Mpc
+        paperTab['$\log(M_\star)^c$'].unit = u.Msun
+        paperTab['$\log(SFR)^d$'].unit = u.Msun/u.yr
+        paperTab['$\log(sSFR)^e$'].unit = u.Msun/u.yr/u.Msun        
+
+        ################################################
+        # write table
+        ################################################        
+
+        if outfile is None:
+            outfile = plotdir+'/NGC5364_tab1.tex'
+        paperTab.write(outfile,format='latex',names=col_names,formats=col_formats,latexdict=latexdict,\
                        fill_values=[(ascii.masked,'\\nodata')])#,(np.ma.masked,'no data')])
         #paperTab.write(plotdir+'/NGC5364_tab1.tex',format='latex',names=col_names,formats=col_formats,latexdict=ascii.latex.latexdicts['ApJ'])
-        self.paperTab = paperTab
+
+        if outfile is None:
+            self.paperTab = paperTab
+        else:
+            return paperTab
         pass
 
 
     def write_latex_table_nohalpha(self):
         self.get_distance_Virgo()
         flag = self.groupMembs & ~self.main['HAobsflag']
-        col_names = ['VFID','NED Name','vr (km/s)','Virgo $d_{3d}$ (Mpc)','logMstar','logSFR','logsSFR','H2 def','HI def', 'HI def Bos']
-        col_formats={'logMstar': '%5.2f',\
-                     'logSFR': '%5.2f',\
-                     'logsSFR': '%5.2f',\
-                     'H2 def': '%5.2f',\
-                     'HI def': '%5.2f',\
-                     'HI def Bos': '%5.2f',\
-                     'Virgo $d_{3d}$':'%5.1f'}
-        latexdict={'preamble': r'\begin{center}',\
-                   'tablefoot': r'\end{center}',\
-                   'tabletype': 'table*',\
-                   'header_start': '\\hline \\hline',\
-                   'header_end': '\\hline',\
-                   'data_end': '\\hline',\
-                   'caption': 'NGC~5364 Group Members outside of \\ha \\ footprint \\label{tab:nohalpha}'}
-        paperTab = Table([self.main['VFID'],self.main['NEDname'],self.main['vr'],self.dist3dVirgo,self.magphys['logMstar_med'],self.magphys['logSFR_med'],self.magphys['logsSFR_med'],self.paper1['H2def'],self.paper1['HIdef'],self.a100['HIdef_bos']])[flag]
-        paperTab.write(plotdir+'/NGC5364_tab2.tex',format='latex',names=col_names,formats=col_formats,latexdict=latexdict,\
-                       fill_values=[(ascii.masked,'\\nodata')])#,(np.ma.masked,'no data')])
-        #paperTab.write(plotdir+'/NGC5364_tab1.tex',format='latex',names=col_names,formats=col_formats,latexdict=ascii.latex.latexdicts['ApJ'])
-        self.paperTab_nohalpha = paperTab
-        pass
+        self.paperTab_nohalpha = self.write_latex_table(flag=flag,outfile=plotdir+'/NGC5364_tab2.tex')
+
     
     def get_distance_Virgo(self):
         """ calculate 3D distance to Virgo for group members """
