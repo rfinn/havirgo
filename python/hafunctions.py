@@ -979,6 +979,19 @@ def plot_MHI_Mstar_sizeratio(paper1=False):
     plt.savefig(plotdir+'/NGC5364-MHI-Mstar-sizeratio90.png',dpi=150,bbox_inches="tight")
     plt.savefig(plotdir+'/NGC5364-MHI-Mstar-sizeratio90.pdf',bbox_inches="tight")     
     
+def get_rad_fluxfrac_sersfunc(pfit,frac=0.9,verbose=False):
+    from scipy.interpolate import interp1d
+    N = 10
+    x = np.linspace(0,N*pfit.r_eff.value,100*N)
+    flux = pfit(x)*2*np.pi*x*(x[1]-x[0])
+        
+    integral2 = np.cumsum(flux)
+    
+    interp_profile = interp1d(integral2,x)
+    if verbose:
+        print(f"cumulative sum of profile = {integral2[-1]:.2e}")
+    return interp_profile(frac*integral2[-1])
+
 def get_rad_fluxfrac(pfit,frac=0.9,verbose=False):
     from scipy.interpolate import interp1d
     N = 10
@@ -1514,7 +1527,7 @@ def plot_mstar_sfr_profiles(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xtic
             if harmax is not None:
                 pflag = x < harmax
         plt.plot(x[pflag],y[pflag]/norm_factor,'bo',c=colors[i],label=labels[i],marker=markers[i])
-        #plt.fill_between(x,(y+yerr)/norm_factor,y2=(y-yerr)/norm_factor,color=mycolors[i],alpha=.5)
+        #plt.fill_between(x,(y+yerr)/norm_factor,y2=(y-yerr)/norm_factor,color=mycolors[i],alpha=.2)
     # add R50 if it's provided
     if Re_mstar is not None:
         plt.axvline(x=Re_mstar,ls='--',lw=2,color=colors[0],label='$R_e$')#,label='$R_e(M_\star)$')
@@ -1840,10 +1853,13 @@ def plot_mstar_sfr_CO(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xticks=Tru
 
 def fit_profiles(rp,hp,weights=None,rmax=None,fixN=False,labels = ['logMstar','logSFR'],log1Flag=False):
     """
+    Fit a sersic model to a light profile
+
     PARAMS: 
     * rp = r-band photometry file
     * hp = halpha photometry file
     * rmax = max radius to use for fitting
+
     RETURN:
     * rfit = r-band model
     * hfit = halpha model
@@ -1920,6 +1936,10 @@ def fit_profiles(rp,hp,weights=None,rmax=None,fixN=False,labels = ['logMstar','l
     return rfit, hfit
 
 def plot_cog(rp,hp,rfit,hfit,rmax=None,labels = ['logMstar','logSFR']):
+    '''
+    rmax in arcsec
+    '''
+    
     # plot enclosed flux to see if Re is approx half light radius
 
     # this is using R band and CS Halpha
@@ -1949,23 +1969,43 @@ def plot_cog(rp,hp,rfit,hfit,rmax=None,labels = ['logMstar','logSFR']):
     names.reverse()
     
     plt.figure()
-    radii50=[]
+    radii50 = []
+    radii90 = []
     for i,f in enumerate(fits):
         plt.subplot(2,1,i+1)
         if rmax is not None:
             plt.xlim(0,rmax)
+            flag = phots[i]['sma_arcsec'] < rmax
+        else:
+            flag = np.ones(len(phots),'bool')
         #plt.gca().set_yscale('log')
 
-        plt.plot(phots[i]['sma_arcsec'],phots[i]['flux'],'bo',c=mycolors[0],label=labels[i])
+        plt.plot(phots[i]['sma_arcsec'][flag],phots[i]['flux'][flag],'bo',c=mycolors[0],label=labels[i])
         
-        plt.axhline(y=0.5*np.max(phots[i]['flux']),ls=':',color='k')
+        plt.axhline(y=0.5*np.max(phots[i]['flux'][flag]),ls=':',color='k')
         plt.axvline(x=fits[i].r_eff.value,ls='--',color='k')
 
     
         # plot R50, where the enclosed flux reaches the 0.5*total
-        r50flag = phots[i]['flux'] > 0.5*np.max(phots[i]['flux'])
-        r50 = phots[i]['sma_arcsec'][r50flag][0]
-        radii50.append(r50)
+        if rmax is not None:
+
+            r50flag = phots[i]['flux'] > 0.5*np.max(phots[i]['flux'][flag])
+            r50 = phots[i]['sma_arcsec'][r50flag][0]
+            radii50.append(r50)
+            
+            r90flag = phots[i]['flux'] > 0.9*np.max(phots[i]['flux'][flag])
+            r90 = phots[i]['sma_arcsec'][r90flag][0]
+            radii90.append(r90)
+        else:
+            r50flag = phots[i]['flux'] > 0.5*np.max(phots[i]['flux'])
+            r50 = phots[i]['sma_arcsec'][r50flag][0]
+            radii50.append(r50)
+
+            r90flag = phots[i]['flux'] > 0.9*np.max(phots[i]['flux'])
+            r90 = phots[i]['sma_arcsec'][r90flag][0]
+            radii90.append(r90)
+            
+
         plt.axvline(x=r50,ls=':',color='k')                                     
         plt.text(0.05,0.8,f"{names[i]}: Re = {fits[i].r_eff.value:.1f}, n={f.n.value:.1f}, R50={r50:.1f}",transform=plt.gca().transAxes)
                                  
@@ -1973,7 +2013,7 @@ def plot_cog(rp,hp,rfit,hfit,rmax=None,labels = ['logMstar','logSFR']):
 
             plt.xlabel("SMA (arcsec)",fontsize=16)
             plt.text(-.15,1,"Enclosed Flux",fontsize=16,transform=plt.gca().transAxes,rotation=90,horizontalalignment='center')
-    return radii50
+    return radii50,radii90
     
 def fit1profile(dirname='VFID5842-NGC5356-INT-20190206-p120',rmax=None):
     os.chdir(homedir+'/research/Virgo-dev/cont-sub-gr')
@@ -1993,9 +2033,9 @@ def fit1profile(dirname='VFID5842-NGC5356-INT-20190206-p120',rmax=None):
     print("in fit1profile, rmax = ",rmax)
     mfit,sfit = fit_profiles(rp,hp,rmax=rmax,labels=['logMstar','logSFR'],log1Flag=False)
     vfid = dirname.split('-')[0]
-    plt.savefig(vfid+'-mstar-sfr-profiles.png',dpi=150,bbox_inches="tight")
+    plt.savefig(vfid+'-mstar-sfr-sersic-profiles.png',dpi=150,bbox_inches="tight")
         
-    radii50 = plot_cog(rp,hp,mfit,sfit,rmax=rmax,labels=['logMstar','logSFR'])
+    radii50,radii90 = plot_cog(rp,hp,mfit,sfit,rmax=rmax,labels=['logMstar','logSFR'])
     plt.savefig(vfid+'-mstar-sfr-cog.png',dpi=150,bbox_inches="tight")    
     # use this to run on R and CS Halpha
     rphot = dirname+'-R_phot.fits'
@@ -2010,7 +2050,7 @@ def fit1profile(dirname='VFID5842-NGC5356-INT-20190206-p120',rmax=None):
         hp = Table.read(haphot)
     rfit,hfit = fit_profiles(rp,hp,rmax=rmax,labels=['r','halpha'])
     plt.savefig(vfid+'-r-halpha-profiles.png',dpi=150,bbox_inches="tight")    
-    return mfit,sfit,rfit,hfit
+    return mfit,sfit,rfit,hfit,radii50,radii90
 
 
 def plot_sfr_indicators(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xticks=True,figsize=[16,6],cbfrac=.08,cbaspect=20,clevels=[4,5],contourFlag=False):
@@ -2602,8 +2642,8 @@ class grouptables(vtables):
             flag = self.groupMembs & self.main['HAobsflag']
         #col_names = ['VFID','NED Name','vr','Virgo $d_{3d}$','logMstar','logSFR','logsSFR','H2 def','HI def']#, 'HI def Bos']
         #col_names = ['VFID','NED Name','$v_r$','Virgo $d_{3d}$','$\log(M_\star)$','$\log(SFR)$','$\log(sSFR)$','H2 def','HI def']#, 'HI def Bos']
-        tc = [r'\end{center} \\ \tablecomments{$^a$ Heliocentric recession velocity. \\']
-        tc.append(r'$^b$ 3D distance from center of Virgo Cluster \\')
+        tc = [r'\end{center} \n \tablecomments{$^a$ Heliocentric recession velocity. \n']
+        tc.append(r'$^b$ Flow-corrected, 3D distance from center of Virgo Cluster from \citet{Castignani2022a} \\')
         tc.append(r'$^c$ Stellar mass from SED fitting. \\')
         tc.append(r'$^d$ SFR from SED fitting. \\')
         tc.append(r'$^e$ sSFR from SED fitting. \\')
@@ -2646,9 +2686,23 @@ class grouptables(vtables):
             except KeyError:
                 print(f"WARNING: no meerkat HI mass for {v.main['VFID'][i]}")
                 pass
-        #paperTab = Table([self.main['VFID'],self.main['NEDname'],self.main['vr'],self.dist3dVirgo,self.magphys['logMstar_med'],self.magphys['logSFR_med'],self.magphys['logsSFR_med'],self.paper1['H2def'],self.paper1['HIdef']],names=col_names)[flag]
-        paperTab = Table([self.main['VFID'],self.main['NEDname'],self.main['vr'],self.dist3dVirgo,self.magphys['logMstar_med'],self.magphys['logSFR_med'],self.magphys['logsSFR_med'],self.paper1['H2def']],names=col_names)[flag]        
 
+        ################################################
+        # replace mass value for VFID5851 with the best value
+        ################################################
+        mass_column = self.magphys['logMstar_med']
+        swap_flag = self.main['VFID'] == 'VFID5851'
+        mass_column[swap_flag] = self.magphys['logMstar_best'][swap_flag]
+
+        ################################################
+        # construct table
+        ################################################
+
+        #paperTab = Table([self.main['VFID'],self.main['NEDname'],self.main['vr'],self.dist3dVirgo,self.magphys['logMstar_med'],self.magphys['logSFR_med'],self.magphys['logsSFR_med'],self.paper1['H2def'],self.paper1['HIdef']],names=col_names)[flag]
+        paperTab = Table([self.main['VFID'],self.main['NEDname'],self.main['vr'],self.dist3dVirgo,mass_column,self.magphys['logSFR_med'],self.magphys['logsSFR_med'],self.paper1['H2def']],names=col_names)[flag]        
+
+
+        
         ################################################
         # specify units
         ################################################        
@@ -2658,10 +2712,11 @@ class grouptables(vtables):
         paperTab['$\log(SFR)^d$'].unit = u.Msun/u.yr
         paperTab['$\log(sSFR)^e$'].unit = u.Msun/u.yr/u.Msun        
 
+
         ################################################
         # write table
         ################################################        
-
+        
         if outfile is None:
             outfile = plotdir+'/NGC5364_tab1.tex'
         paperTab.write(outfile,format='latex',names=col_names,formats=col_formats,latexdict=latexdict,\
