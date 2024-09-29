@@ -793,16 +793,21 @@ if __name__ == '__main__':
 
     otab.write_ellipse_output(e)
     print('wrote output from ellipse')
+    
     ###############################################
     # measure radii using custom fitting
-    ###############################################    
+    ###############################################
+    print("running fit_profiles")
     rfit, hfit = fit_profiles(rfile,hfile)
+    print("finished running fit_profiles")    
     dirname = os.path.basename(os.getcwd())
     vfid = dirname.split('-')[0]
     g = galaxy(vfid)
     g.get_redshift()
     # write output table
     igal = 0 # only doing one galaxy at a time, so set igal to zero...
+
+    print("writing profile fits")
     otab.write_rprofile_fits(igal,rfit)
 
     #print(f"g.zdist = {g.zdist}")
@@ -810,6 +815,7 @@ if __name__ == '__main__':
     otab.write_sky()
     otab.write_fits_table()            
 
+    print("plotting fancy_profiles")
     otab.e.plot_fancy_profiles()
     # should I run the photometry on the matched g and r images as well???
     # use our r-band as the reference, measure on legacy g
