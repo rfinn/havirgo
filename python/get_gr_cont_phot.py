@@ -792,7 +792,7 @@ if __name__ == '__main__':
     e.run_for_gui()
 
     otab.write_ellipse_output(e)
-
+    print('wrote output from ellipse')
     ###############################################
     # measure radii using custom fitting
     ###############################################    
