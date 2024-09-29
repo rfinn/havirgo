@@ -718,6 +718,7 @@ if __name__ == '__main__':
     JMapertures_arcsec = []
     for i in range(8):
         keyword = f'SMA_AP{i:02d}'
+        print(keyword)
         JMapertures_arcsec.append(ephottab[keyword][galindex])
 
     # this is only 8 apertures, so how to add additional apertures
