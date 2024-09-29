@@ -413,7 +413,7 @@ class output_table():
         e.cat2.add_extra_property('PHOT_R50',r50)
         e.cat2.add_extra_property('PHOT_R90',r90)
         
-
+        print("write fluxfrac to tables")        
         # write these out to the main table
         fields = ['R30','R50','R90',\
                   'HR30','HR50','HR90']
@@ -442,8 +442,11 @@ class output_table():
                 self.table[colname][self.igal]=float('%.4e'%(values[i]))
             except:
                 print("problem writing table element",colname,values[i])
+
+        print("writing fits table")
         self.write_fits_table()            
         if e.statmorph_flag:
+            print("writing statmorph table")
             self.write_statmorph()
             self.write_fits_table()
         
