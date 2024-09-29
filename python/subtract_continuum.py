@@ -227,14 +227,16 @@ def get_gr(gfile,rfile,mask=None):
     print('Subtracting {0:3.2e} from g-band image'.format(stat_g[1]))
     #data_g -= stat_g[1]
 
-    # create a mask, where SNR > 10    
+    # create a mask, where SNR > 10
+    # QUESTION : why is this 3 instead of 10?
     usemask = (data_g>3*stat_g[2])
 
     # calculate the g-r color 
     gr_col = -2.5*np.log10(data_g/data_r)
 
     # TODO - should add masking here - we don't want stars to be in our g-r image, right?
-    gr_col[mask] = np.nan
+    if mask is not None:
+        gr_col[mask] = np.nan
     print('Smoothing images for color calculation')
     # changing convolution size from 20 to 10 b/c I'm wondering if it's blurring the color
     # gradients too much - specific example is
@@ -242,8 +244,10 @@ def get_gr(gfile,rfile,mask=None):
     # Testing to remove smoothing on M109
 
     # going to add this back in once I have the legacy images at the native pixel scale...
-    
-    #gr_col = convolution.convolve_fft(gr_col, convolution.Box2DKernel(10), allow_huge=True, nan_treatment='interpolate')
+    # downloaded the legacy images on 2024-09-29
+    # we are using the legacy images that are reprojected on the halpha footprint,
+    # so pixel scale is slightly larger than native
+    gr_col = convolution.convolve_fft(gr_col, convolution.Box2DKernel(10), allow_huge=True, nan_treatment='interpolate')
 
     # set the pixel with SNR < 10 to nan - don't use these for color correction
     gr_col[np.logical_not(usemask)] = np.nan
