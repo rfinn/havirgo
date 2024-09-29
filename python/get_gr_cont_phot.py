@@ -711,6 +711,15 @@ if __name__ == '__main__':
     ra = mtab['RA'][galindex][0]
     dec = mtab['DEC'][galindex][0]
     print("RA,DEC = ",ra,dec)
+
+    ###################################################################    
+    # construct list of apertures from JM's phot file
+    ###################################################################    
+    JMapertures_arcsec = []
+    for i in range(8):
+        keyword = f'SMA_AP{i:02d}'
+        JMapertures_arcsec.append(ephottab[keyword][galindex])
+    
     ###################################################################    
     # get R and CS-gr image
     ###################################################################    
@@ -765,7 +774,7 @@ if __name__ == '__main__':
         hfilter = '4'
 
     
-    e = ellipse(rfile, image2=hfile, mask = maskfile, image_frame = None,image2_filter='4', filter_ratio=filter_ratio,psf=None,psf_ha=None,objra=ra,objdec=dec)
+    e = ellipse(rfile, image2=hfile, mask = maskfile, image_frame = None,image2_filter='4', filter_ratio=filter_ratio,psf=None,psf_ha=None,objra=ra,objdec=dec,apertures=None)
     e.run_for_gui()
 
     otab.write_ellipse_output(e)

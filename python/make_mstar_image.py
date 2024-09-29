@@ -40,6 +40,9 @@ SDSS_r    4.53     4.65
 DES_r     4.45     4.61
 PS_r      4.53     4.64
 
+
+TODO : use the legacy r-band image instead of our r-band image
+
 """
 import os
 import glob

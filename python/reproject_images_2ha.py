@@ -54,7 +54,11 @@ if __name__ == '__main__':
         print("can't find CS image - exiting ",reffile)
         sys.exit()
     #get legacy/*.fits
-    legacy_images = glob.glob(os.path.join(dirname,'legacy/*.fits'))
+    # get each filter separately to avoid creating -ha-ha-ha.fits when running multiple times...
+    legacyr = glob.glob(os.path.join(dirname,'legacy/*r.fits'))
+    legacyg = glob.glob(os.path.join(dirname,'legacy/*g.fits'))
+    legacyz = glob.glob(os.path.join(dirname,'legacy/*z.fits'))        
+    legacy_images = legacyr+legacyg+legacyz #glob.glob(os.path.join(dirname,'legacy/*r.fits'))
     legacy_images.sort()
 
     for infile in legacy_images:
