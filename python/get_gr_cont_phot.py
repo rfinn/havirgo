@@ -55,10 +55,11 @@ def get_params_from_name(image_name):
         print(t)
         for s in t:
             pointing = t[-1]
-            if s.startswith('20'):
+            if s.startswith('20') & (len(s) == 6):
                 dateobs = s
             elif s in ['BOK','INT','MOS','HDI']:
                 telescope = s
+        print(f"here is what I think: pointing={pointing}, dateobs={dateobs},telescope={telescope}")
                 
             
     return telescope,dateobs,pointing
