@@ -33,7 +33,6 @@ from astropy.io import fits
 from astropy.table import Table
 
 # get input files
-flist = flist1 + flist2 + flist3
 flist = glob.glob("VFID*/halpha-csgr-rfinn*.fits")
 flist.sort()
 print(f"Found {len(flist)} files to stack")
