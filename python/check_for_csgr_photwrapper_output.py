@@ -10,8 +10,9 @@ alldirs = open('virgo-cutouts.txt','r')
 alldirlist = alldirs.readlines()
 
 for d in alldirlist:
-    print(f"{d}/halpha-csgr-rfinn-2024-Sep-29.fits")
-    dirname = d.replace("\n","")
+    
+    dirname = d.rstrip()
+    #print(f"{d}/halpha-csgr-rfinn-2024-Sep-29.fits")
     if os.path.exists(f"{dirname}/halpha-csgr-rfinn-2024-Sep-29.fits"):
         continue
     else:
