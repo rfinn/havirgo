@@ -63,6 +63,6 @@ print('writing output table')
 today = date.today()
 str_date_today = today.strftime('%Y-%b-%d')
 outtab = Table(outtab)
-outtab_name = 'halphagui-output-combined-{}.fits'.format(str_date_today)
+outtab_name = 'csgr-output-combined-{}.fits'.format(str_date_today)
 
 outtab.write(outtab_name,overwrite=True)
