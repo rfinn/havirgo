@@ -793,7 +793,7 @@ if __name__ == '__main__':
     
     e = ellipse(rfile, image2=hfile, mask = maskfile, image_frame = None,image2_filter='4', filter_ratio=filter_ratio,psf=None,psf_ha=None,objra=ra,objdec=dec,apertures=None)
     e.run_for_gui()
-
+    print("done with run_for_gui")
     otab.write_ellipse_output(e)
     print('wrote output from ellipse')
     
