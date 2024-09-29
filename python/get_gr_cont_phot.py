@@ -679,8 +679,11 @@ def fit_profiles(cutout_name_r,cutout_name_ha,prefix=None):
         rphot_table = cutout_name_r.split('.fits')[0]+'-'+prefix+'_phot.fits'
         haphot_table = cutout_name_ha.split('.fits')[0]+'-'+prefix+'_phot.fits'
 
+    print("measuring r-band profiles becky")
     rfit = rprofile(cutout_name_r, rphot_table, label='R')
     rfit.becky_measurements()
+
+    print("measuring halpha profiles becky")    
     hafit = haprofile(cutout_name_ha, haphot_table, label=r"$H\alpha$")
     
     hafit.becky_measurements()
