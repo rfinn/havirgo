@@ -718,7 +718,7 @@ if __name__ == '__main__':
     ###################################################################    
     JMapertures_arcsec = []
     for i in range(8):
-        keyword = f'SMA_AP{i:02d}'
+        keyword = f'SMA_AP{i+1:02d}'
         print(keyword)
         JMapertures_arcsec.append(etab[keyword][galindex][0])
 
