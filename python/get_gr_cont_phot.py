@@ -53,6 +53,14 @@ def get_params_from_name(image_name):
     else:
         print("ruh roh - trouble getting info from ",image_name, len(t))
         print(t)
+        for s in t:
+            pointing = t[-1]
+            if s.startswith('20'):
+                dateobs = s
+            elif s in ['BOK','INT','MOS','HDI']:
+                telescope = s
+                
+            
     return telescope,dateobs,pointing
 
 
