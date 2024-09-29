@@ -405,9 +405,9 @@ class output_table():
         e.cat.add_extra_property('PHOT_R90',r90)
 
         print("calculating fluxfrac for halpha in write_ellipse_output")        
-        r30 = e.cat2.fluxfrac_radius(0.3)*pixelscale*u.arcsec/u.pixel
-        r50 = e.cat2.fluxfrac_radius(0.5)*pixelscale*u.arcsec/u.pixel
-        r90 = e.cat2.fluxfrac_radius(0.9)*pixelscale*u.arcsec/u.pixel
+        #r30 = e.cat2.fluxfrac_radius(0.3)*pixelscale*u.arcsec/u.pixel
+        #r50 = e.cat2.fluxfrac_radius(0.5)*pixelscale*u.arcsec/u.pixel
+        #r90 = e.cat2.fluxfrac_radius(0.9)*pixelscale*u.arcsec/u.pixel
 
         e.cat2.add_extra_property('PHOT_R30',r30)
         e.cat2.add_extra_property('PHOT_R50',r50)
@@ -415,15 +415,15 @@ class output_table():
         
         print("write fluxfrac to tables")        
         # write these out to the main table
-        fields = ['R30','R50','R90',\
-                  'HR30','HR50','HR90']
+        fields = ['R30','R50','R90']
+                  #'HR30','HR50','HR90']
         
         values = [e.cat.PHOT_R30[e.objectIndex].value,\
                   e.cat.PHOT_R50[e.objectIndex].value,\
-                  e.cat.PHOT_R90[e.objectIndex].value,\
-                  e.cat2.PHOT_R30[e.objectIndex].value,\
-                  e.cat2.PHOT_R50[e.objectIndex].value,\
-                  e.cat2.PHOT_R90[e.objectIndex].value]
+                  e.cat.PHOT_R90[e.objectIndex].value]
+                  #e.cat2.PHOT_R30[e.objectIndex].value,\
+                  #e.cat2.PHOT_R50[e.objectIndex].value,\
+                  #e.cat2.PHOT_R90[e.objectIndex].value]
         for i,f in enumerate(fields):
             colname = 'ELLIP_'+f
             #print(colname,values[i])
