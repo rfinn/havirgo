@@ -770,8 +770,9 @@ if __name__ == '__main__':
 
     otab.write_ellipse_output(e)
 
-    
-    # measure radii
+    ###############################################
+    # measure radii using custom fitting
+    ###############################################    
     rfit, hfit = fit_profiles(rfile,hfile)
     dirname = os.path.basename(os.getcwd())
     vfid = dirname.split('-')[0]
