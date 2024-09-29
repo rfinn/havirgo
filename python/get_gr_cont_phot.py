@@ -704,6 +704,7 @@ if __name__ == '__main__':
     ephottab = homedir+"/research/Virgo/tables-north/v2/vf_v2_legacy_ephot.fits"    
     # read in vf_main
     mtab = Table.read(maintab)
+    etab = Table.read(ephottab)    
     # get redshift
     galindex = np.arange(len(mtab))[mtab['VFID'] == vfid]
         
@@ -718,8 +719,8 @@ if __name__ == '__main__':
     JMapertures_arcsec = []
     for i in range(8):
         keyword = f'SMA_AP{i:02d}'
-        #print(keyword)
-        JMapertures_arcsec.append(ephottab[keyword][galindex[0]])
+        print(keyword)
+        JMapertures_arcsec.append(etab[keyword][galindex][0])
 
     # this is only 8 apertures, so how to add additional apertures
     # could add one between each aperture
