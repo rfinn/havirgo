@@ -37,11 +37,12 @@ alldirs = open('virgo-cutouts.txt','r')
 alldirlist = alldirs.readlines()
 
 for d in alldirlist:
-    print(f"{d}/halpha-csgr-rfinn-2024-Sep-29.fits")
-    if os.path.exists(f"{d}/halpha-csgr-rfinn-2024-Sep-29.fits"):
+    dirname = d.rstrip()
+    #print(f"{dirname}/halpha-csgr-rfinn-2024-Sep-29.fits")
+    if os.path.exists(f"{dirname}/halpha-csgr-rfinn-2024-Sep-29.fits"):
         continue
     else:
-        print(f"Missing halpha-csgr file for {d}")
+        print(f"Missing halpha-csgr file for {dirname}")
 
 # now gather list of phot output
 flist = glob.glob("VFID*/halpha-csgr-rfinn*.fits")

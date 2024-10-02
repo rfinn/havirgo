@@ -404,7 +404,8 @@ class output_table():
         e.cat.add_extra_property('PHOT_R50',r50)
         e.cat.add_extra_property('PHOT_R90',r90)
 
-        print("calculating fluxfrac for halpha in write_ellipse_output")        
+        print("calculating fluxfrac for halpha in write_ellipse_output")
+        # this 
         #r30 = e.cat2.fluxfrac_radius(0.3)*pixelscale*u.arcsec/u.pixel
         #r50 = e.cat2.fluxfrac_radius(0.5)*pixelscale*u.arcsec/u.pixel
         #r90 = e.cat2.fluxfrac_radius(0.9)*pixelscale*u.arcsec/u.pixel
