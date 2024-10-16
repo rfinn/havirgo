@@ -14,7 +14,7 @@ homedir = os.getenv("HOME")
 sys.path.append(os.path.join(homedir,'github/Virgo/programs/'))
 from readtablesv2 import vtables
 
-def pairplot_linear(tab,cols,dupindex1,dupindex2,colorcolumn='M24'):
+def pairplot_linear(tab,cols,dupindex1,dupindex2,colorcolumn='M24',remove_string=None):
     plt.figure(figsize=(10,10))
     plt.subplots_adjust(hspace=.5,wspace=.35)
 
@@ -35,7 +35,11 @@ def pairplot_linear(tab,cols,dupindex1,dupindex2,colorcolumn='M24'):
         xline = np.linspace(xmin,xmax,100)
         plt.plot(xline,xline,'k--')
         #plt.title(c)
-        plt.title(f"{c} ({npair})")
+        if remove_string is not None:
+            ctitle = c.replace(remove_string,'')
+        else:
+            ctitle = c
+        plt.title(f"{ctitle} ({npair})")
         allax.append(plt.gca())
         med = np.nanmedian(dx)
         mad =MAD(dx)
@@ -219,6 +223,42 @@ class duplicates():
 
         pairplot_residuals(self.htab,cols,dupindex1,dupindex2,colorcolumn='M24')
         plt.show()
+
+    def plot_rstatmorph(self):
+        cols = ['SMORPH_XCENTROID','SMORPH_YCENTROID','SMORPH_RPETRO_CIRC','SMORPH_RPETRO_ELLIP',\
+                    'SMORPH_RHALF_ELLIP','SMORPH_R20','SMORPH_R80','SMORPH_GINI',\
+                    'SMORPH_M20','SMORPH_F_GM20','SMORPH_S_GM20','SMORPH_C',\
+                    'SMORPH_A','SMORPH_S']
+        flag = self.htab['SMORPH_FLAG'] & (self.htab['SMORPH_XCENTROID'] > 0) \
+          & (self.htab['SMORPH_S'] > -.5) & (self.htab['SMORPH_A'] > -.5)
+          
+        
+        keepflag = flag[self.dupindex1] & flag[self.dupindex2]
+        dupindex1 = self.dupindex1[keepflag]
+        dupindex2 = self.dupindex2[keepflag]
+        plt.figure(figsize=(10,10))
+        plt.subplots_adjust(hspace=.5,wspace=.35)
+
+        pairplot_linear(self.htab,cols,dupindex1,dupindex2,colorcolumn='M24',remove_string='SMORPH_')
+        
+    def plot_hstatmorph(self):
+        cols = ['SMORPH_HXCENTROID','SMORPH_HYCENTROID','SMORPH_HRPETRO_CIRC','SMORPH_HRPETRO_ELLIP',\
+                    'SMORPH_HRHALF_ELLIP','SMORPH_HR20','SMORPH_HR80','SMORPH_HGINI',\
+                    'SMORPH_HM20','SMORPH_HF_GM20','SMORPH_HS_GM20','SMORPH_HC',\
+                    'SMORPH_HA','SMORPH_HS']
+        flag = self.htab['SMORPH_HFLAG'] & (self.htab['SMORPH_HXCENTROID'] > 0) \
+          & (self.htab['SMORPH_HS'] > -.5) & (self.htab['SMORPH_HA'] > -.5) \
+          &  (self.htab['SMORPH_HM20'] > -50)
+        
+        keepflag = flag[self.dupindex1] & flag[self.dupindex2]
+        dupindex1 = self.dupindex1[keepflag]
+        dupindex2 = self.dupindex2[keepflag]
+        plt.figure(figsize=(10,10))
+        plt.subplots_adjust(hspace=.5,wspace=.35)
+
+        pairplot_linear(self.htab,cols,dupindex1,dupindex2,colorcolumn='M24',remove_string='SMORPH_H')
+        plt.show()        
+        
         
 if __name__ == '__main__':
 
