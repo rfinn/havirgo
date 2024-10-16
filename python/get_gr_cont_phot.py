@@ -132,7 +132,7 @@ class output_table():
         self.table.add_columns([e1,e2,e3,e4,e5,e6,e7,e8, e9, e9b,e10, e11, e12, e13,e14,e15,e16,e17,e18,e19,e20,e21,e22,e23,e24,e25,e26,e27])
 
     def add_pointing_params(self):
-        c13 = Column(np.zeros(self.ngalaxies,dtype='|S40'),name='POINTING', description='string specifying year and pointing')
+        c13 = Column(np.zeros(self.ngalaxies,dtype='|S60'),name='POINTING', description='string specifying year and pointing')
         c14 = Column(np.zeros(self.ngalaxies,dtype='|S3'),name='TEL', description='telescope/instrument')
         c15 = Column(np.zeros(self.ngalaxies,dtype='i'),name='DATE-OBS', description='string specifying date of observation')                        
         self.table.add_columns([c13,c14,c15])

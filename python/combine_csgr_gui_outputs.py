@@ -54,13 +54,16 @@ csgr = Table.read(csgr_filename)
 ########################################
 gsheet_filename = 'hagalaxies-including-duplicates.csv'
 gtab = Table.read(gsheet_filename)
-
+# get rid of first row, which is totals
+gtab = gtab[1:]
+print("len of gtab after slicing = ",len(gtab))
 
 ########################################
 # only keep vfids in csgr file
 ########################################
 matchflag = np.zeros(len(hgui),'bool')
 matchindex = np.zeros(len(hgui),'i')
+gmatchindex = np.zeros(len(hgui),'i')
 csindices = np.arange(len(csgr))
 for i,v in enumerate(hgui['VFID']):
     test = (v == csgr['VFID']) & (hgui['TEL'][i]==csgr['TEL']) & (hgui['DATE-OBS'][i]==csgr['DATE-OBS']) 
@@ -68,8 +71,11 @@ for i,v in enumerate(hgui['VFID']):
         matchflag[i] = True
         matchindex[i] = csindices[test][0]
         #print(i,matchindex[i])
-
-# cut table
+        
+####################################################
+# cut halpha gui table to keep only
+# those galaxies that made it through analysis
+####################################################
 hgui = hgui[matchflag]
 matchindex = matchindex[matchflag]
 
@@ -234,9 +240,8 @@ csgr_keep_columns = ['ELLIP_XCENTROID',
 for c in csgr_keep_columns:
     hgui[c]=csgr[c][matchindex]
 
-# sort the output file?  or just write it out...
-# remove unwanted columns
 
+# remove unwanted columns
 for c in hgui.colnames:
     if c.startswith('GAL_2') | c.startswith('GAL_SERSASYM') | c.startswith('GAL_H'):
         hgui.remove_column(c)
@@ -245,8 +250,10 @@ for c in hgui.colnames:
 # add column "POINTING" in the csgr-output file as galid in hgui
 # this is the directory name and allows for easy id of each unique observation
 ###########################################################
-c = Column(csgr['POINTING'][matchindex],name='galid')
+c = Column(csgr['POINTING'][matchindex],name='galid',dtype='S60')
 hgui.add_column(c)
+
+
 
 
 ###########################################################
@@ -255,49 +262,71 @@ hgui.add_column(c)
 ###########################################################
 c = Column(np.zeros(len(hgui), 'bool'),name='badflag')
 hgui.add_column(c)
-c = Column(np.ones(len(hgui), 'bool'),name='cleanflag')
+
+c = Column(np.zeros(len(hgui),'f'),name='remove')
 hgui.add_column(c)
+
+#c = Column(np.ones(len(hgui), 'bool'),name='cleanflag')
+#hgui.add_column(c)
 # search though gtab
 
 # if remove == 1, then
 # match gtab galid with hgui galid
 # set hgui remove_flag to True
 
-remove = gtab['remove'] == 1
+remove = gtab['remove'] > .1
+
+
 #remove = (gtab['remove'] > 0.1) | (gtab['remove'] == 1)
 badgals = gtab['galid'][remove]
+remove_val = gtab['remove'][remove]
+print("first galaxy to remove in gtab = ",badgals[0])
 
-for g in badgals:
-    match = g == hgui['galid']
-    hgui['badflag'][match] = True
+for i,g in enumerate(badgals):
+    for j,hgal in enumerate(hgui['galid']):
+        # I saved galid in get_csgr_phot as an S40, but this is not long enough for some
+        if badgals[i].startswith(hgal):
+            #print("found a match ",badgals[i],hgal)
+            hgui['badflag'][j] = True
+            hgui['galid'][j] = g
+            hgui['remove'][j] = remove_val[i]            
+            #print(hgui['badflag'][j],hgui['galid'][j])
+            break
+# let's just save the remove column from the spreadsheet
 
 
-# this will include galaxies with remove = 0.5
-remove = (gtab['remove'] == 0.5) | (gtab['remove'] == 1)
-testgal = gtab['galid'] == 'VFID2715-KUG1138+327-BOK-20220426-VFID2762' 
-print("test, this should be 0.5",gtab['remove'][testgal],gtab['remove'][testgal] == 0.5, remove[testgal]) 
-badgals = gtab['galid'][remove]
-#print(badgals)
-for g in badgals: # need to skip first line, which is column total
-    try:
-        n = len(g)
-    except TypeError:
-        continue
+
+#c = Column((hgui['remove'] < 0.1),name='clean')
+#hgui.add_column(c)
+
+# # this will include galaxies with remove = 0.5
+# remove = (gtab['remove'] == 0.5) | (gtab['remove'] == 1)
+# testgal = gtab['galid'] == 'VFID2715-KUG1138+327-BOK-20220426-VFID2762' 
+# print("test, this should be 0.5",gtab['remove'][testgal],gtab['remove'][testgal] == 0.5, remove[testgal]) 
+# badgals = gtab['galid'][remove]
+# #print(badgals)
+# for g in badgals: # need to skip first line, which is column total
+#     try:
+#         n = len(g)
+#     except TypeError:
+#         continue
     
-    match = g == hgui['galid']
-    print(hgui['galid'][match])
-    if np.sum(matchflag) < 1:
-        print("warning, no match for ",g)
-    #if g == 'VFID2715-KUG1138+327-BOK-20220426-VFID2762':
-    #    print("hey", hgui['galid'][match])
-    #print(match)
-    hgui['cleanflag'][match] = False
+#     match = g == hgui['galid']
+#     print(hgui['galid'][match])
+#     if np.sum(matchflag) < 1:
+#         print("warning, no match for ",g)
+#     #if g == 'VFID2715-KUG1138+327-BOK-20220426-VFID2762':
+#     #    print("hey", hgui['galid'][match])
+#     #print(match)
+#     hgui['cleanflag'][match] = False
     
-print("this should be false: ",hgui['cleanflag'][hgui['VFID']=='VFID2715'])
+# print("this should be false: ",hgui['cleanflag'][hgui['VFID']=='VFID2715'])
 ###########################################################
 # sort file by galid
 ###########################################################
-sorted_indices = np.argsort(hgui['galid'])
+
+# sort the output file?  or just write it out...
+sorted_indices = np.argsort(hgui['VFID'])
 hgui = hgui[sorted_indices]
 
 
