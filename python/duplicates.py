@@ -21,7 +21,8 @@ def pairplot_linear(tab,cols,dupindex1,dupindex2,colorcolumn='M24',remove_string
     nplot = 1
     allax = []
 
-    npair = len(dupindex1)        
+    npair = len(dupindex1)
+    mycolor = tab[colorcolumn]
     for c in cols:
         plt.subplot(4,4,nplot)
         x1 = tab[c][dupindex1]
@@ -230,7 +231,9 @@ class duplicates():
                     'SMORPH_M20','SMORPH_F_GM20','SMORPH_S_GM20','SMORPH_C',\
                     'SMORPH_A','SMORPH_S']
         flag = self.htab['SMORPH_FLAG'] & (self.htab['SMORPH_XCENTROID'] > 0) \
-          & (self.htab['SMORPH_S'] > -.5) & (self.htab['SMORPH_A'] > -.5)
+          & (self.htab['SMORPH_S'] > -.5) & (self.htab['SMORPH_A'] > -.5) \
+
+            
           
         
         keepflag = flag[self.dupindex1] & flag[self.dupindex2]
@@ -248,7 +251,7 @@ class duplicates():
                     'SMORPH_HA','SMORPH_HS']
         flag = self.htab['SMORPH_HFLAG'] & (self.htab['SMORPH_HXCENTROID'] > 0) \
           & (self.htab['SMORPH_HS'] > -.5) & (self.htab['SMORPH_HA'] > -.5) \
-          &  (self.htab['SMORPH_HM20'] > -50)
+          &  (self.htab['SMORPH_HM20'] > -50) #& (self.htab['M24'] > 10)
         
         keepflag = flag[self.dupindex1] & flag[self.dupindex2]
         dupindex1 = self.dupindex1[keepflag]
