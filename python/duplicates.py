@@ -191,6 +191,34 @@ class duplicates():
 
         pairplot_residuals(self.htab,cols,dupindex1,dupindex2,colorcolumn='M24')
         plt.show()
+
+    def plot_hparams(self):
+        cols = ['ELLIP_HGINI','ELLIP_HASYM','ELLIP_HM20','HC30',\
+        'ELLIP_HSUM','HPETRO_R','HR16','HR17',\
+        'HM16','HM17','HF_TOT','HPETRO_MAG']
+
+        keepflag = self.hflag[self.dupindex1] & self.hflag[self.dupindex2]
+        dupindex1 = self.dupindex1[keepflag]
+        dupindex2 = self.dupindex2[keepflag]
+        plt.figure(figsize=(10,10))
+        plt.subplots_adjust(hspace=.5,wspace=.35)
+
+        pairplot_linear(self.htab,cols,dupindex1,dupindex2,colorcolumn='M24')
+        plt.show()
+
+
+    def plot_hparams_residuals(self):
+        cols = ['ELLIP_HGINI','ELLIP_HASYM','ELLIP_HM20','HC30',\
+        'ELLIP_HSUM','HPETRO_R','HR16','HR17',\
+        'HM16','HM17','HF_TOT','HPETRO_MAG']
+
+
+        keepflag = self.hflag[self.dupindex1] & self.hflag[self.dupindex2]
+        dupindex1 = self.dupindex1[keepflag]
+        dupindex2 = self.dupindex2[keepflag]
+
+        pairplot_residuals(self.htab,cols,dupindex1,dupindex2,colorcolumn='M24')
+        plt.show()
         
 if __name__ == '__main__':
 
