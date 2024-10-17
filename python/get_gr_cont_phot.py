@@ -625,7 +625,7 @@ class output_table():
                   self.e.morph2.rhalf_circ*self.pixelscale,\
                   self.e.morph2.flux_ellip,\
                   self.e.morph2.rmax_ellip*self.pixelscale,\
-                  self.e.morph2.rhalf_ellip*self.pixelscale,\ 
+                  self.e.morph2.rhalf_ellip*self.pixelscale,\
                   self.e.morph2.gini,\
                   self.e.morph2.m20,\
                   self.e.morph2.gini_m20_bulge,\
