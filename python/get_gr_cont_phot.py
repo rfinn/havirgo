@@ -274,11 +274,11 @@ class output_table():
         e7 = Column(np.zeros(self.ngalaxies,'f'), name='SMORPH_R50', unit='arcsec',description='R50')
         e8 = Column(np.zeros(self.ngalaxies,'f'), name='SMORPH_R80', unit='arcsec',description='R80')
         
-        e9 = Column(np.zeros(self.ngalaxies,'f'), name='SMORPH_FLUX_CIRC',description='statmorph flux circ')
+        e9 = Column(np.zeros(self.ngalaxies,'d'), name='SMORPH_FLUX_CIRC',description='statmorph flux circ')
         e10 = Column(np.zeros(self.ngalaxies,'f'), name='SMORPH_RHALF_CIRC',description='statmorph rhalf circ')        
         e11 = Column(np.zeros(self.ngalaxies,'f'), name='SMORPH_RMAX_CIRC',description='statmorph rmax circ')
         
-        e12 = Column(np.zeros(self.ngalaxies,'f'), name='SMORPH_FLUX_ELLIP', description='statmorph flux ellip')                
+        e12 = Column(np.zeros(self.ngalaxies,'d'), name='SMORPH_FLUX_ELLIP', description='statmorph flux ellip')                
         e13 = Column(np.zeros(self.ngalaxies,'f'), name='SMORPH_RHALF_ELLIP',description='statmorph rhalf ellip')        
         e14 = Column(np.zeros(self.ngalaxies,'f'), name='SMORPH_RMAX_ELLIP',description='statmorph rmax ellip')
         
@@ -289,7 +289,7 @@ class output_table():
         e19 = Column(np.zeros(self.ngalaxies,'f'), name='SMORPH_C',description='statmorph concentration')
         e20 = Column(np.zeros(self.ngalaxies,'f'), name='SMORPH_A',description='statmorph asymmetry')
         e21 = Column(np.zeros(self.ngalaxies,'f'), name='SMORPH_S',description='statmorph smoothness')
-        e22 = Column(np.zeros(self.ngalaxies,'f'), name='SMORPH_SERSIC_AMP',description='statmorph sersic amplitude')
+        e22 = Column(np.zeros(self.ngalaxies,'d'), name='SMORPH_SERSIC_AMP',description='statmorph sersic amplitude')
         e23 = Column(np.zeros(self.ngalaxies,'f'), name='SMORPH_SERSIC_RHALF',description='statmorph sersic rhalf')
         e24 = Column(np.zeros(self.ngalaxies,'f'), name='SMORPH_SERSIC_N',description='statmorph sersic n')
         e25 = Column(np.zeros(self.ngalaxies,'f'), name='SMORPH_SERSIC_XC',description='statmorph sersic xc')
@@ -297,10 +297,10 @@ class output_table():
         e27 = Column(np.zeros(self.ngalaxies,'f'), name='SMORPH_SERSIC_ELLIP',description='statmorph sersic ellip')
         e28 = Column(np.zeros(self.ngalaxies,'f'), name='SMORPH_SERSIC_THETA',description='statmorph sersic theta')
         e29 = Column(np.zeros(self.ngalaxies,'f'), name='SMORPH_SERSIC_CHISQ',description='statmorph sersic chisq dof')
-        e30 = Column(np.zeros(self.ngalaxies,'f'), name='SMORPH_SERSIC_FLAG',description='statmorph sersic flag')        
-        e31 = Column(np.zeros(self.ngalaxies,'f'), name='SMORPH_SKY_MEAN',description='statmorph sky mean')
-        e32 = Column(np.zeros(self.ngalaxies,'f'), name='SMORPH_SKY_MED',description='statmorph sky med')
-        e33 = Column(np.zeros(self.ngalaxies,'f'), name='SMORPH_SKY_STD',description='statmorph sky sigma')
+        e30 = Column(np.zeros(self.ngalaxies,'i'), name='SMORPH_SERSIC_FLAG',description='statmorph sersic flag')        
+        e31 = Column(np.zeros(self.ngalaxies,'d'), name='SMORPH_SKY_MEAN',description='statmorph sky mean')
+        e32 = Column(np.zeros(self.ngalaxies,'d'), name='SMORPH_SKY_MED',description='statmorph sky med')
+        e33 = Column(np.zeros(self.ngalaxies,'d'), name='SMORPH_SKY_STD',description='statmorph sky sigma')
         e34 = Column(np.zeros(self.ngalaxies,'f'), name='SMORPH_SNR_PIXEL',description='statmorph snr per pixes')                       
         e35 = Column(np.zeros(self.ngalaxies,'i'), name='SMORPH_FLAG',description='statmorph flag')                 
 
@@ -314,11 +314,11 @@ class output_table():
         h7 = Column(np.zeros(self.ngalaxies,'f'), name='SMORPH_HR50', unit='arcsec',description='R50')
         h8 = Column(np.zeros(self.ngalaxies,'f'), name='SMORPH_HR80', unit='arcsec',description='R80')
     
-        h9 = Column(np.zeros(self.ngalaxies,'f'), name='SMORPH_HFLUX_CIRC',description='statmorph flux circ')
+        h9 = Column(np.zeros(self.ngalaxies,'d'), name='SMORPH_HFLUX_CIRC',description='statmorph flux circ')
         h10 = Column(np.zeros(self.ngalaxies,'f'), name='SMORPH_HRHALF_CIRC',description='statmorph rhalf circ')        
         h11 = Column(np.zeros(self.ngalaxies,'f'), name='SMORPH_HRMAX_CIRC',description='statmorph rmax circ')
         
-        h12 = Column(np.zeros(self.ngalaxies,'f'), name='SMORPH_HFLUX_ELLIP', description='statmorph flux ellip')                
+        h12 = Column(np.zeros(self.ngalaxies,'d'), name='SMORPH_HFLUX_ELLIP', description='statmorph flux ellip')                
         h13 = Column(np.zeros(self.ngalaxies,'f'), name='SMORPH_HRHALF_ELLIP',description='statmorph rhalf ellip')        
         h14 = Column(np.zeros(self.ngalaxies,'f'), name='SMORPH_HRMAX_ELLIP',description='statmorph rmax ellip')
         
@@ -337,9 +337,9 @@ class output_table():
         h27 = Column(np.zeros(self.ngalaxies,'f'), name='SMORPH_HSERSIC_ELLIP',description='statmorph sersic ellip')
         h28 = Column(np.zeros(self.ngalaxies,'f'), name='SMORPH_HSERSIC_THETA',description='statmorph sersic theta')
         h29 = Column(np.zeros(self.ngalaxies,'f'), name='SMORPH_HSERSIC_CHISQ',description='statmorph sersic chisq dof')
-        h30 = Column(np.zeros(self.ngalaxies,'f'), name='SMORPH_HSERSIC_FLAG',description='statmorph sersic flag')        
-        h31 = Column(np.zeros(self.ngalaxies,'f'), name='SMORPH_HSKY_MEAN',description='statmorph sky mean')
-        h32 = Column(np.zeros(self.ngalaxies,'f'), name='SMORPH_HSKY_MED',description='statmorph sky med')
+        h30 = Column(np.zeros(self.ngalaxies,'i'), name='SMORPH_HSERSIC_FLAG',description='statmorph sersic flag')        
+        h31 = Column(np.zeros(self.ngalaxies,'d'), name='SMORPH_HSKY_MEAN',description='statmorph sky mean')
+        h32 = Column(np.zeros(self.ngalaxies,'d'), name='SMORPH_HSKY_MED',description='statmorph sky med')
         h33 = Column(np.zeros(self.ngalaxies,'f'), name='SMORPH_HSKY_STD',description='statmorph sky sigma')
         h34 = Column(np.zeros(self.ngalaxies,'f'), name='SMORPH_HSNR_PIXEL',description='statmorph snr per pixes')                      
         h35 = Column(np.zeros(self.ngalaxies,'i'), name='SMORPH_HFLAG',description='statmorph flag')                 
@@ -551,12 +551,17 @@ class output_table():
 
         
         # write these out to the main table
-        fields = ['XCENTROID','YCENTROID',\
-                  'RPETRO_CIRC','RPETRO_ELLIP','RHALF_ELLIP',\
-                  'R20','R80',\
-                  'GINI','M20','F_GM20','S_GM20',\
-                  'C','A','S','FLAG']
-        
+        fields = ['XCENTROID', 'YCENTROID', 'RPETRO_CIRC', 'RPETRO_ELLIP', \
+                      'RHALF_ELLIP', 'R20','R50','R80',\
+                      'FLUX_CIRC','RHALF_CIRC', 'RMAX_CIRC', 'FLUX_ELLIP', \
+                      'RHALF_ELLIP', 'RMAX_ELLIP', 'GINI', 'M20',\
+                      'F_GM20','S_GM20','C','A','S',\
+                      'SERSIC_AMP','SERSIC_RHALF','SERSIC_N',\
+                      'SERSIC_XC','SERSIC_YC','SERSIC_ELLIP','SERSIC_THETA',\
+                      'SERSIC_CHISQ','SERSIC_FLAG',\
+                      'SKY_MEAN','SKY_MED','SKY_STD',\
+                      'SNR_PIXEL','FLAG']
+                  
         values = [self.e.morph.xc_centroid*self.pixelscale,\
                   self.e.morph.yc_centroid*self.pixelscale,\
                   self.e.morph.rpetro_circ*self.pixelscale,\
