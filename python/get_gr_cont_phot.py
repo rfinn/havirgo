@@ -558,7 +558,8 @@ class output_table():
                       'SERSIC_AMP','SERSIC_RHALF','SERSIC_N',\
                       'SERSIC_XC','SERSIC_YC','SERSIC_ELLIP','SERSIC_THETA',\
                       #'SERSIC_CHISQ','SERSIC_FLAG',\
-                      'SKY_MEAN','SKY_MED','SKY_STD',\
+                      'SKY_MEAN',\ #'SKY_MED',
+                      'SKY_STD',\
                       'SNR_PIXEL','FLAG']
                   
         values = [self.e.morph.xc_centroid,\
@@ -591,7 +592,7 @@ class output_table():
                   #self.e.morph.sersic_chi2_dof,\
                   #self.e.morph.sersic_flag,\
                   self.e.morph.sky_mean,\
-                  self.e.morph.sky_med,\
+                  #self.e.morph.sky_med,\
                   self.e.morph.sky_std,\
                   self.e.morph.sn_per_pixel,\
                   self.e.morph.flag]
@@ -642,7 +643,7 @@ class output_table():
                   self.e.morph2.sersic_theta,\
                   #self.e.morph2.sersic_chi2_dof,\
                   #self.e.morph2.sersic_flag,\
-                  self.e.morph2.sky_mean,\
+                  #self.e.morph2.sky_mean,\
                   self.e.morph2.sky_med,\
                   self.e.morph2.sky_std,\
                   self.e.morph2.sn_per_pixel,\
