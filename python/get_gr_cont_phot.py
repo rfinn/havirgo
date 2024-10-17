@@ -557,7 +557,7 @@ class output_table():
                       'GINI', 'M20','F_GM20','S_GM20','C','A','S',\
                       'SERSIC_AMP','SERSIC_RHALF','SERSIC_N',\
                       'SERSIC_XC','SERSIC_YC','SERSIC_ELLIP','SERSIC_THETA',\
-                      'SERSIC_CHISQ','SERSIC_FLAG',\
+                      #'SERSIC_CHISQ','SERSIC_FLAG',\
                       'SKY_MEAN','SKY_MED','SKY_STD',\
                       'SNR_PIXEL','FLAG']
                   
@@ -589,7 +589,7 @@ class output_table():
                   self.e.morph.sersic_ellip,\
                   self.e.morph.sersic_theta,\
                   #self.e.morph.sersic_chi2_dof,\
-                  self.e.morph.sersic_flag,\
+                  #self.e.morph.sersic_flag,\
                   self.e.morph.sky_mean,\
                   self.e.morph.sky_med,\
                   self.e.morph.sky_std,\
@@ -641,7 +641,7 @@ class output_table():
                   self.e.morph2.sersic_ellip,\
                   self.e.morph2.sersic_theta,\
                   #self.e.morph2.sersic_chi2_dof,\
-                  self.e.morph2.sersic_flag,\
+                  #self.e.morph2.sersic_flag,\
                   self.e.morph2.sky_mean,\
                   self.e.morph2.sky_med,\
                   self.e.morph2.sky_std,\
