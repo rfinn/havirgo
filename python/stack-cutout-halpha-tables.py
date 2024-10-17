@@ -39,7 +39,8 @@ alldirlist = alldirs.readlines()
 for d in alldirlist:
     dirname = d.rstrip()
     #print(f"{dirname}/halpha-csgr-rfinn-2024-Sep-29.fits")
-    if os.path.exists(f"{dirname}/halpha-csgr-rfinn-2024-Sep-29.fits"):
+    #if os.path.exists(f"{dirname}/halpha-csgr-rfinn-2024-Sep-29.fits"):
+    if os.path.exists(f"{dirname}/halpha-csgr-rfinn-2024-Oct-17.fits"):
         continue
     else:
         print(f"Missing halpha-csgr file for {dirname}")
