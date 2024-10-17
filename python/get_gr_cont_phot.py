@@ -572,11 +572,11 @@ class output_table():
                   self.e.morph.r80*self.pixelscale,\
                   self.e.morph.flux_circ,\
                   self.e.morph.rmax_circ,\
-                  self.e.morph.rhalf_circ,\                  
+                  self.e.morph.rhalf_circ,\
                   self.e.morph.flux_ellip,\
                   self.e.morph.rmax_ellip,\
-                  self.e.morph.rhalf_ellip,\                  
-                  self.e.morph.gini,\                  
+                  self.e.morph.rhalf_ellip,\
+                  self.e.morph.gini,\
                   self.e.morph.m20,\
                   self.e.morph.gini_m20_bulge,\
                   self.e.morph.gini_m20_merger,\
@@ -625,11 +625,11 @@ class output_table():
                   self.e.morph2.r80*self.pixelscale,\
                   self.e.morph2.flux_circ,\
                   self.e.morph2.rmax_circ,\
-                  self.e.morph2.rhalf_circ,\                  
+                  self.e.morph2.rhalf_circ,\
                   self.e.morph2.flux_ellip,\
                   self.e.morph2.rmax_ellip,\
-                  self.e.morph2.rhalf_ellip,\                  
-                  self.e.morph2.gini,\                  
+                  self.e.morph2.rhalf_ellip,\
+                  self.e.morph2.gini,\
                   self.e.morph2.m20,\
                   self.e.morph2.gini_m20_bulge,\
                   self.e.morph2.gini_m20_merger,\
