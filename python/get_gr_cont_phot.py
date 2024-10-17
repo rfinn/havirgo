@@ -269,7 +269,6 @@ class output_table():
         e2 = Column(np.zeros(self.ngalaxies,'f'), name='SMORPH_YCENTROID', unit='pixel',description='ycentroid from ellipse')
         e3 = Column(np.zeros(self.ngalaxies,'f'), name='SMORPH_RPETRO_CIRC', unit='arcsec',description='rpetro circ')
         e4 = Column(np.zeros(self.ngalaxies,'f'), name='SMORPH_RPETRO_ELLIP', unit='arcsec',description='rpetro ellip')
-        e5 = Column(np.zeros(self.ngalaxies,'f'), name='SMORPH_RHALF_ELLIP', unit='arcsec',description='rhalf ellip')
         e6 = Column(np.zeros(self.ngalaxies,'f'), name='SMORPH_R20', unit='arcsec',description='R20')
         e7 = Column(np.zeros(self.ngalaxies,'f'), name='SMORPH_R50', unit='arcsec',description='R50')
         e8 = Column(np.zeros(self.ngalaxies,'f'), name='SMORPH_R80', unit='arcsec',description='R80')
@@ -309,7 +308,7 @@ class output_table():
         h2 = Column(np.zeros(self.ngalaxies,'f'), name='SMORPH_HYCENTROID', unit='pixel',description='ycentroid from ellipse')
         h3 = Column(np.zeros(self.ngalaxies,'f'), name='SMORPH_HRPETRO_CIRC', unit='arcsec',description='rpetro circ')
         h4 = Column(np.zeros(self.ngalaxies,'f'), name='SMORPH_HRPETRO_ELLIP', unit='arcsec',description='rpetro ellip')
-        h5 = Column(np.zeros(self.ngalaxies,'f'), name='SMORPH_HRHALF_ELLIP', unit='arcsec',description='rhalf ellip')
+
         h6 = Column(np.zeros(self.ngalaxies,'f'), name='SMORPH_HR20', unit='arcsec',description='R20')
         h7 = Column(np.zeros(self.ngalaxies,'f'), name='SMORPH_HR50', unit='arcsec',description='R50')
         h8 = Column(np.zeros(self.ngalaxies,'f'), name='SMORPH_HR80', unit='arcsec',description='R80')
@@ -346,11 +345,11 @@ class output_table():
         
         
         
-        self.table.add_columns([e1,e2,e3,e4,e5,e6,e7,e8,e9,e10,\
+        self.table.add_columns([e1,e2,e3,e4,e6,e7,e8,e9,e10,\
                                 e11,e12,e13,e14,e15,e16,e17,e18,e19,e20,\
                                 e21,e22,e23,e24,e25,e26,e27,e28,e29,e30,\
                                 e31,e32,e33,e34,e35,\
-                                h1,h2,h3,h4,h5,h6,h7,h8,h9,h10,\
+                                h1,h2,h3,h4,h6,h7,h8,h9,h10,\
                                 h11,h12,h13,h14,h15,h16,h17,h18,h19,h20,\
                                 h21,h22,h23,h24,h25,h26,h27,h28,h29,h30,\
                                 h31,h32,h33,h34,h35])
@@ -552,7 +551,7 @@ class output_table():
         
         # write these out to the main table
         fields = ['XCENTROID', 'YCENTROID', 'RPETRO_CIRC', 'RPETRO_ELLIP', \
-                      'RHALF_ELLIP', 'R20','R50','R80',\
+                      'R20','R50','R80',\
                       'FLUX_CIRC','RHALF_CIRC', 'RMAX_CIRC', \
                       'FLUX_ELLIP', 'RHALF_ELLIP', 'RMAX_ELLIP',\
                       'GINI', 'M20','F_GM20','S_GM20','C','A','S',\
@@ -566,16 +565,15 @@ class output_table():
                   self.e.morph.yc_centroid,\
                   self.e.morph.rpetro_circ*self.pixelscale,\
                   self.e.morph.rpetro_ellip*self.pixelscale,\
-                  self.e.morph.rhalf_ellip*self.pixelscale,\
                   self.e.morph.r20*self.pixelscale,\
                   self.e.morph.r50*self.pixelscale,\
                   self.e.morph.r80*self.pixelscale,\
                   self.e.morph.flux_circ,\
-                  self.e.morph.rmax_circ,\
-                  self.e.morph.rhalf_circ,\
+                  self.e.morph.rmax_circ*self.pixelscale,\
+                  self.e.morph.rhalf_circ*self.pixelscale,\
                   self.e.morph.flux_ellip,\
-                  self.e.morph.rmax_ellip,\
-                  self.e.morph.rhalf_ellip,\
+                  self.e.morph.rmax_ellip*self.pixelscale,\
+                  self.e.morph.rhalf_ellip*self.pixelscale,\
                   self.e.morph.gini,\
                   self.e.morph.m20,\
                   self.e.morph.gini_m20_bulge,\
@@ -584,7 +582,7 @@ class output_table():
                   self.e.morph.asymmetry,\
                   self.e.morph.smoothness,\
                   self.e.morph.sersic_amplitude,\
-                  self.e.morph.sersic_rhalf,\
+                  self.e.morph.sersic_rhalf*self.pixelscale,\
                   self.e.morph.sersic_n,\
                   self.e.morph.sersic_xc,\
                   self.e.morph.sersic_yx,\
@@ -619,16 +617,15 @@ class output_table():
                   self.e.morph2.yc_centroid,\
                   self.e.morph2.rpetro_circ*self.pixelscale,\
                   self.e.morph2.rpetro_ellip*self.pixelscale,\
-                  self.e.morph2.rhalf_ellip*self.pixelscale,\
                   self.e.morph2.r20*self.pixelscale,\
                   self.e.morph2.r50*self.pixelscale,\
                   self.e.morph2.r80*self.pixelscale,\
                   self.e.morph2.flux_circ,\
-                  self.e.morph2.rmax_circ,\
-                  self.e.morph2.rhalf_circ,\
+                  self.e.morph2.rmax_circ*self.pixelscale,\
+                  self.e.morph2.rhalf_circ*self.pixelscale,\
                   self.e.morph2.flux_ellip,\
-                  self.e.morph2.rmax_ellip,\
-                  self.e.morph2.rhalf_ellip,\
+                  self.e.morph2.rmax_ellip*self.pixelscale,\
+                  self.e.morph2.rhalf_ellip*self.pixelscale,\ 
                   self.e.morph2.gini,\
                   self.e.morph2.m20,\
                   self.e.morph2.gini_m20_bulge,\
@@ -637,7 +634,7 @@ class output_table():
                   self.e.morph2.asymmetry,\
                   self.e.morph2.smoothness,\
                   self.e.morph2.sersic_amplitude,\
-                  self.e.morph2.sersic_rhalf,\
+                  self.e.morph2.sersic_rhalf*self.pixelscale,\
                   self.e.morph2.sersic_n,\
                   self.e.morph2.sersic_xc,\
                   self.e.morph2.sersic_yx,\
