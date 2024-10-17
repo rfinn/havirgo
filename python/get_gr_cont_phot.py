@@ -644,8 +644,8 @@ class output_table():
                   self.e.morph2.sersic_theta,\
                   #self.e.morph2.sersic_chi2_dof,\
                   #self.e.morph2.sersic_flag,\
-                  #self.e.morph2.sky_mean,\
-                  self.e.morph2.sky_med,\
+                  self.e.morph2.sky_mean,\
+                  #self.e.morph2.sky_med,\
                   #self.e.morph2.sky_std,\
                   self.e.morph2.sn_per_pixel,\
                   self.e.morph2.flag]
