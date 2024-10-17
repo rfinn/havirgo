@@ -585,7 +585,7 @@ class output_table():
                   self.e.morph.sersic_rhalf*self.pixelscale,\
                   self.e.morph.sersic_n,\
                   self.e.morph.sersic_xc,\
-                  self.e.morph.sersic_yx,\
+                  self.e.morph.sersic_yc,\
                   self.e.morph.sersic_ellip,\
                   self.e.morph.sersic_theta,\
                   self.e.morph.sersic_chi2_dof,\
@@ -637,7 +637,7 @@ class output_table():
                   self.e.morph2.sersic_rhalf*self.pixelscale,\
                   self.e.morph2.sersic_n,\
                   self.e.morph2.sersic_xc,\
-                  self.e.morph2.sersic_yx,\
+                  self.e.morph2.sersic_yc,\
                   self.e.morph2.sersic_ellip,\
                   self.e.morph2.sersic_theta,\
                   self.e.morph2.sersic_chi2_dof,\
