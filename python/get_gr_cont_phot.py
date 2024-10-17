@@ -553,29 +553,49 @@ class output_table():
         # write these out to the main table
         fields = ['XCENTROID', 'YCENTROID', 'RPETRO_CIRC', 'RPETRO_ELLIP', \
                       'RHALF_ELLIP', 'R20','R50','R80',\
-                      'FLUX_CIRC','RHALF_CIRC', 'RMAX_CIRC', 'FLUX_ELLIP', \
-                      'RHALF_ELLIP', 'RMAX_ELLIP', 'GINI', 'M20',\
-                      'F_GM20','S_GM20','C','A','S',\
+                      'FLUX_CIRC','RHALF_CIRC', 'RMAX_CIRC', \
+                      'FLUX_ELLIP', 'RHALF_ELLIP', 'RMAX_ELLIP',\
+                      'GINI', 'M20','F_GM20','S_GM20','C','A','S',\
                       'SERSIC_AMP','SERSIC_RHALF','SERSIC_N',\
                       'SERSIC_XC','SERSIC_YC','SERSIC_ELLIP','SERSIC_THETA',\
                       'SERSIC_CHISQ','SERSIC_FLAG',\
                       'SKY_MEAN','SKY_MED','SKY_STD',\
                       'SNR_PIXEL','FLAG']
                   
-        values = [self.e.morph.xc_centroid*self.pixelscale,\
-                  self.e.morph.yc_centroid*self.pixelscale,\
+        values = [self.e.morph.xc_centroid,\
+                  self.e.morph.yc_centroid,\
                   self.e.morph.rpetro_circ*self.pixelscale,\
                   self.e.morph.rpetro_ellip*self.pixelscale,\
                   self.e.morph.rhalf_ellip*self.pixelscale,\
                   self.e.morph.r20*self.pixelscale,\
-                  self.e.morph.r80*self.pixelscale,\
-                  self.e.morph.gini,\
+                  self.e.morph.r50*self.pixelscale,\
+                  self.e.morph.r80*self.pixelscale,\                  
+                  self.e.morph.flux_circ,\
+                  self.e.morph.rmax_circ,\
+                  self.e.morph.rhalf_circ,\                  
+                  self.e.morph.flux_ellip,\
+                  self.e.morph.rmax_ellip,\
+                  self.e.morph.rhalf_ellip,\                  
+                  self.e.morph.gini,\                  
                   self.e.morph.m20,\
                   self.e.morph.gini_m20_bulge,\
                   self.e.morph.gini_m20_merger,\
                   self.e.morph.concentration,\
                   self.e.morph.asymmetry,\
                   self.e.morph.smoothness,\
+                  self.e.morph.sersic_amplitude,\
+                  self.e.morph.sersic_rhalf,\
+                  self.e.morph.sersic_n,\
+                  self.e.morph.sersic_xc,\
+                  self.e.morph.sersic_yx,\
+                  self.e.morph.sersic_ellip,\
+                  self.e.morph.sersic_theta,\
+                  self.e.morph.sersic_chi2_dof,\
+                  self.e.morph.sersic_flag,\
+                  self.e.morph.sky_mean,\
+                  self.e.morph.sky_med,\
+                  self.e.morph.sky_std,\
+                  self.e.morph.sn_per_pixel,\
                   self.e.morph.flag]
                   
         for i,f in enumerate(fields):
@@ -594,20 +614,41 @@ class output_table():
                 sys.exit()
 
         ## Add Halpha values
+                  
         values = [self.e.morph2.xc_centroid,\
                   self.e.morph2.yc_centroid,\
                   self.e.morph2.rpetro_circ*self.pixelscale,\
                   self.e.morph2.rpetro_ellip*self.pixelscale,\
                   self.e.morph2.rhalf_ellip*self.pixelscale,\
                   self.e.morph2.r20*self.pixelscale,\
-                  self.e.morph2.r80*self.pixelscale,\
-                  self.e.morph2.gini,\
+                  self.e.morph2.r50*self.pixelscale,\
+                  self.e.morph2.r80*self.pixelscale,\                  
+                  self.e.morph2.flux_circ,\
+                  self.e.morph2.rmax_circ,\
+                  self.e.morph2.rhalf_circ,\                  
+                  self.e.morph2.flux_ellip,\
+                  self.e.morph2.rmax_ellip,\
+                  self.e.morph2.rhalf_ellip,\                  
+                  self.e.morph2.gini,\                  
                   self.e.morph2.m20,\
                   self.e.morph2.gini_m20_bulge,\
                   self.e.morph2.gini_m20_merger,\
-                  self.e.morph2.concentration,
-                  self.e.morph2.asymmetry,
+                  self.e.morph2.concentration,\
+                  self.e.morph2.asymmetry,\
                   self.e.morph2.smoothness,\
+                  self.e.morph2.sersic_amplitude,\
+                  self.e.morph2.sersic_rhalf,\
+                  self.e.morph2.sersic_n,\
+                  self.e.morph2.sersic_xc,\
+                  self.e.morph2.sersic_yx,\
+                  self.e.morph2.sersic_ellip,\
+                  self.e.morph2.sersic_theta,\
+                  self.e.morph2.sersic_chi2_dof,\
+                  self.e.morph2.sersic_flag,\
+                  self.e.morph2.sky_mean,\
+                  self.e.morph2.sky_med,\
+                  self.e.morph2.sky_std,\
+                  self.e.morph2.sn_per_pixel,\
                   self.e.morph2.flag]
                   
         for i,f in enumerate(fields):
