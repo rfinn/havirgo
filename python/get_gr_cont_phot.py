@@ -588,7 +588,7 @@ class output_table():
                   self.e.morph.sersic_yc,\
                   self.e.morph.sersic_ellip,\
                   self.e.morph.sersic_theta,\
-                  self.e.morph.sersic_chi2_dof,\
+                  #self.e.morph.sersic_chi2_dof,\
                   self.e.morph.sersic_flag,\
                   self.e.morph.sky_mean,\
                   self.e.morph.sky_med,\
@@ -640,7 +640,7 @@ class output_table():
                   self.e.morph2.sersic_yc,\
                   self.e.morph2.sersic_ellip,\
                   self.e.morph2.sersic_theta,\
-                  self.e.morph2.sersic_chi2_dof,\
+                  #self.e.morph2.sersic_chi2_dof,\
                   self.e.morph2.sersic_flag,\
                   self.e.morph2.sky_mean,\
                   self.e.morph2.sky_med,\
