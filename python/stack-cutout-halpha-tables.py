@@ -46,7 +46,7 @@ for d in alldirlist:
         print(f"Missing halpha-csgr file for {dirname}")
 
 # now gather list of phot output
-flist = glob.glob("VFID*/halpha-csgr-rfinn*.fits")
+flist = glob.glob("VFID*/halpha-csgr-rfinn-2024-Oct-17.fits")
 flist.sort()
 print(f"Found {len(flist)} files to stack")
 print()
