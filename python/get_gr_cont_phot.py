@@ -558,7 +558,8 @@ class output_table():
                       'SERSIC_AMP','SERSIC_RHALF','SERSIC_N',\
                       'SERSIC_XC','SERSIC_YC','SERSIC_ELLIP','SERSIC_THETA',\
                       #'SERSIC_CHISQ','SERSIC_FLAG',\
-                      'SKY_MEAN',\ #'SKY_MED',
+                      'SKY_MEAN',\
+                      #'SKY_MED',\
                       'SKY_STD',\
                       'SNR_PIXEL','FLAG']
                   
