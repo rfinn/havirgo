@@ -569,7 +569,7 @@ class output_table():
                   self.e.morph.rhalf_ellip*self.pixelscale,\
                   self.e.morph.r20*self.pixelscale,\
                   self.e.morph.r50*self.pixelscale,\
-                  self.e.morph.r80*self.pixelscale,\                  
+                  self.e.morph.r80*self.pixelscale,\
                   self.e.morph.flux_circ,\
                   self.e.morph.rmax_circ,\
                   self.e.morph.rhalf_circ,\                  
@@ -622,7 +622,7 @@ class output_table():
                   self.e.morph2.rhalf_ellip*self.pixelscale,\
                   self.e.morph2.r20*self.pixelscale,\
                   self.e.morph2.r50*self.pixelscale,\
-                  self.e.morph2.r80*self.pixelscale,\                  
+                  self.e.morph2.r80*self.pixelscale,\
                   self.e.morph2.flux_circ,\
                   self.e.morph2.rmax_circ,\
                   self.e.morph2.rhalf_circ,\                  
