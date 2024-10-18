@@ -2,7 +2,7 @@
 
 from astropy.io import fits
 from matplotlib import pyplot as plt
-from astropy.table import Table, column
+from astropy.table import Table, Column
 import os
 import numpy as np
 from scipy.stats import median_abs_deviation as MAD
@@ -29,7 +29,7 @@ def pairplot_linear(tab,cols,dupindex1,dupindex2,colorcolumn='M24',remove_string
         x2 = tab[c][dupindex2]
         dx = x2 - x1
         colorcolumn = colorcolumn
-        mycolor = tab[colorcolumn][dupindex1]
+        mycolor = 0.5*(tab[colorcolumn][dupindex1] +tab[colorcolumn][dupindex2])
         plt.scatter(x1,x2,c=mycolor,s=20,alpha=.7)#,vmin=1,vmax=1.3)
 
         xmin,xmax = plt.xlim()
@@ -58,7 +58,7 @@ def pairplot_linear(tab,cols,dupindex1,dupindex2,colorcolumn='M24',remove_string
     #plt.show()
 
 
-def pairplot_residuals(tab,cols,dupindex1,dupindex2,colorcolumn='M24'):
+def pairplot_residuals(tab,cols,dupindex1,dupindex2,colorcolumn='M24',remove_string=None):
     plt.figure(figsize=(10,10))
     plt.subplots_adjust(hspace=.5,wspace=.35)
 
@@ -77,15 +77,23 @@ def pairplot_residuals(tab,cols,dupindex1,dupindex2,colorcolumn='M24'):
 
         plt.axhline(y=0,color='k',ls='--')        
         #plt.title(c)
-        plt.title(f"{c} ({npair})")
+        if remove_string is not None:
+            ctitle = c.replace(remove_string,'')
+        else:
+            ctitle = c
+        plt.title(f"{ctitle} ({npair})")
+        
         allax.append(plt.gca())
         med = np.nanmedian(dx)
         mad =MAD(dx)
-        #mad = np.nanstd(dx)
+        #mad = np.std(dx)
+        mad = np.nanstd(dx)
         if nplot == 5:
-            plt.text(0.05,0.95,f"MED/MAD =\n {med:.2e},{mad:.2e}",transform=plt.gca().transAxes,horizontalalignment="left",verticalalignment='top',fontsize=10)
+            #plt.text(0.05,0.95,f"MED/MAD =\n {med:.2e},{mad:.2e}",transform=plt.gca().transAxes,horizontalalignment="left",verticalalignment='top',fontsize=10)
+            plt.text(0.05,0.95,f"MED/STD =\n {med:.2e},{mad:.2e}",transform=plt.gca().transAxes,horizontalalignment="left",verticalalignment='top',fontsize=10)
         else:
-            plt.text(0.05,0.95,f"MED/MAD =\n {med:.2f},{mad:.2f}",transform=plt.gca().transAxes,horizontalalignment="left",verticalalignment='top',fontsize=10)
+            #plt.text(0.05,0.95,f"MED/MAD =\n {med:.2f},{mad:.2f}",transform=plt.gca().transAxes,horizontalalignment="left",verticalalignment='top',fontsize=10)
+            plt.text(0.05,0.95,f"MED/STD =\n {med:.2f},{mad:.2f}",transform=plt.gca().transAxes,horizontalalignment="left",verticalalignment='top',fontsize=10)            
         #print(f"number of pairs = {npair}")
         plt.axhline(y=mad,color='k',ls=':')
         plt.axhline(y=-mad,color='k',ls=':')        
@@ -116,7 +124,11 @@ class duplicates():
         # read in spreadsheet with ratios and list of galaxies to exclude
         self.gspread = Table.read(googlesheet)
 
-        
+        tel_int = 1*(self.fulltab['TEL'] == 'BOK') + \
+          2*(self.fulltab['TEL'] == 'HDI') + \
+          3*(self.fulltab['TEL'] == 'INT') + \
+          4*(self.fulltab['TEL'] == 'MOS') 
+        self.fulltab.add_column(Column(tel_int,name='TELNUM'))
     def get_sample(self):
         print("number of galaxies observed in halpha = ",len(self.fulltab))
         self.htab = self.fulltab[~self.fulltab['badflag']]
@@ -230,8 +242,11 @@ class duplicates():
                     'SMORPH_RHALF_ELLIP','SMORPH_R20','SMORPH_R80','SMORPH_GINI',\
                     'SMORPH_M20','SMORPH_F_GM20','SMORPH_S_GM20','SMORPH_C',\
                     'SMORPH_A','SMORPH_S']
-        flag = self.htab['SMORPH_FLAG'] & (self.htab['SMORPH_XCENTROID'] > 0) \
+        flag =  (self.htab['SMORPH_XCENTROID'] > 0) \
           & (self.htab['SMORPH_S'] > -.5) & (self.htab['SMORPH_A'] > -.5) \
+          & (self.htab['SMORPH_FLAG'] < 2)
+
+        #flag =  (self.htab['SMORPH_FLAG'] < 1)
 
             
           
@@ -243,15 +258,17 @@ class duplicates():
         plt.subplots_adjust(hspace=.5,wspace=.35)
 
         pairplot_linear(self.htab,cols,dupindex1,dupindex2,colorcolumn='M24',remove_string='SMORPH_')
-        
+        pairplot_residuals(self.htab,cols,dupindex1,dupindex2,colorcolumn='M24',remove_string='SMORPH_H')                
     def plot_hstatmorph(self):
         cols = ['SMORPH_HXCENTROID','SMORPH_HYCENTROID','SMORPH_HRPETRO_CIRC','SMORPH_HRPETRO_ELLIP',\
-                    'SMORPH_HRHALF_ELLIP','SMORPH_HR20','SMORPH_HR80','SMORPH_HGINI',\
+                    'SMORPH_HRHALF_ELLIP','SMORPH_HR20','SMORPH_HR50','SMORPH_HR80','SMORPH_HGINI',\
                     'SMORPH_HM20','SMORPH_HF_GM20','SMORPH_HS_GM20','SMORPH_HC',\
                     'SMORPH_HA','SMORPH_HS']
-        flag = self.htab['SMORPH_HFLAG'] & (self.htab['SMORPH_HXCENTROID'] > 0) \
-          & (self.htab['SMORPH_HS'] > -.5) & (self.htab['SMORPH_HA'] > -.5) \
-          &  (self.htab['SMORPH_HM20'] > -50) #& (self.htab['M24'] > 10)
+        flag = (self.htab['SMORPH_HXCENTROID'] > 0) & (self.htab['SMORPH_HFLAG'] < 3)\
+          &  (self.htab['SMORPH_HM20'] > -50) & (self.htab['SMORPH_HS'] > -.5) & (self.htab['SMORPH_HA'] > -1)
+          #& (self.htab['SMORPH_HFLUX_ELLIP'] < 100000)
+          
+          #&  ##& (self.htab['M24'] > 10)
         
         keepflag = flag[self.dupindex1] & flag[self.dupindex2]
         dupindex1 = self.dupindex1[keepflag]
@@ -260,6 +277,7 @@ class duplicates():
         plt.subplots_adjust(hspace=.5,wspace=.35)
 
         pairplot_linear(self.htab,cols,dupindex1,dupindex2,colorcolumn='M24',remove_string='SMORPH_H')
+        pairplot_residuals(self.htab,cols,dupindex1,dupindex2,colorcolumn='TELNUM',remove_string='SMORPH_H')        
         plt.show()        
         
         
@@ -285,7 +303,8 @@ if __name__ == '__main__':
 
 
     tabledir = homedir+"/research/Virgo/halpha-tables/"
-    hafilename = os.path.join(tabledir,"hgui_csgrphot_combined.fits")
+    #hafilename = os.path.join(tabledir,"hgui_csgrphot_combined.fits")
+    hafilename = os.path.join(tabledir,"hgui_csgrphot_combined_2024-Oct-17.fits")    
     googlesheet = tabledir+'hagalaxies-including-duplicates.csv'
     d = duplicates(hafilename,googlesheet,v)
     d.get_sample()
