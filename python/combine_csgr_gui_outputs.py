@@ -527,6 +527,18 @@ hgui = hgui[sorted_indices]
 
 
 ###########################################################
+# add a column with index in the full vf_v2 tables
+###########################################################
+
+fullvfid = np.zeros(len(hgui),'i')
+for i in range(len(hgui)):
+    fullvfid[i] = int(hgui['VFID'][i].replace('VFID',''))
+
+c = Column(fullvfid,name='VFINDEX',description='row in vf_v2 catalogs')
+hgui.add_column(c)
+
+
+###########################################################
 # write out resulting merged table
 ###########################################################
 

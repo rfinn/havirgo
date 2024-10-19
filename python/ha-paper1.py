@@ -45,6 +45,7 @@ def scatter_hist(x, y, ax, ax_histx, ax_histy,nbins=20,alpha=1):
 
 
 class haplots(vtables):
+    
     def get_sample_flag(self):
         # SNR in halpha
         snr_flag = np.abs(self.halpha['HF_TOT']/self.halpha['HF_TOT_ERR']) > 3
