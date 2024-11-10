@@ -78,7 +78,7 @@ def pairplot_residuals(tab,cols,dupindex1,dupindex2,colorcolumn='M24',remove_str
         dx = x2 - x1
         colorcolumn = colorcolumn
         mycolor = tab[colorcolumn][dupindex1]
-        mycolor = np.abs(tab[colorcolumn][dupindex1] + tab[colorcolumn][dupindex2])
+        mycolor = np.abs(tab[colorcolumn][dupindex1] - tab[colorcolumn][dupindex2])
         if (v1 is not None) and (v2 is not None):
             plt.scatter(x1,dx,c=mycolor,s=20,alpha=.7,vmin=v1,vmax=v2)#,vmin=1,vmax=1.3)
         else:
@@ -96,20 +96,20 @@ def pairplot_residuals(tab,cols,dupindex1,dupindex2,colorcolumn='M24',remove_str
         med = np.nanmedian(dx)
         mad =MAD(dx)
         #mad = np.std(dx)
-        mad = np.nanstd(dx)
+        #mad = np.nanstd(dx)
         if nplot == 5:
             #plt.text(0.05,0.95,f"MED/MAD =\n {med:.2e},{mad:.2e}",transform=plt.gca().transAxes,horizontalalignment="left",verticalalignment='top',fontsize=10)
-            plt.text(0.05,0.95,f"MED/STD =\n {med:.2e},{mad:.2e}",transform=plt.gca().transAxes,horizontalalignment="left",verticalalignment='top',fontsize=10)
+            plt.text(0.05,0.95,f"MED/MAD =\n {med:.2e},{mad:.2e}",transform=plt.gca().transAxes,horizontalalignment="left",verticalalignment='top',fontsize=10)
         else:
             #plt.text(0.05,0.95,f"MED/MAD =\n {med:.2f},{mad:.2f}",transform=plt.gca().transAxes,horizontalalignment="left",verticalalignment='top',fontsize=10)
-            plt.text(0.05,0.95,f"MED/STD =\n {med:.2f},{mad:.2f}",transform=plt.gca().transAxes,horizontalalignment="left",verticalalignment='top',fontsize=10)            
+            plt.text(0.05,0.95,f"MED/MAD =\n {med:.2f},{mad:.2f}",transform=plt.gca().transAxes,horizontalalignment="left",verticalalignment='top',fontsize=10)            
         #print(f"number of pairs = {npair}")
         plt.axhline(y=mad,color='k',ls=':')
         plt.axhline(y=-mad,color='k',ls=':')        
 
         nplot += 1
     cb = plt.colorbar(ax=allax, fraction=0.08)
-    cb.set_label('$\Sigma$'+colorcolumn,fontsize=16)        
+    cb.set_label('$\Delta$'+colorcolumn,fontsize=16)        
     #plt.show()
     
 class duplicates():
@@ -266,9 +266,9 @@ class duplicates():
         dupindex2 = self.dupindex2[keepflag]
         plt.figure(figsize=(10,10))
         plt.subplots_adjust(hspace=.5,wspace=.35)
-
+        pairplot_residuals(self.htab,cols,dupindex1,dupindex2,colorcolumn='R_FWHM',remove_string='SMORPH_') 
         pairplot_linear(self.htab,cols,dupindex1,dupindex2,colorcolumn='R_FWHM',remove_string='SMORPH_')
-        pairplot_residuals(self.htab,cols,dupindex1,dupindex2,colorcolumn='R_FWHM',remove_string='SMORPH_')                
+
     def plot_hstatmorph(self,hsmorphmaxflag=2,remove_tel=None,keep_tel=None):
         cols = ['SMORPH_HXCENTROID','SMORPH_HYCENTROID','SMORPH_HRPETRO_CIRC','SMORPH_HRPETRO_ELLIP',\
                     'SMORPH_HRHALF_ELLIP','SMORPH_HR20','SMORPH_HR50','SMORPH_HR80','SMORPH_HGINI',\
@@ -297,7 +297,7 @@ class duplicates():
         pairplot_residuals(self.htab,cols,dupindex1,dupindex2,colorcolumn=color,remove_string='SMORPH_',v1=0,v2=4)        
         plt.show()
 
-    def get_smorph_flag(self,hsmorphmaxflag=2,rsmorphmaxflag=2):
+    def get_smorph_flag(self,hsmorphmaxflag=3,rsmorphmaxflag=2):
         hflag = (self.htab['SMORPH_HXCENTROID'] > 0) \
           & (self.htab['SMORPH_HFLAG'] < hsmorphmaxflag)\
           &  (self.htab['SMORPH_HM20'] > -50) \
@@ -314,35 +314,45 @@ class duplicates():
         self.smorphflag = flag
 
     def compare_ratios(self,hsmorphmaxflag=2,rsmorphmaxflag=2):
+        """compare the r vs halpha parameters for galaxies that meet both r and halpha smorph flag """
         cols = ['R50','RHALF_ELLIP','RHALF_CIRC',\
                     'R80','RMAX_ELLIP','RMAX_CIRC',\
+                    'FLUX_ELLIP','FLUX_CIRC',\
+                    'GINI','M20','C','A','S']
+
+        cols = ['R20','R50','R80','RMAX_ELLIP',\
                     'FLUX_ELLIP','FLUX_CIRC',\
                     'GINI','M20','C','A','S']
 
         self.get_smorph_flag(hsmorphmaxflag=hsmorphmaxflag,rsmorphmaxflag=rsmorphmaxflag)
 
         flag = self.smorphflag 
-        keepflag = flag[self.dupindex1] & flag[self.dupindex2]
-        dupindex1 = self.dupindex1[keepflag]
-        dupindex2 = self.dupindex2[keepflag]
 
-        print(f"\nNumber that meet r and halpha SMORPH flags = {len(dupindex1)}")        
+
+        #print(f"\nNumber that meet r and halpha SMORPH flags = {len(dupindex1)}")        
         
         tab = self.htab#[keepflag]
 
         
-        plt.figure(figsize=(10,10))
+        plt.figure(figsize=(10,8))
         plt.subplots_adjust(hspace=.5,wspace=.35)
 
         nplot = 1
         allax = []
         colorcolumn = 'M24'
-        npair = np.sum(keepflag)
-        mycolor = tab[colorcolumn]
-        v1 = None
+
+        mycolor = self.htab['SMORPH_HFLAG'] + self.htab['SMORPH_FLAG']
+        mycolor = self.htab['M24'] 
+
+        npair = np.sum(flag)
+        print("number that meet halpha and r smorph flag = ",npair)
+
+        v1 = 10
+        v2=18
         remove_string='SMORPH_'
+        #v1=None
         for c in cols:
-            plt.subplot(4,4,nplot)
+            plt.subplot(3,4,nplot)
             hc = 'SMORPH_H'+c
             rc = 'SMORPH_'+c
             if remove_string is not None:
@@ -350,22 +360,22 @@ class duplicates():
             else:
                 ctitle = c
                 
-            if c.startswith('R') or c.startswith('FLUX'):
+            if c.startswith('FLUX'):
+                x1 = np.log10(tab[rc][flag])
+                x2 = np.log10(tab[hc][flag])
                 
-                x1 = tab[hc][dupindex1]/tab[rc][dupindex1]
-                x2 = tab[hc][dupindex2]/tab[rc][dupindex2]
-                mytitle = f"{ctitle} H/R ({npair})"
             else: # take difference
-                x1 = tab[hc][dupindex1]-tab[rc][dupindex1]
-                x2 = tab[hc][dupindex2]-tab[rc][dupindex2]
-                mytitle = f"{ctitle} H-R ({npair})"
+                x1 = tab[rc][flag]
+                x2 = tab[hc][flag]
+                
+            mytitle = f"{ctitle} ({npair})"
             dx = x2 - x1
-            colorcolumn = colorcolumn
-            mycolor = 0.5*(tab[colorcolumn][dupindex1] + tab[colorcolumn][dupindex2])
+            #mycolor = 0.5*(tab[colorcolumn][dupindex1] + tab[colorcolumn][dupindex2])
+            ccolor = mycolor[flag]
             if v1 is not None:
-                plt.scatter(x1,x2,c=mycolor,s=20,alpha=.7,vmin=v1,vmax=v2)
+                plt.scatter(x1,x2,c=ccolor,s=20,alpha=.7,vmin=v1,vmax=v2)
             else:
-                plt.scatter(x1,x2,c=mycolor,s=20,alpha=.7)#,vmin=1,vmax=1.3)
+                plt.scatter(x1,x2,c=ccolor,s=20,alpha=.7)#,vmin=1,vmax=1.3)
 
             xmin,xmax = plt.xlim()
             xline = np.linspace(xmin,xmax,100)
@@ -384,6 +394,17 @@ class duplicates():
 
             plt.plot(xline,xline+mad,'k:')
             plt.plot(xline,xline-mad,'k:')
+
+            #if c.startswith('R'):
+            #   plt.gca().set_xscale('log')
+            #   plt.gca().set_yscale('log')
+            #if c.startswith('FLUX'):
+            #   plt.gca().set_xscale('log')
+            #   plt.gca().set_yscale('log')                   
+            if nplot in [1,5,9]:
+                plt.ylabel('Halpha',fontsize=16)
+            if nplot > 8:
+                plt.xlabel("R-band",fontsize=16)
             nplot += 1
         cb = plt.colorbar(ax=allax, fraction=0.08)
         cb.set_label(colorcolumn,fontsize=16)        
@@ -432,7 +453,7 @@ class duplicates():
             matchrows = ftab['VFID'] == vfid
             matchindex = np.arange(len(ftab))[matchrows]
             print()
-            print(vfid, np.sum(matchrows)
+            print(vfid, np.sum(matchrows))
             print()
             rflags = []
             hflags = []
