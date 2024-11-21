@@ -394,6 +394,8 @@ def plot_CO_contours(ax,COfilename,mask=None,xmin=None,xmax=None,ymin=None,ymax=
     #print(CO_WCS)
     ncontour = np.array([0,1,2.25,3.5,4])
     ncontour = np.array([0,1,2.25,3.5,4])
+
+
     if levels is None:
         #levels = 3**np.arange(ncontour+1)+1
         levels = np.linspace(.1,1.4,3)
@@ -406,13 +408,42 @@ def plot_CO_contours(ax,COfilename,mask=None,xmin=None,xmax=None,ymin=None,ymax=
         # read in the mask data
         dat = fits.getdata(mask)
 
-        # gianluca has an image with good values are 1
+        # gianluca
+
+        #has an image with good values are 1
         # and bad values are nan
         
         # create a masked array
         codata = codata * dat
     ax.contour(codata,transform=ax.get_transform(CO_WCS),slices=('x', 'y', 1),levels=levels,colors=color,alpha=.7,lw=1)
 
+
+def plot_CO_image(ax,COfilename,mask=None,xmin=None,xmax=None,ymin=None,ymax=None,levels=None,color='white',addbeam=False,ncontour=3):
+    """ plot CO contours, given current axis + reference image header """
+    # borrowing from alma 2023 proposal
+    #ncontour=3
+    
+    #hdu = fits.open(COfilename)
+    codata, coheader = convert_alma3d_alma2d(COfilename)
+    #print(coheader)
+    CO_WCS = WCS(coheader)
+    #ncontour = np.array([1,4,15,29])
+    #ncontour
+    #print(CO_WCS)
+
+    if mask is not None:
+        print()
+        print("FYI: using a mask for CO data")
+        # read in the mask data
+        dat = fits.getdata(mask)
+
+        # gianluca has an image with good values are 1
+        # and bad values are nan
+        
+        # create a masked array
+        codata = codata * dat
+    ax.imshow(codata,transform=ax.get_transform(CO_WCS))
+    
 
 def plot_INT_footprint(center_ra,center_dec,plotguide=False):
     #using full detector sizes for now because 
@@ -458,8 +489,10 @@ def plot_sfr_contours(dirname,ax,legwcs=None,xmin=None,xmax=None,ymin=None,ymax=
     hdu = fits.open(sfrim)[0]
     
     mask = topdir+dirname+'-R-mask.fits'
-    maskdat = fits.getdata(mask)
-
+    if mask is not None:
+        maskdat = fits.getdata(mask)
+    else:
+        maskdat = np.zeros_like(hdu.data,'i')
     if dirname.find('5889') > -1:
         maskdat[0:600,:]= 1
     mdat = np.ma.array(hdu.data,mask=maskdat)
@@ -1055,7 +1088,7 @@ def display_image(image,percent=99.9,lowrange=False,mask=None,sigclip=True,cmap=
     #plt.imshow(image, cmap='gray_r',vmin=v1,vmax=v2,origin='lower')    
 
 def plot_mstar_sfr(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xticks=True,figsize=[16,6],cbfrac=.08,cbaspect=20,\
-                   clevels=[4],contourFlag=True,zoomflag=True):
+                   clevels=[4],contourFlag=True,zoomflag=True,COlevels=None):
     #%matplotlib inline
     os.chdir(homedir+'/research/Virgo-dev/cont-sub-gr')
     # add scale factor for continuue after the directory name
@@ -1566,7 +1599,7 @@ def plot_mstar_sfr_profiles(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xtic
 
 def plot_mstar_sfr_CO(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xticks=True,figsize=[16,6],\
                             cbfrac=.08,cbaspect=20,clevels=[4],contourFlag=True,rmax=None,\
-                            logMstar=None,cmap='magma_r',markGroupCenter=False,COcolor='white'):
+                            logMstar=None,cmap='magma_r',markGroupCenter=False,COcolor='white',COlevels=None):
     """
     same plot as mstar_sfr, but swap out ssfr for radial profiles in the 4th panel
 
@@ -1703,10 +1736,10 @@ def plot_mstar_sfr_CO(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xticks=Tru
             # check if HI moment zero map is available
             COfilename = CO_file[vfid]
             COmask_filename = CO_mask[vfid]
-            if COfilename is not None:
-                print("COfilename = ",COfilename)
+            #if COmask_filename is not None:
+            #print("COfilename = ",COfilename)
 
-                plot_CO_contours(ax2,COfilename,color=COcolor,mask=COmask_filename)
+            plot_CO_contours(ax2,COfilename,color=COcolor,mask=COmask_filename,levels=COlevels)
                 #if vfid == 'VFID5859':
                 #    plot_HI_beam(ax2,HIfilename,hdu.header,color='steelblue',expandBox=True)
                 #else:
@@ -1727,6 +1760,314 @@ def plot_mstar_sfr_CO(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xticks=Tru
 
 
         if xmin is not None:
+            plt.axis([xmin,xmax,ymin,ymax])
+        if i in [0,1]:
+            plt.xticks([],[])
+            plt.yticks([],[])
+
+        elif not xticks: 
+            plt.xticks([],[])
+            plt.yticks([],[])
+        
+        allax.append(plt.gca())
+
+        #if i in [1,2]:
+        cbaxes = inset_axes(ax2, width="80%", height="3%", loc=8) 
+        cb = plt.colorbar(cax=cbaxes, orientation='horizontal')
+        cb.set_label(label=cblabels[i],fontsize=12)
+
+    
+    # read in header from legacy r-band image
+    legacyr = glob.glob("legacy/*r.fits")[0]
+    #print(legacyr)
+    legacy_jpg = legacyr.replace('-r.fits','.jpg')
+    jpeg_data = Image.open(legacy_jpg)
+    legwcs = WCS(fits.getheader(legacyr))
+    # plot jpg as projection of legacy r-band
+
+    
+    ax1 = plt.subplot(1,4,1,projection=legwcs)
+    plt.imshow(jpeg_data)
+
+    #ax1.set_xlabel("RA",fontsize=16)
+    #ax1.set_ylabel("DEC",fontsize=16)    
+
+    if xmin is not None:
+        # plot the legacy image in panel 1
+        xcoords = np.array([xmin,xmax])
+        ycoords = np.array([ymin,ymax])
+    
+        # get ramin,ramax and decmin,decmax from SFR image
+        sfrim = dirname+"-sfr-vr.fits"
+        header = fits.getheader(sfrim)
+        #print(header)
+        wcs = WCS(header)
+        sky = wcs.pixel_to_world(xcoords,ycoords)
+    
+        # set limits in ra,dec
+        x,y = legwcs.world_to_pixel(sky)
+        # convert ramin,ramax and decmin,decmax to (x,y)
+        #print(sky)
+        plt.axis([x[0],x[1],y[0],y[1]])
+    t = dirname.split('-')
+    #plt.text(.05,.02,t[0],fontsize=20,transform=plt.gca().transAxes,horizontalalignment='left',color='white')
+    
+
+    plt.title(f"{t[0]} Legacy grz",fontsize=18)
+
+    #############################################################
+    # add arrow showing direction to group center
+    # TODO : figure out how to make this smaller in smaller images
+    #############################################################
+    print("VFID = ",vfid)
+
+    if (vfid == 'VFID5855') | (vfid == 'VFID5859'):
+        print('hi')
+        # get coords of galaxy
+        vflag = v.main['VFID'] == vfid
+        print(np.sum(vflag))
+        x = v.main['RA'][vflag][0]
+        y = v.main['DEC'][vflag][0]      
+        dRA = v.mw_RAcenter - x
+        dDEC = v.mw_DECcenter - y        
+        norm = np.sqrt(dRA**2+dDEC**2)
+
+        if  (vfid == 'VFID5855'):
+            scale = 0.02
+            mylw = 0.05
+            dx = dRA/norm*scale
+            dy = dDEC/norm*scale
+
+            plt.arrow(x,y,dx,dy,color='c',transform=ax1.get_transform('world'),lw=mylw,alpha=.7)
+        elif (vfid == 'VFID5859'):
+            scale = 0.0025
+            mylw=.5
+            dx = dRA/norm*scale
+            dy = dDEC/norm*scale
+            width=.001
+            plt.arrow(x,y,dx,dy,color='c',transform=ax1.get_transform('world'),linewidth=mylw,alpha=.7,head_width=2.5*width,head_length=2.5*width)
+        print(x,y)
+        #plt.plot(x*u.deg,y*u.deg,'bo',markersize=20,color='c',transform=ax1.get_transform('world'))
+        
+
+    #print(x[0],x[1],y[0],y[1])
+    #############################################################
+    # add HI contour to legacy image
+    #############################################################    
+    # check if HI moment zero map is available
+    HIfilename = HI_file[vfid]
+    if HIfilename is not None:
+        print("HIfilename = ",HIfilename)
+        plot_HI_contours(plt.gca(),HIfilename,color='lightsteelblue')
+        plot_HI_beam(plt.gca(),HIfilename,fits.getheader(legacyr),color='steelblue') 
+        
+    #############################################################
+    # add stellar mass from magphys to the legacy image
+    #############################################################    
+    if logMstar is not None:
+        print("adding logMstar = ",logMstar)
+        plt.text(0.05,0.05,logMstar,fontsize=16,color='white',transform=plt.gca().transAxes,horizontalalignment='left')
+    
+    
+    ax1.update({'xlabel': 'RA', 'ylabel': 'DEC'})
+
+
+    plt.sca(ax1)
+    plt.xlabel("RA (hr)",fontsize=14)
+    plt.ylabel("DEC (deg)",fontsize=14)
+    plt.savefig(os.path.join(plotdir,dirname)+'-mstar-sfr-profiles-CO.png',dpi=150,bbox_inches="tight")
+
+
+    os.chdir(cwd)
+
+
+    return ax1
+
+
+def plot_mstar_sfr_COimage(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xticks=True,figsize=[16,6],\
+                            cbfrac=.08,cbaspect=20,clevels=[4],contourFlag=True,rmax=None,\
+                            logMstar=None,cmap='magma_r',markGroupCenter=False,COcolor='white'):
+    """
+    same plot as mstar_sfr, but swap out CO image radial profiles in the 4th panel
+
+    """
+    #%matplotlib inline
+    os.chdir(homedir+'/research/Virgo-dev/cont-sub-gr')
+    # add scale factor for continuue after the directory name
+
+    vfid = dirname.split('-')[0]    
+
+    cwd = os.getcwd()
+    os.chdir(dirname)
+    massim = dirname+"-logmstar-vr.fits"
+    sfrim = dirname+"-sfr-vr.fits"
+
+    
+    ssfrim = dirname+"-ssfr.fits"
+    mask = dirname+'-R-mask.fits'
+    #titles = [r'$\log_{10}(M_\star/M_\odot)$',r'$H\alpha \ SFR$','log sSFR']
+    titles = [r'$\log_{10}(\Sigma_\star)$',r'$\Sigma_{SFR} \ w/HI$',r'$CO$']
+    vmin = [2,0e-5,0]
+    vmax = [6,.6e-5,.1]
+    allim = [massim,sfrim,ssfrim]
+    #allim = [massim,sfrim]
+    #allim = [massim,sfrim,sfrim] # show halpha with HI and CO
+    allim = [massim,sfrim,CO_file[vfid]] # show halpha with HI and CO    
+    cblabels = [r'$\rm \log_{10}(M_\star/M_\odot)/pixel$',r'$\rm SFR(M_\star/yr)/pixel$',r'$\rm CO/pixel$']
+    
+
+    print("VFID = ",vfid)
+    if 'INT' in dirname:
+        try:
+            xmin,xmax,ymin,ymax = zoom_coords_INT[vfid]
+        except KeyError:
+            # use the full image
+            # read in massim
+            data = fits.getdata(massim)
+            ymax,xmax = data.shape
+            xmin=1
+            ymin=1
+
+    else:
+        try:
+            xmin,xmax,ymin,ymax = zoom_coords_HDI[vfid]
+        except KeyError:
+            # use the full image
+            # read in massim
+            data = fits.getdata(massim)
+            ymax,xmax = data.shape
+            xmin=1
+            ymin=1
+    
+
+
+    myfigsize=afigsize[vfid]
+    mycbfrac=acbfrac[vfid]
+    myclevels=alevels[vfid]
+
+        
+    fig = plt.figure(figsize=(myfigsize[0],myfigsize[1]))
+
+    plt.subplots_adjust(wspace=0.01,bottom=.15)
+
+    if 'VFID5892' in dirname:
+        cbaspect = 10
+        plt.subplots_adjust(wspace=0.01,bottom=.2)
+    maskdat = fits.getdata(mask)
+
+    if contourFlag:
+        # get contours from logmstar image
+        hdu = fits.open(massim)
+        contour_data = hdu[0].data
+        contour_header = hdu[0].header
+        contour_WCS = WCS(contour_header)
+        hdu.close()
+        mcontour_data = np.ma.array(contour_data,mask=maskdat)
+
+
+    allax = []
+    for i, im in enumerate(allim):
+        if i == 2:
+            COfilename = CO_file[vfid]
+            COmask_filename = CO_mask[vfid]
+            dat, cheader = convert_alma3d_alma2d(COfilename)
+            if COmask_filename is not None:
+                maskdat = fits.getdata(COmask_filename)
+                maskdat = maskdat == 1
+                maskdat = ~maskdat
+            else:
+                maskdat = np.zeros_like(dat,'i')
+
+            #maskdat = np.zeros_like(dat)
+            imwcs = WCS(cheader)
+            #plt.figure()
+            #plt.imshow(dat)
+            
+            pass
+        else:
+            hdu = fits.open(im)[0]
+            dat = fits.getdata(im)
+            imwcs = WCS(fits.getheader(im))
+
+            dat = hdu.data
+            imwcs = WCS(hdu.header)
+        #if i == 2:
+        #    ax2=plt.subplot(1,4,i+2,projection=imwcs,slices=('x','y',1))
+        #else:
+        ax2=plt.subplot(1,4,i+2,projection=imwcs)
+        
+                        
+
+
+        mdat = np.ma.array(dat,mask=maskdat)
+        
+        #if xmin is None:
+        #    mdat = mdat
+        #else:
+        #    mdat = mdat[ymin:ymax,xmin:xmax]
+        if i == 2:
+            plt.imshow(mdat,vmin=0,vmax=.2,interpolation='nearest')#,vmin=vmin[i],vmax=vmax[i],origin='lower',interpolation='nearest')
+
+            continue
+        else:
+            #display_image(mdat,percent=99.5,cmap='viridis')#,vmin=vmin[i],vmax=vmax[i])
+            plt.imshow(mdat,vmin=vmin[i],vmax=vmax[i],cmap=cmap)#cmap='viridis'
+        
+        lon = ax2.coords[0]
+        lat = ax2.coords[1]
+        #lon.set_ticklabel_visible(False)
+        #lon.set_ticks_visible(False)            
+        #lat.set_ticklabel_visible(False)
+        #lat.set_ticks_visible(False)            
+        
+        #plt.colorbar(fraction=mycbfrac,aspect=cbaspect)
+        # plot contours from mass
+
+        #############################################################
+        # add HI contour to halpha image
+        #############################################################
+        if i == 1:
+            # check if HI moment zero map is available
+            HIfilename = HI_file[vfid]
+            if HIfilename is not None:
+                print("HIfilename = ",HIfilename)
+                plot_HI_contours(ax2,HIfilename,color='steelblue')
+                if vfid == 'VFID5859':
+                    plot_HI_beam(ax2,HIfilename,hdu.header,color='steelblue',expandBox=True)
+                else:
+                    plot_HI_beam(ax2,HIfilename,hdu.header,color='steelblue') 
+
+        #############################################################
+        # add CO contour to halpha image
+        #############################################################
+        #if i == 2:
+            # check if HI moment zero map is available
+        #    COfilename = CO_file[vfid]
+        #    COmask_filename = CO_mask[vfid]
+        #    if COfilename is not None:
+        #        print("COfilename = ",COfilename)
+
+                #plot_CO_image(ax2,COfilename,color=COcolor,mask=COmask_filename)
+                #if vfid == 'VFID5859':
+                #    plot_HI_beam(ax2,HIfilename,hdu.header,color='steelblue',expandBox=True)
+                #else:
+                #    plot_HI_beam(ax2,HIfilename,hdu.header,color='steelblue') 
+
+
+                    
+        #############################################################
+        # add contours from stellar mass image
+        #############################################################    
+        if contourFlag and (i < 2):
+            ax = plt.gca()
+            ax.contour(mcontour_data,levels=myclevels, colors='k',linestyles='-',linewidths=1,transform=ax.get_transform(contour_WCS))
+
+                
+        plt.title(titles[i],fontsize=18)
+
+
+
+        if (xmin is not None) and (i < 2):
             plt.axis([xmin,xmax,ymin,ymax])
         if i in [0,1]:
             plt.xticks([],[])
