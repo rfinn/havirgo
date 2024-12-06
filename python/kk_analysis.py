@@ -94,8 +94,8 @@ class galaxy():
         return newsegmap
 
     def run_statmorph(self):
-        self.morph1 = myStatmorph.myStatmorph(self.image1,self.segmap,1,gain=1)
-        self.morph2 = myStatmorph.myStatmorph(self.image2,self.segmap,1,gain=1)        
+        self.morph1 = myStatmorph.myStatmorph(self.image1,self.segmap,1,gain=1,cutout_extent=1.5)
+        self.morph2 = myStatmorph.myStatmorph(self.image2,self.segmap,1,gain=1,cutout_extent=1.5)        
 
     def plot_statmorph(self):
         fig = make_figure(self.morph1)
