@@ -16,8 +16,6 @@ from astropy.io import fits
 
 class myStatmorph(statmorph.SourceMorphology):
 
-    def testprop(self):
-        pass
     
     @lazyproperty
     def _segmap_gini(self):
