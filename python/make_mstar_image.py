@@ -230,10 +230,21 @@ class galaxy():
         """ divide SFR image by mstar image  """
         from astropy.stats import sigma_clipped_stats
         #import ccdproc
-        from photutils import make_source_mask
-
-        # create mask to cut low SNR pixels based on SNR in SFR image
-        mask = make_source_mask(self.sfr_vr,nsigma=3,npixels=5,dilate_size=5)
+        try:
+            from photutils import make_source_mask
+            # create mask to cut low SNR pixels based on SNR in SFR image
+            mask = make_source_mask(self.sfr_vr,nsigma=3,npixels=5,dilate_size=5)
+        except ImportError:
+            from photutils.segmentation import detect_threshold, detect_sources
+            from photutils.utils import circular_footprint
+            footprint = circular_footprint(radius=10)
+            # create threshold
+            threshold = detect_threshold(self.sfr_vr,nsigma=3)#,dilate_size=5)
+            # detect sources
+            segment_img = detect_sources(self.sfr_vr, threshold, npixels=10)
+            # make source mask
+            mask = segment_img.make_source_mask(footprint=footprint)
+            
         masked_data = np.ma.array(self.sfr_vr,mask=mask)
         #clipped_array = sigma_clip(masked_data,cenfunc=np.ma.mean)
 
