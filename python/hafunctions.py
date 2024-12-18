@@ -2021,7 +2021,7 @@ def plot_mstar_sfr_CO(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xticks=Tru
 
 
 def plot_mstar_sfr_COall(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xticks=True,figsize=[16,4],\
-                            cbfrac=.08,cbaspect=20,clevels=[4],contourFlag=True,rmax=None,\
+                            cbfrac=.08,cbaspect=20,clevels=[4],contourFlag=True,rmax=None,vr=None,\
                             logMstar=None,cmap='magma_r',markGroupCenter=False,COcolor='white',COlevels=None):
     """
     same plot as mstar_sfr, but swap out ssfr for radial profiles in the 4th panel
@@ -2070,15 +2070,18 @@ def plot_mstar_sfr_COall(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xticks=
     #titles = [r'$\log_{10}(M_\star/M_\odot)$',r'$H\alpha \ SFR$','log sSFR']
     titles = [r'$\log_{10}(\Sigma_\star)$',r'$\Sigma_{SFR} \ w/HI$',r'$\Sigma_{SFR} \ w/CO$',\
                  '$CO~ Intensity$','$CO ~velocity$',r'$CO ~ \Delta v $']
+                 
     vmin = [2,0e-5,0e-5,0,-200,0]
     vmax = [6,.6e-5,.6e-5,2,200,100]
     allim = [massim,sfrim,ssfrim]
     #allim = [massim,sfrim]
-    allim = [massim,sfrim,sfrim,coim,covelim,cowidthim] # show halpha with HI and CO    
-    cblabels = [r'$\rm \log_{10}(M_\star/M_\odot)/pixel$',\
-                    r'$\rm SFR(M_\star/yr)/pixel$',\
-                    r'$\rm SFR(M_\star/yr)/pixel$',\
-                     '$Jy~beam^{-1}~ km~s^{-1}$','$km~s^{-1}$','$km~s^{-1}$']
+    allim = [massim,sfrim,sfrim,coim,covelim,cowidthim] # show halpha with HI and CO
+
+    cblabels = [r'$\rm \log_{10}(M_\star/M_\odot/kpc^2)$',\
+                    r'$\rm SFR(M_\star/yr)/kpc^2$',\
+                    r'$\rm SFR(M_\star/yr)/kpc^2$',\
+                    r'$\rm Jy~beam^{-1}~ km~s^{-1}$',\
+                    r'$\rm km~s^{-1}$',r'$\rm km~s^{-1}$']
     
     try:
         xmin,xmax,ymin,ymax = CO_zoom_coords_INT[vfid]
@@ -2142,10 +2145,14 @@ def plot_mstar_sfr_COall(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xticks=
     #for i, im in enumerate(allim):
     for i,j in enumerate(nplots):
         im = allim[i]
+        v1 = vmin[i]
+        v2 = vmax[i]
         if i > 2:
             COfilename = CO_file[vfid]
+            # need to get the header from Francoise's version
             cdat, cheader = convert_alma3d_alma2d(COfilename)
-            imwcs = WCS(cheader)            
+            imwcs = WCS(cheader)
+            COheader = cheader
             if i == 3:
                 COmask_filename = CO_mask[vfid]
             
@@ -2156,24 +2163,34 @@ def plot_mstar_sfr_COall(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xticks=
             elif i== 5:
                 COmask_filename = CO_width[vfid]
                 dat = fits.getdata(COmask_filename)
-        elif i == 3:
-            dat, header = convert_alma3d_alma2d(im)
-            imwcs = WCS(header)
-            mdat = dat
-        elif i == 3:
-            dat, header = convert_alma3d_alma2d(im)
-            imwcs = WCS(header)
-            mdat = dat
         
         else:
             hdu = fits.open(im)[0]
             dat = hdu.data
             imwcs = WCS(hdu.header)
+
+        if vr is not None:
+            # scale data to convert to flux/kpc^2
+            kpc_per_pixel = get_kpc_per_pixel(imwcs,vr)
+            if i == 0:
+                dat = np.log10(10**dat/(kpc_per_pixel**2))
+                v1 = vmin[i]-2.*np.log10(kpc_per_pixel) 
+                v2 = vmax[i]-2.*np.log10(kpc_per_pixel)           
+                #myclevels = myclevels-2.*np.log10(kpc_per_pixel)
+                print("\nmass contour",myclevels-2.*np.log10(kpc_per_pixel))
+            elif i in [1,2]:
+                dat = dat/(kpc_per_pixel**2)
+                v1 = vmin[i]/kpc_per_pixel**2 
+                v2 = vmax[i]/kpc_per_pixel**2
+                #myclevels = myclevels/kpc_per_pixel**2
+            
         if i < 3:
             mdat = np.ma.array(dat,mask=maskdat)            
         else:
             mdat = dat
-            
+
+
+        
         #if i == 2:
         #    ax2=plt.subplot(1,4,i+2,projection=imwcs,slices=('x','y',1))
         #else:
@@ -2186,21 +2203,21 @@ def plot_mstar_sfr_COall(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xticks=
         #    mdat = mdat[ymin:ymax,xmin:xmax]
         if i == 2:
             try:
-                v1 = vmin[i]
-                v2 = vmax[i]
+                #v1 = vmin[i]
+                #v2 = vmax[i]
                 plt.imshow(mdat,vmin=v1,vmax=v2,origin='lower',interpolation='nearest',cmap='gray_r')
             except IndexError:
                 plt.imshow(mdat,origin='lower',interpolation='nearest',cmap='gray_r')
         elif i in [3,4,5]:
-            v1 = vmin[i]
-            v2 = vmax[i]
+            #v1 = vmin[i]
+            #v2 = vmax[i]
             plt.imshow(mdat,vmin=v1,vmax=v2,origin='lower',cmap=cmap,interpolation='nearest')
 
         else:
             #display_image(mdat,percent=99.5,cmap='viridis')#,vmin=vmin[i],vmax=vmax[i])
             try:
-                v1 = vmin[i]
-                v2 = vmax[i]
+                #v1 = vmin[i]
+                #v2 = vmax[i]
                 #print(cmap)
                 plt.imshow(mdat,vmin=v1,vmax=v2,cmap=cmap)
             except IndexError:
@@ -2208,10 +2225,6 @@ def plot_mstar_sfr_COall(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xticks=
             
                 #plt.imshow(mdat,vmin=vmin[i],vmax=vmax[i],cmap=cmap)#cmap='viridis'
 
-        # plot CO beam
-        if i == 3:
-            plot_HI_beam(plt.gca(),im,header,color='steelblue') 
-          
         
         #plt.colorbar(fraction=mycbfrac,aspect=cbaspect)
         # plot contours from mass
@@ -2262,6 +2275,9 @@ def plot_mstar_sfr_COall(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xticks=
         plt.title(titles[i],fontsize=14)
 
 
+        # plot CO beam
+        if i >= 3:
+            plot_HI_beam(plt.gca(),COfilename,COheader,color='steelblue') 
 
         if xmin is not None:
             
@@ -2275,8 +2291,8 @@ def plot_mstar_sfr_COall(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xticks=
             sfrim = dirname+"-sfr-vr.fits"
             header = fits.getheader(sfrim)
             #print(header)
-            wcs = WCS(header)
-            sky = wcs.pixel_to_world(xcoords,ycoords)
+            sfrwcs = WCS(header)
+            sky = sfrwcs.pixel_to_world(xcoords,ycoords)
     
             # set limits in ra,dec
             x,y = imwcs.world_to_pixel(sky)
@@ -2348,8 +2364,8 @@ def plot_mstar_sfr_COall(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xticks=
         sfrim = dirname+"-sfr-vr.fits"
         header = fits.getheader(sfrim)
         #print(header)
-        wcs = WCS(header)
-        sky = wcs.pixel_to_world(xcoords,ycoords)
+        sfrwcs = WCS(header)
+        sky = sfrwcs.pixel_to_world(xcoords,ycoords)
     
         # set limits in ra,dec
         x,y = legwcs.world_to_pixel(sky)
@@ -2364,14 +2380,29 @@ def plot_mstar_sfr_COall(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xticks=
             #plt.title(f"{t[0]} Legacy grz",fontsize=18)
 
             # Manually set x-ticks at specific RA values (e.g., every 10 degrees)
-            ax.coords[0].set_ticks(spacing=40 * u.arcsec)
+            #ax.coords[0].set_ticks(spacing=40 * u.arcsec)
             #ax.xaxis.set_major_locator(ticker.MaxNLocator(2))  # Change 5 to the number of ticks you want
             lon = ax.coords[0]
             lat = ax.coords[1]
 
             #lon.set_major_formatter('hh:mm')
-            lon.set_ticks(spacing=.04 * u.deg)
+            if vfid in ['VFID6018']:
+                dx = 0.04
+            else:
+                dx = .01
+            #'VFID5855': ,'VFID5842': ,'VFID5709': ,
+            lon.set_ticks(spacing=1/60 * u.deg)
+            #lon.set_major_formatter('dd:mm')
             lat.set_major_formatter('dd:mm')
+
+            ###############################################
+            # add a physical scale
+            ###############################################
+            pscale = wcs.utils.proj_plane_pixel_scales(legwcs) # in deg -> arcsec
+            pscale_arcsec = pscale[0]*3600
+            add_scale(ax,vr=vr,pscale=pscale_arcsec,color='w',barsize=2,fontsize=12,yscale=.95)    
+
+            
     plt.sca(ax1)
     #plt.xlabel("RA (hr)",fontsize=14)
     plt.xlabel("",fontsize=14)    
@@ -2379,7 +2410,7 @@ def plot_mstar_sfr_COall(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xticks=
     plt.title(f"{t[0]}-{t[1]}",fontsize=14)    
 
     plt.sca(ax5)
-    plt.xlabel("RA (deg)",fontsize=14)
+    plt.xlabel("RA (hr)",fontsize=14)
     #plt.xlabel("",fontsize=14)    
     plt.ylabel("DEC (deg)",fontsize=14)
     #plt.title(f"{t[0]}-{t[1]}",fontsize=14)    
@@ -2447,7 +2478,10 @@ def plot_mstar_sfr_COall(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xticks=
     COfilename = CO_file[vfid]
     COmask_filename = CO_mask[vfid]
     plot_CO_contours(ax5,COfilename,color=COcolor,mask=COmask_filename,levels=COlevels)
-    plot_HI_beam(ax5,COfilename,fits.getheader(legacyr),color='steelblue')     
+
+    plot_HI_beam(ax5,COfilename,COheader,color='steelblue')
+
+    
     plt.savefig(os.path.join(plotdir,dirname)+'-mstar-sfr-profiles-COall.png',dpi=150,bbox_inches="tight")
     plt.savefig(os.path.join(plotdir,dirname)+'-mstar-sfr-profiles-COall.pdf',dpi=150,bbox_inches="tight")    
 
@@ -2681,8 +2715,8 @@ def plot_mstar_sfr_COimages(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xtic
         sfrim = dirname+"-sfr-vr.fits"
         header = fits.getheader(sfrim)
         #print(header)
-        wcs = WCS(header)
-        sky = wcs.pixel_to_world(xcoords,ycoords)
+        sfrwcs = WCS(header)
+        sky = sfrwcs.pixel_to_world(xcoords,ycoords)
     
         # set limits in ra,dec
         x,y = legwcs.world_to_pixel(sky)
@@ -3011,8 +3045,8 @@ def plot_sfr_indicators(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xticks=T
         ycoords = np.array([ymin,ymax])
 
         header = fits.getheader(sfrim)
-        wcs = WCS(header)
-        sky = wcs.pixel_to_world(xcoords,ycoords)
+        sfrwcs = WCS(header)
+        sky = sfrwcs.pixel_to_world(xcoords,ycoords)
         print("skycoords = ",sky)
         
     plt.figure(figsize=(figsize[0],figsize[1]))
@@ -3070,8 +3104,8 @@ def plot_sfr_indicators(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xticks=T
     # get ramin,ramax and decmin,decmax from SFR image
     sfrim = dirname+"-sfr-vr.fits"
     header = fits.getheader(sfrim)
-    wcs = WCS(header)
-    sky = wcs.pixel_to_world(xcoords,ycoords)
+    sfrwcs = WCS(header)
+    sky = sfrwcs.pixel_to_world(xcoords,ycoords)
     
     # read in header from legacy r-band image
     legacyr = glob.glob("legacy/*r.fits")[0]
