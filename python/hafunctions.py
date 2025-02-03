@@ -129,15 +129,21 @@ meerkat_HI_mass = {'VFID5859':7.84,\
 
 #'VFID5851': 
 HIdir = homedir+'/research/Virgo/alma/2023/MeerKAT_ALMA_target_list/'
-HI_file = {'VFID5889':HIdir+'ngc5363_ngc5364_ngc5360.fits',\
-           'VFID5851':HIdir+'J1355_fin_lw05_bpcorr_2_mom0.fits',\
-           #'VFID5851':None, \
-           'VFID5855':HIdir+'J1355_fin_lw05_bpcorr_6_mom0.fits',\
-           'VFID5842':HIdir+'J1355_fin_lw05_bpcorr_5_mom0.fits',\
-           'VFID5859':HIdir+'J1355_p_0512_lw05_final_15_mom0.fits',\
-           'VFID5892':HIdir+'ngc5363_ngc5364_ngc5360.fits',\
-           'VFID5879':None,\
-           'VFID5844':None 
+HIdir2 = homedir+'/research/Virgo/MeerKAT/final_24Jan2025/'
+HI_file = {'VFID5709': HIdir2+'J1406_p_0601_lw00_final_1_mom0.fits',\
+               'VFID6033': HIdir2+'J1420_p_0336_lw00_final_1_mom0.fits',\
+               'VFID6091': HIdir2+'J1420_p_0336_lw00_final_3_mom0.fits',\
+               'VFID6018': HIdir2+'J1420_p_0336_lw00_final_6_mom0.fits',\
+               'VFID6362': HIdir2+'J1502_p_0150_lw00_final_2_mom0.fits',\
+               'VFID5889':HIdir+'ngc5363_ngc5364_ngc5360.fits',\
+               'VFID5851':HIdir+'J1355_fin_lw05_bpcorr_2_mom0.fits',\
+               #'VFID5851':None, \
+               'VFID5855':HIdir+'J1355_fin_lw05_bpcorr_6_mom0.fits',\
+               'VFID5842':HIdir+'J1355_fin_lw05_bpcorr_5_mom0.fits',\
+               'VFID5859':HIdir+'J1355_p_0512_lw05_final_15_mom0.fits',\
+               'VFID5892':HIdir+'ngc5363_ngc5364_ngc5360.fits',\
+               'VFID5879':None,\
+               'VFID5844':None 
 }
 
 
@@ -164,6 +170,10 @@ CO_file = {'VFID5889':None,\
            'VFID6362':COdir+'u9661-co10-mean.fits',\
            
 }
+
+
+alma_galaxies = ['VFID5709', 'VFID5855', 'VFID5842','VFID6018','VFID6033','VFID6091','VFID6362']
+
 
 CO_mask = {'VFID5889':None,\
            'VFID5851':None,\
@@ -1119,6 +1129,97 @@ def plot_MHI_Mstar_sizeratio(paper1=False):
 
     plt.savefig(plotdir+'/NGC5364-MHI-Mstar-sizeratio90.png',dpi=150,bbox_inches="tight")
     plt.savefig(plotdir+'/NGC5364-MHI-Mstar-sizeratio90.pdf',bbox_inches="tight")     
+
+def plot_MH2_Mstar_sizeratio(paper1=False):
+    """
+    galaxies with HI detections: VFID5859, VFID5892, VFID5855, VFID5842, VFID5889
+
+
+    """
+
+    # this is super clunky but going with it for now...
+    sizeratio90 = np.zeros(len(v.a100))
+
+    vfids = [5859,5892,5855,5842,5889,5851]
+    ratio90 = [0.6,0.35,1.3,0.6,1.11,0.11]
+
+
+    for i,vf in enumerate(vfids):
+        sizeratio90[vf] = ratio90[i]
+
+
+    #vfids = [5859,5892,5855,5842,5889]
+    # updating for H2 measurements
+    vfids = [5892,5855,5842,5889,5851]
+    plotflag = np.zeros(len(v.main),'bool')        
+    for i,vf in enumerate(vfids):
+        plotflag[vf] = True
+    # now plot HIdef vs sizeratio90
+
+    #plt.figure(figsize=(8,6))
+    #plt.subplots_adjust(bottom=.15)
+    
+    plt.figure(figsize=(8,6))
+    plt.subplots_adjust(bottom=.15,right=.9)
+    
+    x = sizeratio90[plotflag]
+
+    
+
+    # updating to plot HImass / stellar mass
+    yall = np.zeros(len(v.main))
+    for i,vf in enumerate(vfids):
+        logMH2 = np.log10(v.paper1['Mmol'][vf])
+        # convert masses to Vcosmic
+        logMstar = v.magphys['logMstar_best'][vf] + 2*np.log10(v.env['Vcosmic'][vf]/v.main['vr'][vf])
+        
+        yall[vf] = logMH2 - logMstar
+        print(vf,logMH2,v.magphys['logMstar_best'][vf],logMstar,yall[vf])
+
+        
+    y = yall[plotflag]
+    c = v.magphys['logMstar_med'][plotflag]
+    plt.scatter(x,y,c=c,s=120,marker='s')
+    plt.xlabel(r"$\rm R_{90}(SFR)/R_{90}(M_\star)$",fontsize=22)
+    plt.ylabel(r"$\rm \log_{10}(M_{H2}/M_\star) $",fontsize=22)
+
+    cb = plt.colorbar()
+    cb.set_label("$\log(M_\star/M_\odot)$",fontsize=16)
+
+    for vf in vfids:
+        xp = sizeratio90[vf]
+        yp = yall[vf]
+        plt.text(xp-.01,yp+.08,v.main['VFID'][vf],horizontalalignment='center',fontsize=14)
+
+    #plt.ylim(-2,1.2)
+    #if paper1:
+    #    plt.ylim(-.5,1.2)
+    #plt.xlim(0.19,1.41)
+    #plt.axhline(ls='-',c='k',alpha=.5)
+    #plt.axhline(y=0.25,ls='--',c='k',alpha=.5)
+    #plt.axhline(y=-0.25,ls='--',c='k',alpha=.5)
+    
+    #######################################
+    # calculate spearman rank coeff
+    #######################################
+    r,pvalue = spearmanr(x,y)
+    print(f"Spearman rank correlation coeff = {r:.2f}, pvalue = {pvalue:.3f}")
+
+
+    plotflag[v.main['VFID']=='VFID5859'] = False
+    x = sizeratio90[plotflag]
+    y = yall[plotflag]
+    r,pvalue = spearmanr(x,y)
+    print()
+    print("removing VFID5859")
+    print(f"Spearman rank correlation coeff = {r:.2e}, pvalue = {pvalue:.3e}")
+    
+    # now plot HIdef vs sizeratio90
+    plt.xticks(fontsize=16)
+    plt.yticks(fontsize=16)    
+
+    plt.savefig(plotdir+'/NGC5364-MH2-Mstar-sizeratio90.png',dpi=150,bbox_inches="tight")
+    plt.savefig(plotdir+'/NGC5364-MH2-Mstar-sizeratio90.pdf',bbox_inches="tight")     
     
 def get_rad_fluxfrac_sersfunc(pfit,frac=0.9,verbose=False):
     from scipy.interpolate import interp1d
@@ -3646,7 +3747,7 @@ class grouptables(vtables):
         # construct table
         ################################################
 
-        #paperTab = Table([self.main['VFID'],self.main['NEDname'],self.main['vr'],self.dist3dVirgo,self.magphys['logMstar_med'],self.magphys['logSFR_med'],self.magphys['logsSFR_med'],self.paper1['H2def'],self.paper1['HIdef']],names=col_names)[flag]
+        #paperTab = Table([self.main['VFID'],self.main['NEDname'],self.main['vr'],self.dist3dVirgo,self.magphys['logMstar_med'],self.magphys['logSFR_med'],self.magphys['logsSFR_med'],self.paper1['H2defM'],self.paper1['HIdef']],names=col_names)[flag]
         paperTab = Table([self.main['VFID'],self.main['NEDname'],self.main['vr'],self.dist3dVirgo,mass_column,self.magphys['logSFR_med'],self.magphys['logsSFR_med'],self.paper1['H2def']],names=col_names)[flag]        
 
 
@@ -3711,6 +3812,13 @@ class grouptables(vtables):
         """ fit profile of each group member """
         pass
 
+
+class fullsample(vtables):
+    def plot_HImass_mstar(self):
+        '''
+        show 
+        '''
+        pass
 if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser(description ='Read in all virgo filament tables')

@@ -20,6 +20,10 @@ for fname in filelist:
             allprefix.append(fname[:6])
         elif fname.startswith('sn'):
             allprefix.append(fname[:6])
+        elif fname.startswith('u'):
+            allprefix.append(fname[:5])
+        elif fname.startswith('i'):
+            allprefix.append(fname[:5])
 
 #print(allprefix)
 objlist = set(allprefix)
@@ -34,6 +38,6 @@ for gal in objlist:
             continue
         if fname.startswith(gal):
             # move images
-            #print(os.path.join(gal,fname))
+            print(os.path.join(gal,fname))
             os.rename(fname,os.path.join(gal,fname))
         
