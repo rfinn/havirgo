@@ -3691,26 +3691,29 @@ class grouptables(vtables):
             flag = self.groupMembs & self.main['HAobsflag']
         #col_names = ['VFID','NED Name','vr','Virgo $d_{3d}$','logMstar','logSFR','logsSFR','H2 def','HI def']#, 'HI def Bos']
         #col_names = ['VFID','NED Name','$v_r$','Virgo $d_{3d}$','$\log(M_\star)$','$\log(SFR)$','$\log(sSFR)$','H2 def','HI def']#, 'HI def Bos']
-        tc = [r'\end{center} \n \tablecomments{$^a$ Heliocentric recession velocity. \n']
-        tc.append(r'$^b$ Flow-corrected, 3D distance from center of Virgo Cluster from \citet{Castignani2022a} \\')
-        tc.append(r'$^c$ Stellar mass from SED fitting. \\')
-        tc.append(r'$^d$ SFR from SED fitting. \\')
-        tc.append(r'$^e$ sSFR from SED fitting. \\')
-        tc.append(r'$^f$ $H_2$ deficiency from \citet{Castignani2022a}.\\')
+        tc = [r'\end{center} \n \tablecomments{$^a$ Hubble T-type from Hyperleda \citep{Makarov2014}. \\']
+        tc.append(r'$^b$ Heliocentric recession velocity. \\')
+        tc.append(r'$^d$ Flow-corrected, 3D distance from the center of the Virgo Cluster from \citet{Castignani2022a} \\')
+        tc.append(r'$^d$ \ha \ flux correction, equal to the inverse of the filter transmission at the redshift of galaxy. \\')        
+        tc.append(r'$^e$ Stellar mass from MAGPHYS SED fitting presented in \citet{Conger2025}. \\')
+        tc.append(r'$^f$ SFR from MAGPHYS SED fitting presented in \citet{Conger2025}. \\')
+        tc.append(r'$^g$ sSFR from MAGPHYS SED fitting presented in \citet{Conger2025}. \\')
+        tc.append(r'$^h$ $H_2$ deficiency from \citet{Castignani2022a}.\\')
 
         # end table comments
         tc.append(r'}\\')
 
         print(tc)
-        col_names = ['VFID','NED Name','$v_r^{a}$','Virgo $d_{3d}^{b}$','$\log(M_\star)^c$',\
-                     '$\log(SFR)^d$','$\log(sSFR)^e$','H2 def$^f$']
-        col_formats={'$\log(M_\star)^c$': '%5.2f',\
-                     '$\log(SFR)^d$': '%5.2f',\
-                     '$\log(sSFR)^e$': '%5.2f',\
-                     'H2 def$^f$': '%5.2f',\
+        col_names = ['VFID','NED Name','$T^{a}$', '$v_r^{b}$','Virgo $d_{3d}^{c}$','$1/T(z)^{d}$', '$\log(M_\star)^e$',\
+                     '$\log(SFR)^f$','$\log(sSFR)^g$','H2 def$^h$']
+        col_formats={'$T^{a}$':'%5.1f', '$v_r^{b}$':'%.0f','Virgo $d_{3d}^{c}$':'%.1f' ,'$1/T(z)^{d}$': '%5.2f',\
+                     '$\log(M_\star)^e$': '%5.2f',\
+                     '$\log(SFR)^f$': '%5.2f',\
+                     '$\log(sSFR)^g$': '%5.2f',\
+                     'H2 def$^h$': '%5.2f',\
                      'HI def': '%5.2f',\
                      #'HI def Bos': '%5.2f',\
-                     'Virgo $d_{3d}^{b}$':'%5.1f'}
+                     }
         latexdict={'preamble': r'\begin{center}',\
                    #'tablefoot': tc.append(r'\end{center}'),\
                    'tablefoot': tc,\
@@ -3748,18 +3751,18 @@ class grouptables(vtables):
         ################################################
 
         #paperTab = Table([self.main['VFID'],self.main['NEDname'],self.main['vr'],self.dist3dVirgo,self.magphys['logMstar_med'],self.magphys['logSFR_med'],self.magphys['logsSFR_med'],self.paper1['H2defM'],self.paper1['HIdef']],names=col_names)[flag]
-        paperTab = Table([self.main['VFID'],self.main['NEDname'],self.main['vr'],self.dist3dVirgo,mass_column,self.magphys['logSFR_med'],self.magphys['logsSFR_med'],self.paper1['H2def']],names=col_names)[flag]        
+        paperTab = Table([self.main['VFID'],self.main['NEDname'],self.hl['t'],self.main['vr'],self.dist3dVirgo,self.halpha['FILT_COR'],mass_column,self.magphys['logSFR_med'],self.magphys['logsSFR_med'],self.paper1['H2def']],names=col_names)[flag]        
 
 
         
         ################################################
         # specify units
         ################################################        
-        paperTab['$v_r^{a}$'].unit = u.km/u.s
-        paperTab['Virgo $d_{3d}^{b}$'].unit = u.Mpc
-        paperTab['$\log(M_\star)^c$'].unit = u.Msun
-        paperTab['$\log(SFR)^d$'].unit = u.Msun/u.yr
-        paperTab['$\log(sSFR)^e$'].unit = u.Msun/u.yr/u.Msun        
+        paperTab['$v_r^{b}$'].unit = u.km/u.s
+        paperTab['Virgo $d_{3d}^{c}$'].unit = u.Mpc
+        paperTab['$\log(M_\star)^e$'].unit = u.Msun
+        paperTab['$\log(SFR)^f$'].unit = u.Msun/u.yr
+        paperTab['$\log(sSFR)^g$'].unit = u.Msun/u.yr/u.Msun        
 
 
         ################################################
@@ -3769,7 +3772,7 @@ class grouptables(vtables):
         if outfile is None:
             outfile = plotdir+'/NGC5364_tab1.tex'
         paperTab.write(outfile,format='latex',names=col_names,formats=col_formats,latexdict=latexdict,\
-                       fill_values=[(ascii.masked,'\\nodata')])#,(np.ma.masked,'no data')])
+                       fill_values=[(ascii.masked,'\\nodata')],overwrite=True)#,(np.ma.masked,'no data')])
         #paperTab.write(plotdir+'/NGC5364_tab1.tex',format='latex',names=col_names,formats=col_formats,latexdict=ascii.latex.latexdicts['ApJ'])
 
         if outfile is None:
