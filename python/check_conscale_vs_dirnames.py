@@ -20,7 +20,7 @@ infile.close()
 
 # now scan through directories
 
-dirlist = os.path.listdir()
+dirlist = os.listdir()
 
 for d in dirlist:
     if os.path.isdir(d):
