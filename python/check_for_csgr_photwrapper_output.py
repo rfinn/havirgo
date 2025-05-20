@@ -4,6 +4,7 @@ import numpy as np
 import os
 from astropy.io import fits
 from astropy.table import Table
+import sys
 
 # get input files
 alldirs = open('virgo-cutouts.txt','r')
