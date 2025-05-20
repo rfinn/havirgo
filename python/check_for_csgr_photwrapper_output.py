@@ -9,12 +9,17 @@ from astropy.table import Table
 alldirs = open('virgo-cutouts.txt','r')
 alldirlist = alldirs.readlines()
 
+if len(sys.argv) > 1:
+    newdate = sys.argv[1]
+    print(f"got a new date to use: {newdate}")
+else:
+    newdate = '2024-Sep-29'
 for d in alldirlist:
     
     dirname = d.rstrip()
     #print(f"{d}/halpha-csgr-rfinn-2024-Sep-29.fits")
     #print(dirname)
-    if os.path.exists(f"{dirname}/halpha-csgr-rfinn-2024-Sep-29.fits"):
+    if os.path.exists(f"{dirname}/halpha-csgr-rfinn-{newdate}.fits"):
         continue
     else:
         print(f"Missing halpha-csgr file for {dirname}")

@@ -583,7 +583,8 @@ if __name__ == '__main__':
 
     tabledir = homedir+"/research/Virgo/halpha-tables/"
     #hafilename = os.path.join(tabledir,"hgui_csgrphot_combined.fits")
-    hafilename = os.path.join(tabledir,"hgui_csgrphot_combined_2024-Oct-18.fits")    
+    #hafilename = os.path.join(tabledir,"hgui_csgrphot_combined_2024-Oct-18.fits")
+    hafilename = os.path.join(tabledir,"hgui_csgrphot_combined_2025-May-20.fits")    
     googlesheet = tabledir+'hagalaxies-including-duplicates.csv'
     d = duplicates(hafilename,googlesheet,v)
     d.get_sample()
