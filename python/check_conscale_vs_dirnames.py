@@ -24,5 +24,7 @@ dirlist = os.path.listdir()
 
 for d in dirlist:
     if os.path.isdir(d):
-        if d is not in cdirnames:
+        if d in cdirnames:
+            continue
+        else:
             print(f"WARNING:{d} is not in conscale_factors.txt")
