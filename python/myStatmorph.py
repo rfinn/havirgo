@@ -3,18 +3,18 @@
 
 
 import numpy as np
-import matplotlib.pyplot as plt
-from astropy.visualization import simple_norm
-from astropy.modeling.models import Sersic2D
-from astropy.convolution import convolve, Gaussian2DKernel
+#import matplotlib.pyplot as plt
+#from astropy.visualization import simple_norm
+#from astropy.modeling.models import Sersic2D
+#from astropy.convolution import convolve, Gaussian2DKernel
 from astropy.utils import lazyproperty
-from photutils.segmentation import detect_threshold, detect_sources
-from photutils.morphology import gini
-import time
+#from photutils.segmentation import detect_threshold, detect_sources
+#from photutils.morphology import gini
+#import time
 
 import statmorph
-import os
-from astropy.io import fits
+#import os
+#from astropy.io import fits
 
 class myStatmorph(statmorph.SourceMorphology):
 

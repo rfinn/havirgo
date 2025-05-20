@@ -55,6 +55,8 @@ class galaxy():
 
     @lazyproperty
     def segmap(self):
+        ''' this will create a segmentation map on an as-needed basis '''
+        
         # psf for making segmentation image for galaxy
         kernel = Gaussian2DKernel(9)
         kernel.normalize()  # make sure kernel adds up to 1
