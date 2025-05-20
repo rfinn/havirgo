@@ -35,6 +35,7 @@ import sys
 
 if len(sys.argv) > 1:
     newdate = sys.argv[1]
+    print(f"got a new date to use: {newdate}")
 else:
     newdate = None
 # get input files
