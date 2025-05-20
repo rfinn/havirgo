@@ -721,7 +721,7 @@ class output_table():
             else:
                 colname = prefix+'H'+f
 
-            #print(colname,values[i])
+            print(colname,values[i])
             self.table[colname][igal]=float('{:.2e}'.format(values[i][0]))
             self.table[colname+'_ERR'][igal]=float('{:.2e}'.format(values[i][1]))
 
