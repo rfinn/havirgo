@@ -24,4 +24,5 @@ for d in alldirlist:
         continue
     else:
         print(f"Missing halpha-csgr file for {dirname}")
-
+        if len(sys.argv) > 2:
+            os.system(f"python ~/github/havirgo/python/get_gr_cont_phot.py {dirname}")
