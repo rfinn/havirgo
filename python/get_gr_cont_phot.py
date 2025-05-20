@@ -698,7 +698,7 @@ class output_table():
                 colname = f
             else:
                 colname = prefix+f
-            #print(colname, values[i])
+            print(colname, values[i])
             self.table[colname][igal]=float('%.2e'%(values[i][0]))
             self.table[colname+'_ERR'][igal]=float('%.2e'%(values[i][1]))
             
@@ -933,6 +933,7 @@ if __name__ == '__main__':
     print("writing profile fits")
     otab.write_rprofile_fits(igal,rfit)
 
+    print("writing hprofile fits")    
     #print(f"g.zdist = {g.zdist}")
     otab.write_hprofile_fits(igal,hfit,np.array(g.zdist))
     otab.write_sky()
