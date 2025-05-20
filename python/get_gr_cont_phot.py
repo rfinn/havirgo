@@ -594,8 +594,8 @@ class output_table():
                   #self.e.morph.sersic_chi2_dof,\
                   #self.e.morph.sersic_flag,\
                   self.e.morph.sky_mean,\
-                  self.e.morph.sky_med,\
-                  self.e.morph.sky_std,\
+                  self.e.morph.sky_median,\
+                  self.e.morph.sky_sigma,\
                   self.e.morph.sn_per_pixel,\
                   self.e.morph.flag]
                   
@@ -659,8 +659,8 @@ class output_table():
                   #self.e.morph2.sersic_chi2_dof,\
                   #self.e.morph2.sersic_flag,\
                   self.e.morph2.sky_mean,\
-                  self.e.morph2.sky_med,\
-                  self.e.morph2.sky_std,\
+                  self.e.morph2.sky_median,\
+                  self.e.morph2.sky_sigma,\
                   self.e.morph2.sn_per_pixel,\
                   self.e.morph2.flag]
                   
