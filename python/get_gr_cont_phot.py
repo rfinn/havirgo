@@ -619,12 +619,12 @@ class output_table():
                       'FLUX_CIRC','RHALF_CIRC', 'RMAX_CIRC', \
                       'FLUX_ELLIP', 'RHALF_ELLIP', 'RMAX_ELLIP',\
                       'GINI', 'M20','F_GM20','S_GM20','C','A','S',\
-                      #'SERSIC_AMP','SERSIC_RHALF','SERSIC_N',\
-                      #'SERSIC_XC','SERSIC_YC','SERSIC_ELLIP','SERSIC_THETA',\
-                      #'SERSIC_CHISQ','SERSIC_FLAG',\
+                      'SERSIC_AMP','SERSIC_RHALF','SERSIC_N',\
+                      'SERSIC_XC','SERSIC_YC','SERSIC_ELLIP','SERSIC_THETA',\
+                      'SERSIC_CHISQ','SERSIC_FLAG',\
                       'SKY_MEAN',\
-                      #'SKY_MED',\
-                      #'SKY_STD',\
+                      'SKY_MED',\
+                      'SKY_STD',\
                       'SNR_PIXEL','FLAG']
                   
         values = [self.e.morph2.xc_centroid,\
@@ -647,15 +647,15 @@ class output_table():
                   self.e.morph2.concentration,\
                   self.e.morph2.asymmetry,\
                   self.e.morph2.smoothness,\
-                  #self.e.morph2.sersic_amplitude,\
-                  #self.e.morph2.sersic_rhalf*self.pixelscale,\
-                  #self.e.morph2.sersic_n,\
-                  #self.e.morph2.sersic_xc,\
-                  #self.e.morph2.sersic_yc,\
-                  #self.e.morph2.sersic_ellip,\
-                  #self.e.morph2.sersic_theta,\
-                  #self.e.morph2.sersic_chi2_dof,\
-                  #self.e.morph2.sersic_flag,\
+                  self.e.morph2.sersic_amplitude,\
+                  self.e.morph2.sersic_rhalf*self.pixelscale,\
+                  self.e.morph2.sersic_n,\
+                  self.e.morph2.sersic_xc,\
+                  self.e.morph2.sersic_yc,\
+                  self.e.morph2.sersic_ellip,\
+                  self.e.morph2.sersic_theta,\
+                  self.e.morph2.sersic_chi2_dof,\
+                  self.e.morph2.sersic_flag,\
                   self.e.morph2.sky_mean,\
                   #self.e.morph2.sky_med,\
                   #self.e.morph2.sky_std,\
@@ -698,9 +698,9 @@ class output_table():
                 colname = f
             else:
                 colname = prefix+f
-            print(colname, values[i])
-            self.table[colname][igal]=float('%.2e'%(values[i][0]))
-            self.table[colname+'_ERR'][igal]=float('%.2e'%(values[i][1]))
+            #print(colname, values[i])
+            self.table[colname][igal]=float('%.3e'%(values[i][0]))
+            self.table[colname+'_ERR'][igal]=float('%.3e'%(values[i][1]))
             
     def write_hprofile_fits(self,igal,pfit,gzdist,prefix=None):
         """pass in the profile fit and array of galaxy redshift (flow corrected) """
@@ -721,9 +721,10 @@ class output_table():
             else:
                 colname = prefix+'H'+f
 
-            print(colname,values[i])
-            self.table[colname][igal]=float('{:.2e}'.format(values[i][0]))
-            self.table[colname+'_ERR'][igal]=float('{:.2e}'.format(values[i][1]))
+            # values still have appropriate precision in print statement
+            #print(colname,values[i])
+            self.table[colname][igal]=float('{:.3e}'.format(values[i][0]))
+            self.table[colname+'_ERR'][igal]=float('{:.3e}'.format(values[i][1]))
 
         # SFR conversion from Kennicutt and Evans (2012)
         # log (dM/dt/Msun/yr) = log(Lx) - logCx
