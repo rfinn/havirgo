@@ -31,7 +31,12 @@ import numpy as np
 import os
 from astropy.io import fits
 from astropy.table import Table
+import sys
 
+if len(sys.argv) > 1:
+    newdate = sys.argv[1]
+else:
+    newdate = None
 # get input files
 alldirs = open('virgo-cutouts.txt','r')
 alldirlist = alldirs.readlines()
@@ -46,7 +51,10 @@ for d in alldirlist:
         print(f"Missing halpha-csgr file for {dirname}")
 
 # now gather list of phot output
-flist = glob.glob("VFID*/halpha-csgr-rfinn-2024-Oct-17.fits")
+if newdate is None:
+    flist = glob.glob("VFID*/halpha-csgr-rfinn-2024-Oct-17.fits")
+else:
+    flist = glob.glob(f"VFID*/halpha-csgr-rfinn-{newdate}.fits")
 flist.sort()
 print(f"Found {len(flist)} files to stack")
 print()

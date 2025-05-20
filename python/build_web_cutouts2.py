@@ -811,7 +811,8 @@ class build_html_cutout():
         except AttributeError:
             pass
         self.write_mag_table()
-        self.write_morph_table()        
+        self.write_morph_table()
+        self.write_statmorph_table()        
         self.write_navigation_links()
         self.close_html()
     def write_header(self):
@@ -1105,6 +1106,28 @@ class build_html_cutout():
             data2 = ["{:.2f}".format(myrow[c]) for c in colnames2]            
         data2.insert(0,'Halpha')
         write_text_table(self.html,labels,data,data2=data2)
+
+    def write_statmorph_table(self):
+        self.html.write('<h2>Statmorph Parameters</h2>\n')        
+        labels=['Band','Gini','M20','Asym','C30','Petro Con']
+        
+        #myrow = vfha[self.vfindex]
+        myrow = fullha[self.fullhaindex]
+        smorphcols = ['XCENTROID','YCENTROID','GINI','M20','C', 'A','S','RMAX_ELLIP']
+        colnames = ['SMORPH_'+c for c in smorphcols]
+        colnames2 = ['SMORPH_H'+c for c in smorphcols]
+        try: # this is required to work with fullha instead of vfha
+            data = ["{:.2f}".format(myrow[c][0]) for c in colnames]
+        except IndexError:
+            data = ["{:.2f}".format(myrow[c]) for c in colnames]            
+        data.insert(0,'r')
+        try:
+            data2 = ["{:.2f}".format(myrow[c][0]) for c in colnames2]
+        except IndexError:
+            data2 = ["{:.2f}".format(myrow[c]) for c in colnames2]            
+        data2.insert(0,'Halpha')
+        write_text_table(self.html,labels,data,data2=data2)
+
     def close_html(self):
         self.html.close()
 # wrap
