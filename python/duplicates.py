@@ -47,7 +47,11 @@ def pairplot_linear(tab,cols,dupindex1,dupindex2,colorcolumn='M24',\
             ctitle = c
         plt.title(f"{ctitle} ({npair})")
         allax.append(plt.gca())
-        med = np.nanmedian(dx)
+        try:
+            med = np.nanmedian(dx)
+        except ValueError:
+            print(f"WARNING: problem getting median for {c}")
+            med=-99
         mad =MAD(dx)
         #mad = np.nanstd(dx)
         if nplot == 5:
@@ -93,7 +97,12 @@ def pairplot_residuals(tab,cols,dupindex1,dupindex2,colorcolumn='M24',remove_str
         plt.title(f"{ctitle} ({npair})")
         
         allax.append(plt.gca())
-        med = np.nanmedian(dx)
+        try:
+            med = np.nanmedian(dx)
+        except ValueError:
+            print(f"WARNING: problem getting median for {c}")
+            med=-99        
+        #med = np.nanmedian(dx)
         mad =MAD(dx)
         #mad = np.std(dx)
         #mad = np.nanstd(dx)
@@ -275,7 +284,7 @@ class duplicates():
                     'SMORPH_HM20','SMORPH_HF_GM20','SMORPH_HS_GM20','SMORPH_HC',\
                     'SMORPH_HA','SMORPH_HS']
         flag = (self.htab['SMORPH_HXCENTROID'] > 0) & (self.htab['SMORPH_HFLAG'] < hsmorphmaxflag)\
-          &  (self.htab['SMORPH_HM20'] > -50) & (self.htab['SMORPH_HS'] > -.5) & (self.htab['SMORPH_HA'] > -1)
+          &  (self.htab['SMORPH_HM20'] > -50) & (self.htab['SMORPH_HS'] > -.5) & (self.htab['SMORPH_HA'] > -1) & (self.htab['SMORPH_HGINI'] > -2)
         if remove_tel is not None:
             flag = flag & (self.htab['TEL'] != remove_tel)
 
@@ -326,7 +335,7 @@ class duplicates():
 
         self.get_smorph_flag(hsmorphmaxflag=hsmorphmaxflag,rsmorphmaxflag=rsmorphmaxflag)
 
-        flag = self.smorphflag 
+        flag = self.smorphflag #& (self.htab['SMORPH_XCENTROID'] > 1) &  (self.htab['SMORPH_HXCENTROID'] > 1)  
 
 
         #print(f"\nNumber that meet r and halpha SMORPH flags = {len(dupindex1)}")        

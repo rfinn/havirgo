@@ -34,7 +34,7 @@ continuum subtracted images that used the gr image and the manually adjusted sca
 """
 
 import sys
-from astropy.table import Table, Column
+from astropy.table import Table, Column, MaskedColumn
 import numpy as np
 from datetime import date
 
@@ -434,7 +434,10 @@ for c in csgr_keep_columns:
         hgui[c]=csgr[c][matchindex]
     else:
         print('adding column ',c)
-        col = Column(csgr[c][matchindex],name=c)
+        try:
+            col = Column(csgr[c][matchindex],name=c)
+        except TypeError:
+            col = MaskedColumn(csgr[c][matchindex],name=c)
         hgui.add_column(col)
 
 # remove unwanted columns
@@ -454,7 +457,7 @@ hgui.add_column(c)
 
 ###########################################################
 # add column "remove" from gsheet
-# this is the directory name and allows for easy id of each unique observation
+# 
 ###########################################################
 c = Column(np.zeros(len(hgui), 'bool'),name='badflag')
 hgui.add_column(c)
