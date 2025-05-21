@@ -826,7 +826,11 @@ if __name__ == '__main__':
     # move to subdirectory
     os.chdir(subdirname)
 
-
+    if len(sys.argv) > 2:
+        statmorphflag = False
+    else:
+        statmorphflag = True
+        
     ###################################################################
     # get galaxy properties from VFID
     ###################################################################    
@@ -914,7 +918,7 @@ if __name__ == '__main__':
     e = ellipse(rfile, image2=hfile, mask = maskfile, image_frame = None,image2_filter='4', filter_ratio=filter_ratio,psf=None,psf_ha=None,objra=ra,objdec=dec,apertures=None)
     
     print("just before run_for_gui\n")
-    e.run_for_gui(runStatmorphFlag=True)
+    e.run_for_gui(runStatmorphFlag=statmorphflag)
     print()
     print("done with run_for_gui")
     otab.write_ellipse_output(e)
