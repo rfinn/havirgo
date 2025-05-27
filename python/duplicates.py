@@ -103,15 +103,16 @@ def pairplot_residuals(tab,cols,dupindex1,dupindex2,colorcolumn='M24',remove_str
             print(f"WARNING: problem getting median for {c}")
             med=-99        
         #med = np.nanmedian(dx)
-        mad =MAD(dx)
+        #mad =MAD(dx)
         #mad = np.std(dx)
-        #mad = np.nanstd(dx)
+        mad = np.nanstd(dx)
         if nplot == 5:
             #plt.text(0.05,0.95,f"MED/MAD =\n {med:.2e},{mad:.2e}",transform=plt.gca().transAxes,horizontalalignment="left",verticalalignment='top',fontsize=10)
             plt.text(0.05,0.95,f"MED/MAD =\n {med:.2e},{mad:.2e}",transform=plt.gca().transAxes,horizontalalignment="left",verticalalignment='top',fontsize=10)
         else:
             #plt.text(0.05,0.95,f"MED/MAD =\n {med:.2f},{mad:.2f}",transform=plt.gca().transAxes,horizontalalignment="left",verticalalignment='top',fontsize=10)
-            plt.text(0.05,0.95,f"MED/MAD =\n {med:.2f},{mad:.2f}",transform=plt.gca().transAxes,horizontalalignment="left",verticalalignment='top',fontsize=10)            
+            #plt.text(0.05,0.95,f"MED/MAD =\n {med:.2f},{mad:.2f}",transform=plt.gca().transAxes,horizontalalignment="left",verticalalignment='top',fontsize=10)
+            plt.text(0.05,0.95,f"MED/STD =\n {med:.2f},{mad:.2f}",transform=plt.gca().transAxes,horizontalalignment="left",verticalalignment='top',fontsize=10)            
         #print(f"number of pairs = {npair}")
         plt.axhline(y=mad,color='k',ls=':')
         plt.axhline(y=-mad,color='k',ls=':')        
@@ -124,10 +125,9 @@ def pairplot_residuals(tab,cols,dupindex1,dupindex2,colorcolumn='M24',remove_str
 class duplicates():
     def __init__(self,hatab_filename,googlesheet,vf):
         """
-        ARGS:
+        PARAMS:
         * hatab = stacked output from running photwrapper on CS gr images
         * googlesheet = spreadsheet with ratios and list of galaxies to exclude
-
         * vf = main vf tables
         """
         self.fulltab = Table.read(hatab_filename)
@@ -142,12 +142,18 @@ class duplicates():
         # read in spreadsheet with ratios and list of galaxies to exclude
         self.gspread = Table.read(googlesheet)
 
+        # create an integer array to represent the telescope
         tel_int = 1*(self.fulltab['TEL'] == 'BOK') + \
           2*(self.fulltab['TEL'] == 'HDI') + \
           3*(self.fulltab['TEL'] == 'INT') + \
-          4*(self.fulltab['TEL'] == 'MOS') 
+          4*(self.fulltab['TEL'] == 'MOS')
+        # add telescope column to the full table
         self.fulltab.add_column(Column(tel_int,name='TELNUM'))
+
+        # this is all of the vf tables.
+        # not sure why we need to save this as a class variable
         self.v = vf
+        
     def get_sample(self):
         print("number of galaxies observed in halpha = ",len(self.fulltab))
         self.htab = self.fulltab[~self.fulltab['badflag']]
@@ -159,8 +165,6 @@ class duplicates():
             & (self.htab['GAL_RE'] < 50) & (self.htab['GAL_MAG'] < 20)  \
             & (self.htab['GAL_N'] < 8) & (self.htab['GAL_MAG'] > 0) \
             & (self.htab['ELLIP_ASYM'] > -90) & (self.htab['PETRO_MAG'] > 0)
-
-        
 
         self.hflag = (self.htab['HM16'] > 0)& (self.htab['HM17'] >0) \
             & (self.htab['HC30'] < 1) &(self.htab['ELLIP_HASYM'] > -10)\
@@ -199,22 +203,25 @@ class duplicates():
         print(f"number of duplicate observations = {len(self.dupindex1)}")
 
         
-    def plot_rparams(self):
+    def plot_rparams(self, colorcolumn = 'M24', filterflag=False, maxfcor = 1.1):
         cols = ['ELLIP_GINI','ELLIP_M20','C30','ELLIP_ASYM',\
                 'ELLIP_SUM','PETRO_R','R24','R25',\
                 'GAL_MAG','GAL_RE','GAL_N','GAL_BA',\
                 'M24','M25','M26','PETRO_MAG']
         keepflag = self.rflag[self.dupindex1] & self.rflag[self.dupindex2]
+        if filterflag:
+            #keepflag = keepflag & (self.htab['FILT_COR'] < maxfcor)
+            keepflag = keepflag & (self.htab['FILT_COR'][self.dupindex1] < maxfcor) &  (self.htab['FILT_COR'][self.dupindex2] < maxfcor)            
         dupindex1 = self.dupindex1[keepflag]
         dupindex2 = self.dupindex2[keepflag]
         plt.figure(figsize=(10,10))
         plt.subplots_adjust(hspace=.5,wspace=.35)
 
-        pairplot_linear(self.htab,cols,dupindex1,dupindex2,colorcolumn='M24')
+        pairplot_linear(self.htab,cols,dupindex1,dupindex2,colorcolumn=colorcolumn)
         plt.show()
 
 
-    def plot_rparams_residuals(self):
+    def plot_rparams_residuals(self, filterflag=False, maxfcor = 1.1):
         cols = ['ELLIP_GINI','ELLIP_M20','C30','ELLIP_ASYM',\
                 'ELLIP_SUM','PETRO_R','R24','R25',\
                 'GAL_MAG','GAL_RE','GAL_N','GAL_BA',\
@@ -222,6 +229,8 @@ class duplicates():
 
 
         keepflag = self.rflag[self.dupindex1] & self.rflag[self.dupindex2]
+        if filterflag:
+            keepflag = keepflag & (self.htab['FILT_COR'][self.dupindex1] < maxfcor) &  (self.htab['FILT_COR'][self.dupindex2] < maxfcor)
         dupindex1 = self.dupindex1[keepflag]
         dupindex2 = self.dupindex2[keepflag]
 
@@ -279,7 +288,7 @@ class duplicates():
         pairplot_linear(self.htab,cols,dupindex1,dupindex2,colorcolumn='R_FWHM',remove_string='SMORPH_')
 
     def plot_hstatmorph(self,hsmorphmaxflag=2,remove_tel=None,keep_tel=None):
-        cols = ['SMORPH_HXCENTROID','SMORPH_HYCENTROID','SMORPH_HRPETRO_CIRC','SMORPH_HRPETRO_ELLIP',\
+        cols = ['SMORPH_HXCENTROID','SMORPH_HYCENTROID','SMORPH_HRMAX_ELLIP','SMORPH_HRPETRO_ELLIP',\
                     'SMORPH_HRHALF_ELLIP','SMORPH_HR20','SMORPH_HR50','SMORPH_HR80','SMORPH_HGINI',\
                     'SMORPH_HM20','SMORPH_HF_GM20','SMORPH_HS_GM20','SMORPH_HC',\
                     'SMORPH_HA','SMORPH_HS']
@@ -592,8 +601,8 @@ if __name__ == '__main__':
 
     tabledir = homedir+"/research/Virgo/halpha-tables/"
     #hafilename = os.path.join(tabledir,"hgui_csgrphot_combined.fits")
-    #hafilename = os.path.join(tabledir,"hgui_csgrphot_combined_2024-Oct-18.fits")
-    hafilename = os.path.join(tabledir,"hgui_csgrphot_combined_2025-May-20.fits")    
+    hafilename = os.path.join(tabledir,"hgui_csgrphot_combined_2024-Oct-18.fits")
+    #hafilename = os.path.join(tabledir,"hgui_csgrphot_combined_2025-May-20.fits")    
     googlesheet = tabledir+'hagalaxies-including-duplicates.csv'
     d = duplicates(hafilename,googlesheet,v)
     d.get_sample()
