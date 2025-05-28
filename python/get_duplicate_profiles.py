@@ -125,5 +125,6 @@ if __name__ == '__main__':
         flag = vfid == vf
 
         subdirs = dirlist[flag]
+        print("testing subdirs: ",vf, subdirs)
         make_plots(subdirs, vf)
         
