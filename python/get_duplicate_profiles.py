@@ -120,6 +120,8 @@ if __name__ == '__main__':
     # print number of duplicates
     print(f"got {len(duplist)} galaxies with duplicate observations")
 
+    vfid = np.array(vfid)
+    dirlist = np.array(dirlist)
     for vf in duplist:
         # get list of subdirectories starting with vf
         flag = vfid == vf
