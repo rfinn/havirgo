@@ -20,7 +20,7 @@ run from cutouts directory on
 """
 import os
 import collections
-
+from matplotlib import pyplot as plt
 
 def make_plots(subdirs,vf):
     # photutils flux
