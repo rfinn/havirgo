@@ -64,7 +64,7 @@ def make_plots(subdirs,vf):
                 plt.subplot(2,2,2)
             else:
                 plt.subplot(2,2,1)
-            plt.fill_between(rphot['sma_arcsec'],y1,y2,label=sd,alpha=alphas[i],color=sd)
+            plt.fill_between(rphot['sma_arcsec'],y1,y2,label=sd,alpha=alphas[i],color=mycolors[i])
             # also plot line because you can't see the result when the error is small
             # this should fix issue #18 in Virgo github
             plt.plot(rphot['sma_arcsec'],y0,'-',lw=2,color=mycolors[i])
