@@ -130,4 +130,5 @@ if __name__ == '__main__':
         subdirs = dirlist[flag]
         print("testing subdirs: ",vf, subdirs)
         make_plots(subdirs, vf)
+        break
         
