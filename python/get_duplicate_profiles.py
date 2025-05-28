@@ -66,20 +66,20 @@ def make_plots(subdirs,vf):
                 plt.subplot(2,2,2)
             else:
                 plt.subplot(2,2,1)
-            plt.fill_between(rphot['sma_arcsec'],y1,y2,label=sd+labels[j],alpha=alphas[i],color=mycolors[i])
+            plt.fill_between(rphot['sma_arcsec'],y1,y2,alpha=alphas[i],color=mycolors[i])
             # also plot line because you can't see the result when the error is small
             # this should fix issue #18 in Virgo github
-            plt.plot(rphot['sma_arcsec'],y0,lss[j],lw=2,color=mycolors[i])
+            plt.plot(rphot['sma_arcsec'],y0,lss[j],lw=2,label=sd+labels[j],color=mycolors[i])
 
 
             if j < 2:
                 plt.subplot(2,2,4)
             else:
                 plt.subplot(2,2,3)
-            plt.fill_between(t['sma_arcsec'],sb1,sb2,label=sd+labels[j],alpha=alphas[i],color=mycolors[i])
+            plt.fill_between(t['sma_arcsec'],sb1,sb2,alpha=alphas[i],color=mycolors[i])
             # also plot line because you can't see the result when the error is small
             # this should fix issue #18 in Virgo github
-            plt.plot(t['sma_arcsec'],sb0,lss[j],lw=2,color=mycolors[i])
+            plt.plot(t['sma_arcsec'],sb0,lss[j],lw=2,label=sd+labels[j],color=mycolors[i])
 
             
     for i in range(4):
