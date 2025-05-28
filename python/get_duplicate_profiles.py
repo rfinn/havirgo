@@ -21,6 +21,7 @@ run from cutouts directory on
 import os
 import collections
 from matplotlib import pyplot as plt
+from astropy.io import fits
 
 def make_plots(subdirs,vf):
     # photutils flux
