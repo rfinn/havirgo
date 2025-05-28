@@ -52,7 +52,7 @@ def pairplot_linear(tab,cols,dupindex1,dupindex2,colorcolumn='M24',\
         except ValueError:
             print(f"WARNING: problem getting median for {c}")
             med=-99
-        mad =MAD(dx)
+        mad =MAD(dx, nan_policy='omit')
         #mad = np.nanstd(dx)
         if nplot == 5:
             plt.text(0.05,0.95,f"MED/MAD =\n {med:.2e},{mad:.2e}",transform=plt.gca().transAxes,horizontalalignment="left",verticalalignment='top',fontsize=10)
