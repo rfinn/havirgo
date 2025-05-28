@@ -19,6 +19,7 @@ R-band:
 run from cutouts directory on 
 """
 import os
+import numpy as np
 import collections
 from matplotlib import pyplot as plt
 from astropy.io import fits
