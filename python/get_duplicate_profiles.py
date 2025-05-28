@@ -212,5 +212,5 @@ if __name__ == '__main__':
         print("testing subdirs: ",vf, subdirs)
         make_plots(subdirs, vf)
         make_plots_mags(subdirs, vf)        
-        break
+        #break
         
