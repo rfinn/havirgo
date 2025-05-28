@@ -102,7 +102,7 @@ if __name__ == '__main__':
 
     if not os.path.exists('duplicates'):
         os.mkdir('duplicates')
-    infile = ('conscale_factors.txt','r')
+    infile = open('conscale_factors.txt','r')
 
     dirlist = []
     vfid = []
