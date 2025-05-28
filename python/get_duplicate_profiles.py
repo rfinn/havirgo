@@ -36,7 +36,7 @@ def make_plots(subdirs,vf):
 
     plt.subplots_adjust(left=.15,bottom=.1,right=.95,top=.95)
     #labels = ['galfit r','galfit Halphax100','photutil r','photutil Halphax100']
-    alphas = [1,.4,.6,.4]
+    alphas = [.4,.4,.4,.4]
 
     
     for i,sd in enumerate(subdirs):
@@ -91,10 +91,10 @@ def make_plots(subdirs,vf):
         plt.gca().set_yscale('log')
         plt.gca().set_xscale('log')
         plt.legend(loc='lower right')
-        if i%2 == 1:
-            plt.title("Rband")
+        if i%2 == 0:
+            plt.title("Rband",fontsize=16)
         else:
-            plt.title("Halpha")
+            plt.title("Halpha",fontsize=16)
     plt.savefig(f"duplicates/{vf}_duplicate_profiles.png")
     plt.close(fig)
 
