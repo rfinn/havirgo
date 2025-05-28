@@ -48,7 +48,7 @@ def make_plots(subdirs,vf):
         csphot = fits.getdata(cs_phot)
         
         #cs_phot = self.csimage.replace('.fits','-phot.fits')        
-        r_phot = self.rimage.replace('.fits','_phot.fits')
+        r_phot =fileroot+'_phot.fits')
         rphot = fits.getdata(r_phot)
         
         tabs = [csgrphot, csphot, rphot]
