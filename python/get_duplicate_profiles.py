@@ -23,6 +23,7 @@ import numpy as np
 import collections
 from matplotlib import pyplot as plt
 from astropy.io import fits
+from astropy import wcs
 
 def make_plots(subdirs,vf):
     # photutils flux
@@ -178,7 +179,102 @@ def make_plots_mags(subdirs,vf):
             plt.title("Halpha",fontsize=16)
     plt.savefig(f"duplicates/{vf}_duplicate_profiles_mag.png")
     plt.close(fig)
+
+
+def make_plots_mags_cutouts(subdirs,vf):
+    # photutils flux
+    fig = plt.figure(figsize=(15,15))
+
+
+    # define colors - need this for plotting line and fill_between in the same color
+    mycolors = plt.rcParams['axes.prop_cycle'].by_key()['color']
+
+    # plot enclosed flux        
+
+    plt.subplots_adjust(left=.15,bottom=.1,right=.95,top=.95)
+    #labels = ['galfit r','galfit Halphax100','photutil r','photutil Halphax100']
+    alphas = [.4,.4,.4,.4]
+
     
+    for i,sd in enumerate(subdirs):
+        fileroot = f"{sd}/{sd}"
+        cs_gr_phot = fileroot+"-CS-gr_phot.fits"
+        csgrphot = fits.getdata(cs_gr_phot)
+
+        cs_phot = fileroot+"-CS_phot.fits"
+        csphot = fits.getdata(cs_phot)
+        
+        #cs_phot = self.csimage.replace('.fits','-phot.fits')        
+        r_phot =fileroot+'-R_phot.fits'
+        rphot = fits.getdata(r_phot)
+        
+        tabs = [csgrphot, csphot, rphot]
+
+        lss = ['-','--','-']
+        labels = ['-gr','','']        
+        for j,t in enumerate(tabs):
+            y0 = t['mag']
+            y1 = t['mag']+t['mag_err']
+            y2 = t['mag']-t['mag_err']
+ 
+            sb0 = t['sb_mag_sqarcsec']
+            sb1 = t['sb_mag_sqarcsec']+t['sb_mag_sqarcsec_err']
+            sb2 = t['sb_mag_sqarcsec']-t['sb_mag_sqarcsec_err']
+
+            if j < 2:
+                plt.subplot(3,3,3)
+            else:
+                plt.subplot(3,3,2)
+            plt.fill_between(rphot['sma_arcsec'],y1,y2,alpha=alphas[i],color=mycolors[i])
+            # also plot line because you can't see the result when the error is small
+            # this should fix issue #18 in Virgo github
+            plt.plot(rphot['sma_arcsec'],y0,lss[j],lw=2,label=sd+labels[j],color=mycolors[i])
+
+
+            if j < 2:
+                plt.subplot(3,3,7)
+            else:
+                plt.subplot(3,4,6)
+            plt.fill_between(t['sma_arcsec'],sb1,sb2,alpha=alphas[i],color=mycolors[i])
+            # also plot line because you can't see the result when the error is small
+            # this should fix issue #18 in Virgo github
+            plt.plot(t['sma_arcsec'],sb0,lss[j],lw=2,label=sd+labels[j],color=mycolors[i])
+
+            
+    for i in [2,3,6,7]:
+        plt.subplot(3,3,i)
+        plt.xlabel('SMA (arcsec)',fontsize=16)
+        if i == 2:
+            plt.ylabel('magnitude (AB)',fontsize=16)
+        elif i == 6:
+            plt.ylabel('Surface Brightness (mag/arcsec^2)',fontsize=16)
+            
+        #plt.gca().set_yscale('log')
+        plt.gca().set_xscale('log')
+        plt.gca().invert_yaxis()  
+        plt.legend(loc='lower right')
+        if i%2 == 0:
+            plt.title("Rband",fontsize=16)
+        else:
+            plt.title("Halpha",fontsize=16)
+
+    # plot jpg in subplot 1
+
+    #jpgfile = glob.glob(fileroot+"/legacy/*.jpg")
+    legacy_jpg = glob.glob(fileroot+"/legacy/*.jpg")[0]
+    legacy_g = glob.glob(fileroot+"/legacy/*-g.fits")[0]
+    jpeg_data = Image.open(legacy_jpg)
+
+    header = fits.getheader(legacy_g)
+    imwcs = wcs.WCS(header)
+    plt.subplot(3,3,1,projection=imwcs)
+    plt.imshow(jpeg_data, origin='lower')
+    plt.xlabel('RA (deg)',fontsize=16)
+    plt.ylabel('Dec (deg)',fontsize=16)
+    
+    
+    plt.savefig(f"duplicates/{vf}_duplicate_profiles_mag_cutouts.png")
+    plt.close(fig)
     
 if __name__ == '__main__':
     # get list of directories
@@ -211,6 +307,7 @@ if __name__ == '__main__':
         subdirs = dirlist[flag]
         print("testing subdirs: ",vf, subdirs)
         make_plots(subdirs, vf)
-        make_plots_mags(subdirs, vf)        
-        #break
+        make_plots_mags(subdirs, vf)
+        make_plots_mags_cutouts(subdirs, vf)
+        break
         

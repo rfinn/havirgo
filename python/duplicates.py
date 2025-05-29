@@ -32,6 +32,12 @@ def pairplot_linear(tab,cols,dupindex1,dupindex2,colorcolumn='M24',\
         dx = x2 - x1
         colorcolumn = colorcolumn
         mycolor = np.abs(tab[colorcolumn][dupindex1] - tab[colorcolumn][dupindex2])
+        cbar_label = '$\Delta$'+colorcolumn
+        if colorcolumn == 'TELNUM':
+            mycolor = np.abs(tab[colorcolumn][dupindex1] + tab[colorcolumn][dupindex2])
+            cbar_label = "SUM TELNUM"
+        
+
         if v1 is not None:
             plt.scatter(x1,x2,c=mycolor,s=20,alpha=.7,vmin=v1,vmax=v2)
         else:
@@ -63,7 +69,7 @@ def pairplot_linear(tab,cols,dupindex1,dupindex2,colorcolumn='M24',\
         plt.plot(xline,xline-mad,'k:')
         nplot += 1
     cb = plt.colorbar(ax=allax, fraction=0.08)
-    cb.set_label('$\Delta$'+colorcolumn,fontsize=16)        
+    cb.set_label(cbar_label,fontsize=16)        
     #plt.show()
 
 
@@ -83,6 +89,11 @@ def pairplot_residuals(tab,cols,dupindex1,dupindex2,colorcolumn='M24',remove_str
         colorcolumn = colorcolumn
         mycolor = tab[colorcolumn][dupindex1]
         mycolor = np.abs(tab[colorcolumn][dupindex1] - tab[colorcolumn][dupindex2])
+        cbar_label = '$\Delta$'+colorcolumn
+        if colorcolumn == 'TELNUM':
+            mycolor = np.abs(tab[colorcolumn][dupindex1] + tab[colorcolumn][dupindex2])
+            cbar_label = "SUM TELNUM"
+        
         if (v1 is not None) and (v2 is not None):
             plt.scatter(x1,dx,c=mycolor,s=20,alpha=.7,vmin=v1,vmax=v2)#,vmin=1,vmax=1.3)
         else:
@@ -119,7 +130,7 @@ def pairplot_residuals(tab,cols,dupindex1,dupindex2,colorcolumn='M24',remove_str
 
         nplot += 1
     cb = plt.colorbar(ax=allax, fraction=0.08)
-    cb.set_label('$\Delta$'+colorcolumn,fontsize=16)        
+    cb.set_label(cbar_label,fontsize=16)        
     #plt.show()
     
 class duplicates():
@@ -143,10 +154,10 @@ class duplicates():
         self.gspread = Table.read(googlesheet)
 
         # create an integer array to represent the telescope
-        tel_int = 1*(self.fulltab['TEL'] == 'BOK') + \
-          2*(self.fulltab['TEL'] == 'HDI') + \
-          3*(self.fulltab['TEL'] == 'INT') + \
-          4*(self.fulltab['TEL'] == 'MOS')
+        tel_int = (1)*(self.fulltab['TEL'] == 'INT') + \
+          2*(self.fulltab['TEL'] == 'BOK') + \
+          4*(self.fulltab['TEL'] == 'HDI') + \
+          8*(self.fulltab['TEL'] == 'MOS')
         # add telescope column to the full table
         self.fulltab.add_column(Column(tel_int,name='TELNUM'))
 
@@ -221,7 +232,7 @@ class duplicates():
         plt.show()
 
 
-    def plot_rparams_residuals(self, filterflag=False, maxfcor = 1.1):
+    def plot_rparams_residuals(self, filterflag=False, maxfcor = 1.1, colorcolumn = 'M24'):
         cols = ['ELLIP_GINI','ELLIP_M20','C30','ELLIP_ASYM',\
                 'ELLIP_SUM','PETRO_R','R24','R25',\
                 'GAL_MAG','GAL_RE','GAL_N','GAL_BA',\
@@ -234,10 +245,10 @@ class duplicates():
         dupindex1 = self.dupindex1[keepflag]
         dupindex2 = self.dupindex2[keepflag]
 
-        pairplot_residuals(self.htab,cols,dupindex1,dupindex2,colorcolumn='M24')
+        pairplot_residuals(self.htab,cols,dupindex1,dupindex2,colorcolumn=colorcolumn)
         plt.show()
 
-    def plot_hparams(self):
+    def plot_hparams(self,colorcolumn = 'M24'):
         cols = ['ELLIP_HGINI','ELLIP_HASYM','ELLIP_HM20','HC30',\
         'ELLIP_HSUM','HPETRO_R','HR16','HR17',\
         'HM16','HM17','HF_TOT','HPETRO_MAG']
@@ -248,11 +259,11 @@ class duplicates():
         plt.figure(figsize=(10,10))
         plt.subplots_adjust(hspace=.5,wspace=.35)
 
-        pairplot_linear(self.htab,cols,dupindex1,dupindex2,colorcolumn='M24')
+        pairplot_linear(self.htab,cols,dupindex1,dupindex2,colorcolumn=colorcolumn)
         plt.show()
 
 
-    def plot_hparams_residuals(self):
+    def plot_hparams_residuals(self,colorcolumn = 'M24'):
         cols = ['ELLIP_HGINI','ELLIP_HASYM','ELLIP_HM20','HC30',\
         'ELLIP_HSUM','HPETRO_R','HR16','HR17',\
         'HM16','HM17','HF_TOT','HPETRO_MAG']
@@ -262,7 +273,7 @@ class duplicates():
         dupindex1 = self.dupindex1[keepflag]
         dupindex2 = self.dupindex2[keepflag]
 
-        pairplot_residuals(self.htab,cols,dupindex1,dupindex2,colorcolumn='M24')
+        pairplot_residuals(self.htab,cols,dupindex1,dupindex2,colorcolumn=colorcolumn)
         plt.show()
 
     def plot_rstatmorph(self,rsmorphmaxflag=2):
