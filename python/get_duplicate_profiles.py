@@ -262,7 +262,7 @@ def make_plots_mags_cutouts(subdirs,vf):
     # plot jpg in subplot 1
 
     #jpgfile = glob.glob(fileroot+"/legacy/*.jpg")
-    legdir = sds[0] + "/legacy/"
+    legdir = subdirs[0] + "/legacy/"
     legacy_jpg = glob.glob(legdir+"*.jpg")[0]
     legacy_g = glob.glob(legdir+"*-g.fits")[0]
     jpeg_data = Image.open(legacy_jpg)
