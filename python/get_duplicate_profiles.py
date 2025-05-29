@@ -298,13 +298,13 @@ def make_plots_mags_cutouts(subdirs,vf):
         mask = mask > 0
         #norm = simple_norm(clipped_data, stretch=stretch,max_percent=percentile2,min_percent=percentile1)
 
-        plt.subplot(nrow,ncol,nsubplots[np])
+        plt.subplot(nrow,ncol,nsubplots[np],projection=imwcs)
         display_image(csdata,stretch='asinh',percentile1=.5,percentile2=99.5,mask=mask)
-        plt.title(sd + "-CS",fontsize=8)
+        plt.xlabel(sd + "-CS",fontsize=8)
         np += 1
-        plt.subplot(nrow,ncol,nsubplots[np])
+        plt.subplot(nrow,ncol,nsubplots[np],projection=imwcs)
         display_image(csgrdata,stretch='asinh',percentile1=.5,percentile2=99.5,mask=mask)
-        plt.title(sd + "-CSgr",fontsize=8)
+        plt.xabel(sd + "-CSgr",fontsize=8)
         np += 1
         
     plt.savefig(f"duplicates/{vf}_duplicate_profiles_mag_cutouts.png")
