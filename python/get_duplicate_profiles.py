@@ -295,14 +295,14 @@ def make_plots_mags_cutouts(subdirs,vf):
         csdata = fits.getdata(cs_phot)
         maskfile = fileroot+"-R-mask.fits"
         mask = fits.getdata(maskfile)
-        norm = simple_norm(clipped_data, stretch=stretch,max_percent=percentile2,min_percent=percentile1)
+        #norm = simple_norm(clipped_data, stretch=stretch,max_percent=percentile2,min_percent=percentile1)
 
         plt.subplot(nrow,ncol,nsubplots[np])
         display_image(csdata,stretch='asinh',percentile1=.5,percentile2=99.5,mask=mask)
         plt.title(cs_phot.replace(".fits",""))
         np += 1
         plt.subplot(nrow,ncol,nsubplots[np])
-        display_image(csdata,stretch='asinh',percentile1=.5,percentile2=99.5,mask=mask)
+        display_image(csgrdata,stretch='asinh',percentile1=.5,percentile2=99.5,mask=mask)
         plt.title(cs_gr_phot.replace(".fits",""))
         np += 1
         
