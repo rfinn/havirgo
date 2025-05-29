@@ -264,9 +264,9 @@ def make_plots_mags_cutouts(subdirs,vf):
         plt.gca().set_xscale('log')
         plt.gca().invert_yaxis()  
         plt.legend(loc='lower right')
-        if i%2 == 0:
+        if i == 2:
             plt.title("Rband",fontsize=16)
-        else:
+        elif i == 3:
             plt.title("Halpha",fontsize=16)
 
     # plot jpg in subplot 1
