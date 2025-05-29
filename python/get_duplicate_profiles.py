@@ -300,11 +300,11 @@ def make_plots_mags_cutouts(subdirs,vf):
 
         plt.subplot(nrow,ncol,nsubplots[np])
         display_image(csdata,stretch='asinh',percentile1=.5,percentile2=99.5,mask=mask)
-        plt.title(sd + "-CS")
+        plt.title(sd + "-CS",fontsize=8)
         np += 1
         plt.subplot(nrow,ncol,nsubplots[np])
         display_image(csgrdata,stretch='asinh',percentile1=.5,percentile2=99.5,mask=mask)
-        plt.title(sd + "-CSgr")
+        plt.title(sd + "-CSgr",fontsize=8)
         np += 1
         
     plt.savefig(f"duplicates/{vf}_duplicate_profiles_mag_cutouts.png")
