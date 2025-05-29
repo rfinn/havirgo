@@ -248,7 +248,7 @@ def make_plots_mags_cutouts(subdirs,vf):
         plt.xlabel('SMA (arcsec)',fontsize=16)
         if i == 2:
             plt.ylabel('magnitude (AB)',fontsize=16)
-        elif i == 6:
+        elif i == 5:
             plt.ylabel('Surface Brightness (mag/arcsec^2)',fontsize=16)
             
         #plt.gca().set_yscale('log')
