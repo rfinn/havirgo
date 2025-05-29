@@ -27,6 +27,8 @@ from astropy.io import fits
 from astropy import wcs
 from PIL import Image
 
+from build_web_cutouts2 import display_image
+
 def make_plots(subdirs,vf):
     # photutils flux
     fig = plt.figure(figsize=(12,12))
@@ -185,7 +187,7 @@ def make_plots_mags(subdirs,vf):
 
 def make_plots_mags_cutouts(subdirs,vf):
     # photutils flux
-    fig = plt.figure(figsize=(16,16))
+
 
 
     # define colors - need this for plotting line and fill_between in the same color
@@ -197,7 +199,13 @@ def make_plots_mags_cutouts(subdirs,vf):
     #labels = ['galfit r','galfit Halphax100','photutil r','photutil Halphax100']
     alphas = [.4,.4,.4,.4]
 
-    
+    ncol = 3
+    nrow = 3
+    figs = (16,16)
+    if len(subdirs) == 3:
+        nrow = 4
+        figs = (20,16)
+    fig = plt.figure(figsize=figs)        
     for i,sd in enumerate(subdirs):
         fileroot = f"{sd}/{sd}"
         cs_gr_phot = fileroot+"-CS-gr_phot.fits"
@@ -224,9 +232,9 @@ def make_plots_mags_cutouts(subdirs,vf):
             sb2 = t['sb_mag_sqarcsec']-t['sb_mag_sqarcsec_err']
 
             if j < 2:
-                plt.subplot(3,3,3)
+                plt.subplot(nrow,ncol,3)
             else:
-                plt.subplot(3,3,2)
+                plt.subplot(nrow,ncol,2)
             plt.fill_between(rphot['sma_arcsec'],y1,y2,alpha=alphas[i],color=mycolors[i])
             # also plot line because you can't see the result when the error is small
             # this should fix issue #18 in Virgo github
@@ -234,9 +242,9 @@ def make_plots_mags_cutouts(subdirs,vf):
 
 
             if j < 2:
-                plt.subplot(3,3,6)
+                plt.subplot(nrow,ncol,6)
             else:
-                plt.subplot(3,3,5)
+                plt.subplot(nrow,ncol,5)
             plt.fill_between(t['sma_arcsec'],sb1,sb2,alpha=alphas[i],color=mycolors[i])
             # also plot line because you can't see the result when the error is small
             # this should fix issue #18 in Virgo github
@@ -244,7 +252,7 @@ def make_plots_mags_cutouts(subdirs,vf):
 
             
     for i in [2,3,5,6]:
-        plt.subplot(3,3,i)
+        plt.subplot(nrow,ncol,i)
         plt.xlabel('SMA (arcsec)',fontsize=16)
         if i == 2:
             plt.ylabel('magnitude (AB)',fontsize=16)
@@ -261,7 +269,6 @@ def make_plots_mags_cutouts(subdirs,vf):
             plt.title("Halpha",fontsize=16)
 
     # plot jpg in subplot 1
-
     #jpgfile = glob.glob(fileroot+"/legacy/*.jpg")
     legdir = subdirs[0] + "/legacy/"
     legacy_jpg = glob.glob(legdir+"*.jpg")[0]
@@ -270,12 +277,34 @@ def make_plots_mags_cutouts(subdirs,vf):
 
     header = fits.getheader(legacy_g)
     imwcs = wcs.WCS(header)
-    plt.subplot(3,3,1,projection=imwcs)
+    plt.subplot(nrow,ncol,1,projection=imwcs)
     plt.imshow(jpeg_data, origin='lower')
     plt.xlabel('RA (deg)',fontsize=16)
     plt.ylabel('Dec (deg)',fontsize=16)
-    
-    
+
+    # plot cs subtracted images
+    nsubplots = [5,7,8,9,11,12]
+    np = 0
+    for i,sd in enumerate(subdirs):
+        fileroot = f"{sd}/{sd}"
+        cs_gr_phot = fileroot+"-CS-gr.fits"
+        csgrdata = fits.getdata(cs_gr_phot)
+
+        cs_phot = fileroot+"-CS.fits"
+        csdata = fits.getdata(cs_phot)
+        maskfile = fileroot+"-R-mask.fits"
+        mask = fits.getdata(maskfile)
+        norm = simple_norm(clipped_data, stretch=stretch,max_percent=percentile2,min_percent=percentile1)
+
+        plt.subplot(nrow,ncol,nsubplots[np])
+        display_image(csdata,stretch='asinh',percentile1=.5,percentile2=99.5,mask=mask)
+        plt.title(cs_phot.replace(".fits","")
+        np += 1
+        plt.subplot(nrow,ncol,nsubplots[np])
+        display_image(csdata,stretch='asinh',percentile1=.5,percentile2=99.5,mask=mask)
+        plt.title(cs_gr_phot.replace(".fits","")        
+        np += 1
+        
     plt.savefig(f"duplicates/{vf}_duplicate_profiles_mag_cutouts.png")
     plt.close(fig)
     
