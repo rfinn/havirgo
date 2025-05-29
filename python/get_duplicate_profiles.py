@@ -234,16 +234,16 @@ def make_plots_mags_cutouts(subdirs,vf):
 
 
             if j < 2:
-                plt.subplot(3,3,7)
-            else:
                 plt.subplot(3,3,6)
+            else:
+                plt.subplot(3,3,5)
             plt.fill_between(t['sma_arcsec'],sb1,sb2,alpha=alphas[i],color=mycolors[i])
             # also plot line because you can't see the result when the error is small
             # this should fix issue #18 in Virgo github
             plt.plot(t['sma_arcsec'],sb0,lss[j],lw=2,label=sd+labels[j],color=mycolors[i])
 
             
-    for i in [2,3,6,7]:
+    for i in [2,3,5,6]:
         plt.subplot(3,3,i)
         plt.xlabel('SMA (arcsec)',fontsize=16)
         if i == 2:
