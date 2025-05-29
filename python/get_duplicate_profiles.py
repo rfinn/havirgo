@@ -284,7 +284,7 @@ def make_plots_mags_cutouts(subdirs,vf):
     plt.ylabel('Dec (deg)',fontsize=16)
 
     # plot cs subtracted images
-    nsubplots = [5,7,8,9,11,12]
+    nsubplots = [4,7,8,9,11,12]
     np = 0
     for i,sd in enumerate(subdirs):
         fileroot = f"{sd}/{sd}"
@@ -300,11 +300,11 @@ def make_plots_mags_cutouts(subdirs,vf):
 
         plt.subplot(nrow,ncol,nsubplots[np])
         display_image(csdata,stretch='asinh',percentile1=.5,percentile2=99.5,mask=mask)
-        plt.title(cs_phot.replace(".fits",""))
+        plt.title(sd + "-CS")
         np += 1
         plt.subplot(nrow,ncol,nsubplots[np])
         display_image(csgrdata,stretch='asinh',percentile1=.5,percentile2=99.5,mask=mask)
-        plt.title(cs_gr_phot.replace(".fits",""))
+        plt.title(sd + "-CSgr")
         np += 1
         
     plt.savefig(f"duplicates/{vf}_duplicate_profiles_mag_cutouts.png")
