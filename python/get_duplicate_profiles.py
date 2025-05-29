@@ -287,7 +287,12 @@ def make_plots_mags_cutouts(subdirs,vf):
     # plot cs subtracted images
     nsubplots = [4,7,8,9,11,12]
     np = 0
+    tels = ['BOK', 'INT', 'HDI', "MOS"]
     for i,sd in enumerate(subdirs):
+        for t in tels:
+            if t in sd:
+                thistel = t
+                break
         fileroot = f"{sd}/{sd}"
         cs_gr_phot = fileroot+"-CS-gr.fits"
         csgrdata, csgrheader = fits.getdata(cs_gr_phot, header=True)
@@ -304,12 +309,12 @@ def make_plots_mags_cutouts(subdirs,vf):
         plt.subplot(nrow,ncol,nsubplots[np],projection=cswcs)
         display_image(csdata,stretch='asinh',percentile1=.5,percentile2=99.5,mask=mask)
         plt.xlabel(sd + "-CS",fontsize=8)
-        plt.text(0.95, 0.9, "CS Halpha", transform=plt.gca().transAxes, color='white',fontsize=16, horizontalalignment='right')
+        plt.text(0.95, 0.9, thistel+" CS Halpha", transform=plt.gca().transAxes, color='white',fontsize=14, horizontalalignment='right')
         np += 1
         plt.subplot(nrow,ncol,nsubplots[np],projection=csgrwcs)
         display_image(csgrdata,stretch='asinh',percentile1=.5,percentile2=99.5,mask=mask)
         plt.xlabel(sd + "-CSgr",fontsize=8)
-        plt.text(0.95, 0.9, "CS-gr Halpha", transform=plt.gca().transAxes, color='white',fontsize=16, horizontalalignment='right')        
+        plt.text(0.95, 0.9, thistel+" CS-gr Halpha", transform=plt.gca().transAxes, color='white',fontsize=14, horizontalalignment='right')        
         np += 1
         
     plt.savefig(f"duplicates/{vf}_duplicate_profiles_mag_cutouts.png")
