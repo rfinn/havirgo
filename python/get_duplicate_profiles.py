@@ -304,7 +304,7 @@ def make_plots_mags_cutouts(subdirs,vf):
         np += 1
         plt.subplot(nrow,ncol,nsubplots[np],projection=imwcs)
         display_image(csgrdata,stretch='asinh',percentile1=.5,percentile2=99.5,mask=mask)
-        plt.xabel(sd + "-CSgr",fontsize=8)
+        plt.xlabel(sd + "-CSgr",fontsize=8)
         np += 1
         
     plt.savefig(f"duplicates/{vf}_duplicate_profiles_mag_cutouts.png")
