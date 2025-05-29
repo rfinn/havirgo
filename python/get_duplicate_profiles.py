@@ -25,6 +25,7 @@ import collections
 from matplotlib import pyplot as plt
 from astropy.io import fits
 from astropy import wcs
+from PIL import Image
 
 def make_plots(subdirs,vf):
     # photutils flux
