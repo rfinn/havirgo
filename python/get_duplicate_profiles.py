@@ -309,12 +309,12 @@ def make_plots_mags_cutouts(subdirs,vf):
         plt.subplot(nrow,ncol,nsubplots[np],projection=cswcs)
         display_image(csdata,stretch='asinh',percentile1=.5,percentile2=99.5,mask=mask)
         plt.xlabel(sd + "-CS",fontsize=8)
-        plt.text(0.95, 0.9, thistel+" CS Halpha", transform=plt.gca().transAxes, color='white',fontsize=14, horizontalalignment='right')
+        plt.text(0.95, 0.92, thistel+" CS Halpha", transform=plt.gca().transAxes, color='white',fontsize=14, horizontalalignment='right')
         np += 1
         plt.subplot(nrow,ncol,nsubplots[np],projection=csgrwcs)
         display_image(csgrdata,stretch='asinh',percentile1=.5,percentile2=99.5,mask=mask)
         plt.xlabel(sd + "-CSgr",fontsize=8)
-        plt.text(0.95, 0.9, thistel+" CS-gr Halpha", transform=plt.gca().transAxes, color='white',fontsize=14, horizontalalignment='right')        
+        plt.text(0.95, 0.92, thistel+" CS-gr Halpha", transform=plt.gca().transAxes, color='white',fontsize=14, horizontalalignment='right')        
         np += 1
         
     plt.savefig(f"duplicates/{vf}_duplicate_profiles_mag_cutouts.png")
