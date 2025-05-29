@@ -202,10 +202,10 @@ def make_plots_mags_cutouts(subdirs,vf):
 
     ncol = 3
     nrow = 3
-    figs = (16,16)
+    figs = (16,14)
     if len(subdirs) == 3:
         nrow = 4
-        figs = (20,16)
+        figs = (16,18)
     fig = plt.figure(figsize=figs)        
     for i,sd in enumerate(subdirs):
         fileroot = f"{sd}/{sd}"
