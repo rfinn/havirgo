@@ -185,7 +185,7 @@ def make_plots_mags(subdirs,vf):
 
 def make_plots_mags_cutouts(subdirs,vf):
     # photutils flux
-    fig = plt.figure(figsize=(15,15))
+    fig = plt.figure(figsize=(16,16))
 
 
     # define colors - need this for plotting line and fill_between in the same color
