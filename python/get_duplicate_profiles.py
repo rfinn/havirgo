@@ -206,7 +206,8 @@ def make_plots_mags_cutouts(subdirs,vf):
     if len(subdirs) == 3:
         nrow = 4
         figs = (16,18)
-    fig = plt.figure(figsize=figs)        
+    fig = plt.figure(figsize=figs)
+    plt.subplots_adjust(bottom=.05, top=.95,left=.05, right=.95)
     for i,sd in enumerate(subdirs):
         fileroot = f"{sd}/{sd}"
         cs_gr_phot = fileroot+"-CS-gr_phot.fits"
