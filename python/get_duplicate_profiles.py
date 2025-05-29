@@ -236,7 +236,7 @@ def make_plots_mags_cutouts(subdirs,vf):
             if j < 2:
                 plt.subplot(3,3,7)
             else:
-                plt.subplot(3,4,6)
+                plt.subplot(3,3,6)
             plt.fill_between(t['sma_arcsec'],sb1,sb2,alpha=alphas[i],color=mycolors[i])
             # also plot line because you can't see the result when the error is small
             # this should fix issue #18 in Virgo github
@@ -309,8 +309,8 @@ if __name__ == '__main__':
 
         subdirs = dirlist[flag]
         print("testing subdirs: ",vf, subdirs)
-        make_plots(subdirs, vf)
-        make_plots_mags(subdirs, vf)
+        #make_plots(subdirs, vf)
+        #make_plots_mags(subdirs, vf)
         make_plots_mags_cutouts(subdirs, vf)
         break
         
