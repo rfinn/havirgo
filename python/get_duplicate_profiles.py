@@ -295,6 +295,7 @@ def make_plots_mags_cutouts(subdirs,vf):
         csdata = fits.getdata(cs_phot)
         maskfile = fileroot+"-R-mask.fits"
         mask = fits.getdata(maskfile)
+        mask = mask > 0
         #norm = simple_norm(clipped_data, stretch=stretch,max_percent=percentile2,min_percent=percentile1)
 
         plt.subplot(nrow,ncol,nsubplots[np])
