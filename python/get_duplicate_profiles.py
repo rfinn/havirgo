@@ -263,7 +263,7 @@ def make_plots_mags_cutouts(subdirs,vf):
         #plt.gca().set_yscale('log')
         plt.gca().set_xscale('log')
         plt.gca().invert_yaxis()  
-        plt.legend(loc='lower right')
+        plt.legend(loc='lower right',fontsize=8)
         if i == 2:
             plt.title("Rband",fontsize=16)
         elif i == 3:
