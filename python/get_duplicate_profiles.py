@@ -353,5 +353,5 @@ if __name__ == '__main__':
         #make_plots(subdirs, vf)
         #make_plots_mags(subdirs, vf)
         make_plots_mags_cutouts(subdirs, vf)
-        break
+        #break
         
