@@ -289,20 +289,22 @@ def make_plots_mags_cutouts(subdirs,vf):
     for i,sd in enumerate(subdirs):
         fileroot = f"{sd}/{sd}"
         cs_gr_phot = fileroot+"-CS-gr.fits"
-        csgrdata = fits.getdata(cs_gr_phot)
-
+        csgrdata, csgrheader = fits.getdata(cs_gr_phot, header=True)
+        csgrwcs = wcs.WCS(csgrheader)
+        
         cs_phot = fileroot+"-CS.fits"
-        csdata = fits.getdata(cs_phot)
+        csdata, csheader = fits.getdata(cs_phot, header=True)
+        cswcs = wcs.WCS(csheader)
         maskfile = fileroot+"-R-mask.fits"
         mask = fits.getdata(maskfile)
         mask = mask > 0
         #norm = simple_norm(clipped_data, stretch=stretch,max_percent=percentile2,min_percent=percentile1)
 
-        plt.subplot(nrow,ncol,nsubplots[np],projection=imwcs)
+        plt.subplot(nrow,ncol,nsubplots[np],projection=cswcs)
         display_image(csdata,stretch='asinh',percentile1=.5,percentile2=99.5,mask=mask)
         plt.xlabel(sd + "-CS",fontsize=8)
         np += 1
-        plt.subplot(nrow,ncol,nsubplots[np],projection=imwcs)
+        plt.subplot(nrow,ncol,nsubplots[np],projection=csgrwcs)
         display_image(csgrdata,stretch='asinh',percentile1=.5,percentile2=99.5,mask=mask)
         plt.xlabel(sd + "-CSgr",fontsize=8)
         np += 1
