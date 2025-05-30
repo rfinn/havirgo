@@ -186,7 +186,7 @@ def make_plots_mags(subdirs,vf):
     plt.close(fig)
 
 
-def plot_mstar_sfr_profiles(subdirlist, ncol, nrow, isubplot):
+def plot_mstar_sfr_profiles(subdirlist, ncol, nrow, isubplot=[5,5,10,10,15]):
     """
     retrofitting this from the build_web_cutouts
 
@@ -201,75 +201,77 @@ def plot_mstar_sfr_profiles(subdirlist, ncol, nrow, isubplot):
     RETURN
     nothing, just adds to the figure
     """
-    mstar1 = subdirname+'-mstar-vr_phot.fits'
-    mstar2 = subdirname+'-mstar-vcosmic_phot.fits'
+    
+    for subdirname in subdirlist:
+        mstar1 = subdirname+'-mstar-vr_phot.fits'
+        mstar2 = subdirname+'-mstar-vcosmic_phot.fits'
 
-    sfr1 = subdirname+'-sfr-vr_phot.fits'
-    sfr2 = subdirname+'-sfr-vcosmic_phot.fits'
+        sfr1 = subdirname+'-sfr-vr_phot.fits'
+        sfr2 = subdirname+'-sfr-vcosmic_phot.fits'
 
-    ssfr = subdirname+'-ssfr_phot.fits'
+        ssfr = subdirname+'-ssfr_phot.fits'
 
-    tables = [mstar1,mstar2,sfr1,sfr2,ssfr]
-    #isubplot = [1,1,2,2,3]
-    icolor = [0,1,0,1,0]
-    ytext = [0.5,0.4,0.5,0.4]
-    labels = ['Mstar-vr','Mstar-Vcosmic','SFR-vr','SFR-Vcosmic','sSFR']
-
-
-    #fig = plt.figure(figsize=(12,3))
-    #plt.subplots_adjust(left=.15,bottom=.1,right=.95,top=.95,wspace=.4)
+        tables = [mstar1,mstar2,sfr1,sfr2,ssfr]
+        #isubplot = [1,1,2,2,3]
+        icolor = [0,1,0,1,0]
+        ytext = [0.5,0.4,0.5,0.4]
+        labels = ['Mstar-vr','Mstar-Vcosmic','SFR-vr','SFR-Vcosmic','sSFR']
 
 
-    alphas = [1,.4,.6,.4,.6]
-    for i,t in enumerate(tables[:-1]):
-        ptab = Table.read(t)
-        x = ptab['sma_arcsec']
-        y0 = ptab['flux']
-        yerr = ptab['flux_err']
+        #fig = plt.figure(figsize=(12,3))
+        #plt.subplots_adjust(left=.15,bottom=.1,right=.95,top=.95,wspace=.4)
 
-        # cut the profiles at SNR > 3
-        snrflag = np.abs(yerr/y0) > 3
-        x = x[snrflag]
-        y0 = y0[snrflag]        
-        yerr = yerr[snrflag]
-        
-        y1 = y0+yerr
-        y2 = y0-yerr
-        
-        plt.subplot(nrow,ncol,isubplot[i])
 
-        if i < 2:
-            plt.fill_between(x,y1,y2,alpha=alphas[i],color=mycolors[icolor[i]])
-        # also plot line because you can't see the result when the error is small
-        # this should fix issue #18 in Virgo github
+        alphas = [1,.4,.6,.4,.6]
+        for i,t in enumerate(tables[:-1]):
+            ptab = Table.read(t)
+            x = ptab['sma_arcsec']
+            y0 = ptab['flux']
+            yerr = ptab['flux_err']
 
-        if i == 0:
-            xmin,xmax = plt.xlim()
-        else:
-            plt.xlim(xmin,xmax)
-        plt.xlabel('SMA (arcsec)',fontsize=16)
-        total = np.max(y0[x < xmax])
-        shortlab = labels[i].split('-')[0]
-        label=f"{labels[i]} ({np.log10(total):.2f})"
-        plt.plot(x,y0,'-',label=label,lw=2,color=mycolors[icolor[i]])        
-        plt.ylabel(shortlab,fontsize=16)
+            # cut the profiles at SNR > 3
+            snrflag = np.abs(yerr/y0) > 3
+            x = x[snrflag]
+            y0 = y0[snrflag]        
+            yerr = yerr[snrflag]
 
-        #plt.gca().set_yscale('log')
-        #plt.gca().set_xscale('log')
-        plt.legend(loc='lower right')
-        plt.gca().set_yscale('log')
+            y1 = y0+yerr
+            y2 = y0-yerr
+
+            plt.subplot(nrow,ncol,isubplot[i])
+
+            if i < 2:
+                plt.fill_between(x,y1,y2,alpha=alphas[i],color=mycolors[icolor[i]])
+            # also plot line because you can't see the result when the error is small
+            # this should fix issue #18 in Virgo github
+
+            if i == 0:
+                xmin,xmax = plt.xlim()
+            else:
+                plt.xlim(xmin,xmax)
+            plt.xlabel('SMA (arcsec)',fontsize=16)
+            total = np.max(y0[x < xmax])
+            shortlab = labels[i].split('-')[0]
+            label=f"{labels[i]} ({np.log10(total):.2f})"
+            plt.plot(x,y0,'-',label=label,lw=2,color=mycolors[icolor[i]])        
+            plt.ylabel(shortlab,fontsize=16)
+
+            #plt.gca().set_yscale('log')
+            #plt.gca().set_xscale('log')
+            plt.legend(loc='lower right')
+            plt.gca().set_yscale('log')
    
-    # add subplot from mstar and sfr profiles
-    plt.subplot(1,3,3)
-    mstartab = Table.read(tables[0])
-    sfrtab = Table.read(tables[2])
-    y0 = sfrtab['flux']/mstartab['flux']
-    i += 1
-    plt.plot(x,np.log10(y0),'-',lw=2,color=mycolors[0])
-    plt.xlim(xmin,xmax)
-    plt.ylabel('log10(sSFR)',fontsize=16)
-    plt.xlabel('SMA (arcsec)',fontsize=16)
-    #plt.gca().set_yscale('log')
+        # add subplot from mstar and sfr profiles
+        plt.subplot(nrow,ncol,isubplot[-1])
+        mstartab = Table.read(tables[0])
+        sfrtab = Table.read(tables[2])
+        y0 = sfrtab['flux']/mstartab['flux']
+        i += 1
+        plt.plot(x,np.log10(y0),'-',lw=2,color=mycolors[0])
+        plt.xlim(xmin,xmax)
+        plt.ylabel('log10(sSFR)',fontsize=16)
+        plt.xlabel('SMA (arcsec)',fontsize=16)
+        #plt.gca().set_yscale('log')
    
 
     
@@ -407,6 +409,7 @@ def make_plots_mags_cutouts(subdirs,vf, singleflag=False):
         plt.xlabel(sd + "-CS",fontsize=8)
         plt.text(0.95, 0.92, thistel+" CS Halpha", transform=plt.gca().transAxes, color='white',fontsize=14, horizontalalignment='right')
         np += 1
+        
         plt.subplot(nrow,ncol,nsubplots[np],projection=csgrwcs)
         display_image(csgrdata,stretch='asinh',percentile1=.5,percentile2=99.5,mask=mask)
         plt.xlabel(sd + "-CSgr",fontsize=8)
@@ -426,30 +429,38 @@ def make_plots_mags_cutouts(subdirs,vf, singleflag=False):
         mstarwcs = wcs.WCS(csgrheader)
         
         sfrfilename = fileroot+"-sfr-vr.fits"
-        csdata, csheader = fits.getdata(sfrfilename, header=True)
-        sfrwcs = wcs.WCS(csheader)
+        sfrdata, sfrheader = fits.getdata(sfrfilename, header=True)
+        sfrwcs = wcs.WCS(sfrheader)
 
-        sfrfilename = fileroot+"-ssfr.fits"
-        csdata, csheader = fits.getdata(sfrfilename, header=True)
-        sfrwcs = wcs.WCS(csheader)
+        ssfrfilename = fileroot+"-ssfr.fits"
+        ssfrdata, ssfrheader = fits.getdata(ssfrfilename, header=True)
+        ssfrwcs = wcs.WCS(ssfrheader)
+        
         maskfile = fileroot+"-R-mask.fits"
         mask = fits.getdata(maskfile)
         mask = mask > 0
         #norm = simple_norm(clipped_data, stretch=stretch,max_percent=percentile2,min_percent=percentile1)
 
-        plt.subplot(nrow,ncol,nsubplots[np],projection=cswcs)
-        display_image(csdata,stretch='asinh',percentile1=.5,percentile2=99.5,mask=mask)
-        plt.xlabel(sd + "-CS",fontsize=8)
-        plt.text(0.95, 0.92, thistel+" CS Halpha", transform=plt.gca().transAxes, color='white',fontsize=14, horizontalalignment='right')
+        plt.subplot(nrow,ncol,nsubplots[np],projection=mstarwcs)
+        display_image(mstardata,stretch='asinh',percentile1=.5,percentile2=99.5,mask=mask)
+        plt.xlabel("Mstar * 1e7",fontsize=8)
+        #plt.text(0.95, 0.92, "Mstar", transform=plt.gca().transAxes, color='white',fontsize=14, horizontalalignment='right')
         np += 1
-        plt.subplot(nrow,ncol,nsubplots[np],projection=csgrwcs)
-        display_image(csgrdata,stretch='asinh',percentile1=.5,percentile2=99.5,mask=mask)
-        plt.xlabel(sd + "-CSgr",fontsize=8)
-        plt.text(0.95, 0.92, thistel+" CS-gr Halpha", transform=plt.gca().transAxes, color='white',fontsize=14, horizontalalignment='right')        
+        
+        plt.subplot(nrow,ncol,nsubplots[np],projection=sfrwcs)
+        display_image(sfrdata,stretch='asinh',percentile1=.5,percentile2=99.5,mask=mask)
+        plt.xlabel("SFR",fontsize=8)
+        #plt.text(0.95, 0.92, thistel+" CS-gr Halpha", transform=plt.gca().transAxes, color='white',fontsize=14, horizontalalignment='right') 
         np += 1
 
-    # plot mstar, sfr profiles
+        plt.subplot(nrow,ncol,nsubplots[np],projection=ssfrwcs)
+        display_image(ssfrdata,stretch='asinh',percentile1=.5,percentile2=99.5,mask=mask)
+        plt.xlabel("sSFR/1e10",fontsize=8)
+        #plt.text(0.95, 0.92, thistel+" CS-gr Halpha", transform=plt.gca().transAxes, color='white',fontsize=14, horizontalalignment='right') 
+        np += 1
         
+    # plot mstar, sfr profiles
+    plot_mstar_sfr_profiles(subdirs, ncol, nrow, isubplot=[5,5,10,10,15]):        
     if singleflag:
         outfile = f"duplicates/{vf}_profiles_mag_cutouts.png"
     else:
