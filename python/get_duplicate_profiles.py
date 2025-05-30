@@ -186,6 +186,93 @@ def make_plots_mags(subdirs,vf):
     plt.close(fig)
 
 
+def plot_mstar_sfr_profiles(subdirlist, ncol, nrow, isubplot):
+    """
+    retrofitting this from the build_web_cutouts
+
+    goal is to plot phot profiles of the stellar mass and sfr images
+
+    PARAMS
+    @param subdirlist list containing name of the subdirectory containing the mstar and sfr phot files; will contain more than one dir if there are duplicate observations
+    @param ncol number of columns in larger figure
+    @param ncow number of rows in larger figure
+    @param isubplot list containing subplots for the 5 figures
+
+    RETURN
+    nothing, just adds to the figure
+    """
+    mstar1 = subdirname+'-logmstar-vr_phot.fits'
+    mstar2 = subdirname+'-logmstar-vcosmic_phot.fits'
+
+    sfr1 = subdirname+'-sfr-vr_phot.fits'
+    sfr2 = subdirname+'-sfr-vcosmic_phot.fits'
+
+    ssfr = subdirname+'-ssfr_phot.fits'
+
+    tables = [mstar1,mstar2,sfr1,sfr2,ssfr]
+    #isubplot = [1,1,2,2,3]
+    icolor = [0,1,0,1,0]
+    ytext = [0.5,0.4,0.5,0.4]
+    labels = ['Mstar-vr','Mstar-Vcosmic','SFR-vr','SFR-Vcosmic','sSFR']
+
+
+    #fig = plt.figure(figsize=(12,3))
+    #plt.subplots_adjust(left=.15,bottom=.1,right=.95,top=.95,wspace=.4)
+
+
+    alphas = [1,.4,.6,.4,.6]
+    for i,t in enumerate(tables[:-1]):
+        ptab = Table.read(t)
+        x = ptab['sma_arcsec']
+        y0 = ptab['flux']
+        yerr = ptab['flux_err']
+
+        # cut the profiles at SNR > 3
+        snrflag = np.abs(yerr/y0) > 3
+        x = x[snrflag]
+        y0 = y0[snrflag]        
+        yerr = yerr[snrflag]
+        
+        y1 = y0+yerr
+        y2 = y0-yerr
+        
+        plt.subplot(nrow,ncol,isubplot[i])
+
+        if i < 2:
+            plt.fill_between(x,y1,y2,alpha=alphas[i],color=mycolors[icolor[i]])
+        # also plot line because you can't see the result when the error is small
+        # this should fix issue #18 in Virgo github
+
+        if i == 0:
+            xmin,xmax = plt.xlim()
+        else:
+            plt.xlim(xmin,xmax)
+        plt.xlabel('SMA (arcsec)',fontsize=16)
+        total = np.max(y0[x < xmax])
+        shortlab = labels[i].split('-')[0]
+        label=f"{labels[i]} ({np.log10(total):.2f})"
+        plt.plot(x,y0,'-',label=label,lw=2,color=mycolors[icolor[i]])        
+        plt.ylabel(shortlab,fontsize=16)
+
+        #plt.gca().set_yscale('log')
+        #plt.gca().set_xscale('log')
+        plt.legend(loc='lower right')
+        plt.gca().set_yscale('log')
+   
+    # add subplot from mstar and sfr profiles
+    plt.subplot(1,3,3)
+    mstartab = Table.read(tables[0])
+    sfrtab = Table.read(tables[2])
+    y0 = sfrtab['flux']/mstartab['flux']
+    i += 1
+    plt.plot(x,np.log10(y0),'-',lw=2,color=mycolors[0])
+    plt.xlim(xmin,xmax)
+    plt.ylabel('log10(sSFR)',fontsize=16)
+    plt.xlabel('SMA (arcsec)',fontsize=16)
+    #plt.gca().set_yscale('log')
+   
+
+    
 def make_plots_mags_cutouts(subdirs,vf, singleflag=False):
     # photutils flux
 
@@ -200,7 +287,7 @@ def make_plots_mags_cutouts(subdirs,vf, singleflag=False):
     #labels = ['galfit r','galfit Halphax100','photutil r','photutil Halphax100']
     alphas = [.4,.4,.4,.4]
 
-    ncol = 3
+    ncol = 5
     nrow = 3
     figs = (16,14)
     if len(subdirs) == 3:
@@ -234,7 +321,7 @@ def make_plots_mags_cutouts(subdirs,vf, singleflag=False):
             sb2 = t['sb_mag_sqarcsec']-t['sb_mag_sqarcsec_err']
 
             if j < 2:
-                plt.subplot(nrow,ncol,3)
+                plt.subplot(nrow,ncol,7)
             else:
                 plt.subplot(nrow,ncol,2)
             plt.fill_between(rphot['sma_arcsec'],y1,y2,alpha=alphas[i],color=mycolors[i])
@@ -244,16 +331,16 @@ def make_plots_mags_cutouts(subdirs,vf, singleflag=False):
 
 
             if j < 2:
-                plt.subplot(nrow,ncol,6)
+                plt.subplot(nrow,ncol,8)
             else:
-                plt.subplot(nrow,ncol,5)
+                plt.subplot(nrow,ncol,3)
             plt.fill_between(t['sma_arcsec'],sb1,sb2,alpha=alphas[i],color=mycolors[i])
             # also plot line because you can't see the result when the error is small
             # this should fix issue #18 in Virgo github
             plt.plot(t['sma_arcsec'],sb0,lss[j],lw=2,label=sd+labels[j],color=mycolors[i])
 
             
-    for i in [2,3,5,6]:
+    for i in [2,7,3,8]:
         plt.subplot(nrow,ncol,i)
         plt.xlabel('SMA (arcsec)',fontsize=16)
         if i == 2:
@@ -293,6 +380,8 @@ def make_plots_mags_cutouts(subdirs,vf, singleflag=False):
     
     # plot cs subtracted images
     nsubplots = [4,7,8,9,11,12]
+    # updating subplots after adding mstar images and profiles
+    nsubplots = [6, 11, 12, 13, 17, 18] 
     np = 0
     tels = ['BOK', 'INT', 'HDI', "MOS"]
     for i,sd in enumerate(subdirs):
@@ -323,13 +412,52 @@ def make_plots_mags_cutouts(subdirs,vf, singleflag=False):
         plt.xlabel(sd + "-CSgr",fontsize=8)
         plt.text(0.95, 0.92, thistel+" CS-gr Halpha", transform=plt.gca().transAxes, color='white',fontsize=14, horizontalalignment='right')        
         np += 1
+
+    # add mstar and sfr images
+    # plot cs subtracted images
+    nsubplots = [4,9,14]
+    np = 0
+    tels = ['BOK', 'INT', 'HDI', "MOS"]
+    for i,sd in enumerate(subdirs):
+        for t in tels:
+            if t in sd:
+                thistel = t
+                break
+        fileroot = f"{sd}/{sd}"
+        
+        mstarfilename = fileroot+"-CS-gr.fits"
+        mstardata, mstarheader = fits.getdata(mstarfilename, header=True)
+        mstarwcs = wcs.WCS(csgrheader)
+        
+        cs_phot = fileroot+"-CS.fits"
+        csdata, csheader = fits.getdata(cs_phot, header=True)
+        cswcs = wcs.WCS(csheader)
+        maskfile = fileroot+"-R-mask.fits"
+        mask = fits.getdata(maskfile)
+        mask = mask > 0
+        #norm = simple_norm(clipped_data, stretch=stretch,max_percent=percentile2,min_percent=percentile1)
+
+        plt.subplot(nrow,ncol,nsubplots[np],projection=cswcs)
+        display_image(csdata,stretch='asinh',percentile1=.5,percentile2=99.5,mask=mask)
+        plt.xlabel(sd + "-CS",fontsize=8)
+        plt.text(0.95, 0.92, thistel+" CS Halpha", transform=plt.gca().transAxes, color='white',fontsize=14, horizontalalignment='right')
+        np += 1
+        plt.subplot(nrow,ncol,nsubplots[np],projection=csgrwcs)
+        display_image(csgrdata,stretch='asinh',percentile1=.5,percentile2=99.5,mask=mask)
+        plt.xlabel(sd + "-CSgr",fontsize=8)
+        plt.text(0.95, 0.92, thistel+" CS-gr Halpha", transform=plt.gca().transAxes, color='white',fontsize=14, horizontalalignment='right')        
+        np += 1
+    
     if singleflag:
         outfile = f"duplicates/{vf}_profiles_mag_cutouts.png"
     else:
-        outfile = f"duplicates/{vf}_duplicate_profiles_mag_cutouts.png"
+        outfile = f"duplicates/{vf}_profiles_duplicate_mag_cutouts.png"
     plt.savefig(outfile)
     plt.close(fig)
-    
+
+
+
+
 if __name__ == '__main__':
     # get list of directories
 
@@ -356,7 +484,17 @@ if __name__ == '__main__':
 
     vfid = np.array(vfid)
     dirlist = np.array(dirlist)
-    #for vf in duplist:
+    for vf in duplist:
+        # get list of subdirectories starting with vf
+        flag = vfid == vf
+
+        subdirs = dirlist[flag]
+        print("testing subdirs: ",vf, subdirs)
+        #make_plots(subdirs, vf)
+        #make_plots_mags(subdirs, vf)
+        make_plots_mags_cutouts(subdirs, vf, singleflag = True)
+        break
+    
     for vf in singlelist:
         # get list of subdirectories starting with vf
         flag = vfid == vf
@@ -366,5 +504,5 @@ if __name__ == '__main__':
         #make_plots(subdirs, vf)
         #make_plots_mags(subdirs, vf)
         make_plots_mags_cutouts(subdirs, vf, singleflag = True)
-        #break
+        break
         

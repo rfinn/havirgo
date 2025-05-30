@@ -158,11 +158,13 @@ class galaxy():
 
         # save mstar images
         outimage = self.dirname+'-logmstar-vr.fits'
-        hdu = fits.PrimaryHDU(self.logMstar_vr, header=rhdu[0].header)
+        outimage = self.dirname+'-mstar-vr.fits'        
+        hdu = fits.PrimaryHDU(10.**(self.logMstar_vr-7), header=rhdu[0].header) # making in linear units of 1e7 Msun
         hdu.writeto(outimage, overwrite=True) #sky-subtracted r-band image - use this for photometry
 
         outimage = self.dirname+'-logmstar-vcosmic.fits'
-        hdu = fits.PrimaryHDU(self.logMstar_vcosmic, header=rhdu[0].header)
+        outimage = self.dirname+'-mstar-vcosmic.fits'        
+        hdu = fits.PrimaryHDU(10.**(self.logMstar_vcosmic-7), header=rhdu[0].header)
         hdu.writeto(outimage, overwrite=True) #sky-subtracted r-band image - use this for photometry
 
         rhdu.close()
@@ -255,7 +257,8 @@ class galaxy():
         self.logssfr[flag] = np.nan
         self.haheader['SFRSTD']=float(f"{std:.3e}")
         outimage = self.dirname+'-ssfr.fits'
-        hdu = fits.PrimaryHDU(self.logssfr, header=self.haheader)
+        # changing to a linear scale on May 30, 2025
+        hdu = fits.PrimaryHDU(10.**(self.logssfr+10), header=self.haheader) # convert to units of 1e-10
         hdu.writeto(outimage, overwrite=True) 
 
     def save_figure(self,zoom=True,zoomfactor=2):
