@@ -201,8 +201,8 @@ def plot_mstar_sfr_profiles(subdirlist, ncol, nrow, isubplot):
     RETURN
     nothing, just adds to the figure
     """
-    mstar1 = subdirname+'-logmstar-vr_phot.fits'
-    mstar2 = subdirname+'-logmstar-vcosmic_phot.fits'
+    mstar1 = subdirname+'-mstar-vr_phot.fits'
+    mstar2 = subdirname+'-mstar-vcosmic_phot.fits'
 
     sfr1 = subdirname+'-sfr-vr_phot.fits'
     sfr2 = subdirname+'-sfr-vcosmic_phot.fits'
