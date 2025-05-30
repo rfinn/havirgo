@@ -356,7 +356,7 @@ def make_plots_mags_cutouts(subdirs,vf, singleflag=False):
     for i in [2,7,3,8]:
         plt.subplot(nrow,ncol,i)
         if i > 5:
-        plt.xlabel('SMA (arcsec)',fontsize=16)
+            plt.xlabel('SMA (arcsec)',fontsize=16)
         if i == 2:
             plt.ylabel('magnitude (AB)',fontsize=16)
         elif i == 5:
