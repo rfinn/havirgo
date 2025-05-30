@@ -32,6 +32,11 @@ from PIL import Image
 
 from build_web_cutouts2 import display_image
 
+
+# define colors - need this for plotting line and fill_between in the same color
+mycolors = plt.rcParams['axes.prop_cycle'].by_key()['color']
+
+
 def make_plots(subdirs,vf):
     # photutils flux
     fig = plt.figure(figsize=(12,12))
@@ -243,7 +248,7 @@ def plot_mstar_sfr_profiles(subdirlist, ncol, nrow, isubplot=[5,5,10,10,15]):
             plt.subplot(nrow,ncol,isubplot[i])
 
             if i < 2:
-                plt.fill_between(x,y1,y2,alpha=alphas[i],color=mycolors[icolor[i]])
+                plt.fill_between(x,y1,y2,alpha=alphas[i])#,color=mycolors[icolor[i]])
             # also plot line because you can't see the result when the error is small
             # this should fix issue #18 in Virgo github
 
@@ -282,8 +287,6 @@ def make_plots_mags_cutouts(subdirs,vf, singleflag=False):
 
 
 
-    # define colors - need this for plotting line and fill_between in the same color
-    mycolors = plt.rcParams['axes.prop_cycle'].by_key()['color']
 
     # plot enclosed flux        
 
