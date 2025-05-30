@@ -186,7 +186,7 @@ def make_plots_mags(subdirs,vf):
     plt.close(fig)
 
 
-def make_plots_mags_cutouts(subdirs,vf):
+def make_plots_mags_cutouts(subdirs,vf, singleflag=False):
     # photutils flux
 
 
@@ -316,8 +316,11 @@ def make_plots_mags_cutouts(subdirs,vf):
         plt.xlabel(sd + "-CSgr",fontsize=8)
         plt.text(0.95, 0.92, thistel+" CS-gr Halpha", transform=plt.gca().transAxes, color='white',fontsize=14, horizontalalignment='right')        
         np += 1
-        
-    plt.savefig(f"duplicates/{vf}_duplicate_profiles_mag_cutouts.png")
+    if singleflag:
+        outfile = f"duplicates/{vf}_profiles_mag_cutouts.png"
+    else:
+        outfile = f"duplicates/{vf}_duplicate_profiles_mag_cutouts.png"
+    plt.savefig(outfile)
     plt.close(fig)
     
 if __name__ == '__main__':
@@ -355,6 +358,6 @@ if __name__ == '__main__':
         print("testing subdirs: ",vf, subdirs)
         #make_plots(subdirs, vf)
         #make_plots_mags(subdirs, vf)
-        make_plots_mags_cutouts(subdirs, vf)
+        make_plots_mags_cutouts(subdirs, vf, singleflag = True)
         #break
         
