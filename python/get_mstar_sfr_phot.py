@@ -53,8 +53,8 @@ mycolors = plt.rcParams['axes.prop_cycle'].by_key()['color']
 
 def plot_profiles(subdirname):
     
-    mstar1 = subdirname+'-logmstar-vr_phot.fits'
-    mstar2 = subdirname+'-logmstar-vcosmic_phot.fits'
+    mstar1 = subdirname+'-mstar-vr_phot.fits'
+    mstar2 = subdirname+'-mstar-vcosmic_phot.fits'
 
     sfr1 = subdirname+'-sfr-vr_phot.fits'
     sfr2 = subdirname+'-sfr-vcosmic_phot.fits'
@@ -182,8 +182,8 @@ if __name__ == "__main__":
     maskfile = subdirname+'-R-mask.fits'
 
 
-    mstar1 = subdirname+'-logmstar-vr.fits'
-    mstar2 = subdirname+'-logmstar-vcosmic.fits'
+    mstar1 = subdirname+'-mstar-vr.fits'
+    mstar2 = subdirname+'-mstar-vcosmic.fits'
 
     sfr1 = subdirname+'-sfr-vr.fits'
     sfr2 = subdirname+'-sfr-vcosmic.fits'

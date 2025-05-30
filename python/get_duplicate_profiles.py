@@ -417,21 +417,21 @@ def make_plots_mags_cutouts(subdirs,vf, singleflag=False):
     # plot cs subtracted images
     nsubplots = [4,9,14]
     np = 0
-    tels = ['BOK', 'INT', 'HDI', "MOS"]
-    for i,sd in enumerate(subdirs):
-        for t in tels:
-            if t in sd:
-                thistel = t
-                break
+
+    for i,sd in enumerate(subdirs[0]): # just need to plot one image - hopefully zero is a good choice
         fileroot = f"{sd}/{sd}"
         
-        mstarfilename = fileroot+"-CS-gr.fits"
+        mstarfilename = fileroot+"-mstar-vr.fits"
         mstardata, mstarheader = fits.getdata(mstarfilename, header=True)
         mstarwcs = wcs.WCS(csgrheader)
         
-        cs_phot = fileroot+"-CS.fits"
-        csdata, csheader = fits.getdata(cs_phot, header=True)
-        cswcs = wcs.WCS(csheader)
+        sfrfilename = fileroot+"-sfr-vr.fits"
+        csdata, csheader = fits.getdata(sfrfilename, header=True)
+        sfrwcs = wcs.WCS(csheader)
+
+        sfrfilename = fileroot+"-ssfr.fits"
+        csdata, csheader = fits.getdata(sfrfilename, header=True)
+        sfrwcs = wcs.WCS(csheader)
         maskfile = fileroot+"-R-mask.fits"
         mask = fits.getdata(maskfile)
         mask = mask > 0
