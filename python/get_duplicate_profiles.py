@@ -277,10 +277,10 @@ def plot_mstar_sfr_profiles(subdirlist, ncol, nrow, isubplot=[5,5,10,10,15]):
         mstartab = Table.read(tables[0])
         sfrtab = Table.read(tables[2])
         y0 = sfrtab['flux']/mstartab['flux']
-        y0 = sfrtab['sb']/mstartab['sb']        
+        y0 = (sfrtab['sb']/1.e3)/(mstartab['sb']*1.e7)        
         i += 1
         plt.plot(x,np.log10(y0),'-',lw=2)#,color=mycolors[0])
-        plt.xlim(xmin,xmax)
+        #plt.xlim(xmin,xmax)
         plt.gca().set_xscale('log')        
         plt.ylabel('log10(sSFR)',fontsize=16)
         plt.xlabel('SMA (arcsec)',fontsize=16)
