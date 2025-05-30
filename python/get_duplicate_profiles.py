@@ -241,7 +241,7 @@ def plot_mstar_sfr_profiles(subdirlist, ncol, nrow, isubplot=[5,5,10,10,15]):
             
             # cut the profiles at SNR > 3
             if i == 0:
-                snrflag = np.abs(yerr/y0) > 3
+                snrflag = np.abs(y0/yerr) > 3
                 x = x[snrflag]
                 y0 = y0[snrflag]        
                 yerr = yerr[snrflag]
