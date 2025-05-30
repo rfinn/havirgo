@@ -275,7 +275,7 @@ def plot_mstar_sfr_profiles(subdirlist, ncol, nrow, isubplot=[5,5,10,10,15]):
         y0 = sfrtab['flux']/mstartab['flux']
         i += 1
         plt.plot(x,np.log10(y0),'-',lw=2,color=mycolors[0])
-        plt.xlim(xmin,xmax)
+        #plt.xlim(xmin,xmax)
         plt.ylabel('log10(sSFR)',fontsize=16)
         plt.xlabel('SMA (arcsec)',fontsize=16)
         #plt.gca().set_yscale('log')
