@@ -274,10 +274,9 @@ def make_plots_mags_cutouts(subdirs,vf, singleflag=False):
     #jpgfile = glob.glob(fileroot+"/legacy/*.jpg")
     legdir = subdirs[0] + "/legacy/"
     legacy_jpg = glob.glob(legdir+"*.jpg")[0]
+    jpeg_data = Image.open(legacy_jpg)    
     try:
         legacy_g = glob.glob(legdir+"*-g.fits")[0]
-        jpeg_data = Image.open(legacy_jpg)
-
         header = fits.getheader(legacy_g)
         imwcs = wcs.WCS(header)
         plt.subplot(nrow,ncol,1,projection=imwcs)
