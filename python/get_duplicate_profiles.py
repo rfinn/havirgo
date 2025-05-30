@@ -205,13 +205,13 @@ def plot_mstar_sfr_profiles(subdirlist, ncol, nrow, isubplot=[5,5,10,10,15]):
     """
     
     for subdirname in subdirlist:
-        mstar1 = subdirname+'-mstar-vr_phot.fits'
-        mstar2 = subdirname+'-mstar-vcosmic_phot.fits'
+        mstar1 = f"{subdirname}/{subdirname}-mstar-vr_phot.fits"
+        mstar2 = f"{subdirname}/{subdirname}-mstar-vcosmic_phot.fits"
 
-        sfr1 = subdirname+'-sfr-vr_phot.fits'
-        sfr2 = subdirname+'-sfr-vcosmic_phot.fits'
+        sfr1 = f"{subdirname}/{subdirname}-sfr-vr_phot.fits"
+        sfr2 = f"{subdirname}/{subdirname}-sfr-vcosmic_phot.fits"
 
-        ssfr = subdirname+'-ssfr_phot.fits'
+        ssfr = f"{subdirname}/{subdirname}-ssfr_phot.fits"
 
         tables = [mstar1,mstar2,sfr1,sfr2,ssfr]
         #isubplot = [1,1,2,2,3]
