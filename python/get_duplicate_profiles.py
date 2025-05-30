@@ -452,19 +452,19 @@ def make_plots_mags_cutouts(subdirs,vf, singleflag=False):
         #norm = simple_norm(clipped_data, stretch=stretch,max_percent=percentile2,min_percent=percentile1)
 
         plt.subplot(nrow,ncol,nsubplots[np],projection=mstarwcs)
-        display_image(mstardata,stretch='asinh',percentile1=.5,percentile2=99.5,mask=mask)
+        display_image(mstardata,stretch='asinh',percentile1=.5,percentile2=99.5,mask=mask,zoom=2)
         plt.xlabel("Mstar * 1e7",fontsize=8)
         #plt.text(0.95, 0.92, "Mstar", transform=plt.gca().transAxes, color='white',fontsize=14, horizontalalignment='right')
         np += 1
         
         plt.subplot(nrow,ncol,nsubplots[np],projection=sfrwcs)
-        display_image(sfrdata,stretch='asinh',percentile1=.5,percentile2=99.5,mask=mask)
+        display_image(sfrdata,stretch='asinh',percentile1=.5,percentile2=99.5,mask=mask,zoom=2)
         plt.xlabel("SFR",fontsize=8)
         #plt.text(0.95, 0.92, thistel+" CS-gr Halpha", transform=plt.gca().transAxes, color='white',fontsize=14, horizontalalignment='right') 
         np += 1
 
         plt.subplot(nrow,ncol,nsubplots[np],projection=ssfrwcs)
-        display_image(ssfrdata,stretch='asinh',percentile1=.5,percentile2=99.5,mask=mask)
+        display_image(ssfrdata,stretch='asinh',percentile1=.5,percentile2=99.5,mask=mask,zoom=2)
         plt.xlabel("sSFR/1e10",fontsize=8)
         #plt.text(0.95, 0.92, thistel+" CS-gr Halpha", transform=plt.gca().transAxes, color='white',fontsize=14, horizontalalignment='right') 
         np += 1
