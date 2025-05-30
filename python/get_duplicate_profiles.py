@@ -233,11 +233,11 @@ def plot_mstar_sfr_profiles(subdirlist, ncol, nrow, isubplot=[5,5,10,10,15]):
         for i,t in enumerate(tables[:-1]):
             ptab = Table.read(t)
             x = ptab['sma_arcsec']
-            y0 = ptab['flux']
-            yerr = ptab['flux_err']
+            #y0 = ptab['flux']
+            #yerr = ptab['flux_err']
 
-            #y0 = ptab['sb']
-            #yerr = ptab['sb_err']
+            y0 = ptab['sb']
+            yerr = ptab['sb_err']
             
             # cut the profiles at SNR > 3
             if i == 0:
@@ -277,9 +277,10 @@ def plot_mstar_sfr_profiles(subdirlist, ncol, nrow, isubplot=[5,5,10,10,15]):
         mstartab = Table.read(tables[0])
         sfrtab = Table.read(tables[2])
         y0 = sfrtab['flux']/mstartab['flux']
+        y0 = sfrtab['sb']/mstartab['sb']        
         i += 1
-        plt.plot(x,np.log10(y0),'-',lw=2,color=mycolors[0])
-        #plt.xlim(xmin,xmax)
+        plt.plot(x,np.log10(y0),'-',lw=2)#,color=mycolors[0])
+        plt.xlim(xmin,xmax)
         plt.gca().set_xscale('log')        
         plt.ylabel('log10(sSFR)',fontsize=16)
         plt.xlabel('SMA (arcsec)',fontsize=16)
