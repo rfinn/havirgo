@@ -244,7 +244,7 @@ def plot_mstar_sfr_profiles(subdirlist, ncol, nrow, isubplot=[5,5,10,10,15]):
                 snrflag = np.abs(yerr/y0) > 3
                 x = x[snrflag]
                 y0 = y0[snrflag]        
-            #err = yerr[snrflag]
+                yerr = yerr[snrflag]
 
             y1 = y0+yerr
             y2 = y0-yerr
