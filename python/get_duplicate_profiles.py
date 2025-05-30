@@ -273,21 +273,23 @@ def make_plots_mags_cutouts(subdirs,vf, singleflag=False):
     # plot jpg in subplot 1
     #jpgfile = glob.glob(fileroot+"/legacy/*.jpg")
     legdir = subdirs[0] + "/legacy/"
-    legacy_jpg = glob.glob(legdir+"*.jpg")[0]
-    jpeg_data = Image.open(legacy_jpg)    
     try:
-        legacy_g = glob.glob(legdir+"*-g.fits")[0]
-        header = fits.getheader(legacy_g)
-        imwcs = wcs.WCS(header)
-        plt.subplot(nrow,ncol,1,projection=imwcs)
-    
+        legacy_jpg = glob.glob(legdir+"*.jpg")[0]
+        jpeg_data = Image.open(legacy_jpg)    
+        try:
+            legacy_g = glob.glob(legdir+"*-g.fits")[0]
+            header = fits.getheader(legacy_g)
+            imwcs = wcs.WCS(header)
+            plt.subplot(nrow,ncol,1,projection=imwcs)
         
+        except IndexError:
+            print(f"WARNING: no legacy g-band image for {subdirs[0]}")
+            plt.subplot(nrow,ncol,1)
+        plt.imshow(jpeg_data, origin='lower')
+        plt.xlabel('RA (deg)',fontsize=16)
+        plt.ylabel('Dec (deg)',fontsize=16)
     except IndexError:
-        print(f"WARNING: no legacy image for {subdirs[0]}")
-        plt.subplot(nrow,ncol,1)
-    plt.imshow(jpeg_data, origin='lower')
-    plt.xlabel('RA (deg)',fontsize=16)
-    plt.ylabel('Dec (deg)',fontsize=16)
+        print(f"WARNING: no legacy jpg image for {subdirs[0]}")
     
     # plot cs subtracted images
     nsubplots = [4,7,8,9,11,12]
