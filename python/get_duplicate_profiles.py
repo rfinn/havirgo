@@ -355,6 +355,7 @@ def make_plots_mags_cutouts(subdirs,vf, singleflag=False):
             
     for i in [2,7,3,8]:
         plt.subplot(nrow,ncol,i)
+        if i > 5:
         plt.xlabel('SMA (arcsec)',fontsize=16)
         if i == 2:
             plt.ylabel('magnitude (AB)',fontsize=16)
@@ -365,9 +366,9 @@ def make_plots_mags_cutouts(subdirs,vf, singleflag=False):
         plt.gca().set_xscale('log')
         plt.gca().invert_yaxis()  
         plt.legend(loc='lower right',fontsize=8)
-        if i == 2:
+        if (i == 2) | (i == 3):
             plt.title("Rband",fontsize=16)
-        elif i == 3:
+        elif (i == 7) | (i == 8):
             plt.title("Halpha",fontsize=16)
 
     # plot jpg in subplot 1
