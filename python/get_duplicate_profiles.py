@@ -26,6 +26,8 @@ from matplotlib import pyplot as plt
 from astropy.io import fits
 from astropy import wcs
 from astropy.visualization import simple_norm
+from astropy.table import Table
+
 from PIL import Image
 
 from build_web_cutouts2 import display_image
