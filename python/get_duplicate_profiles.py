@@ -510,15 +510,15 @@ if __name__ == '__main__':
 
     vfid = np.array(vfid)
     dirlist = np.array(dirlist)
-    #for vf in duplist:
-    #    # get list of subdirectories starting with vf
-    #    flag = vfid == vf
-    #    subdirs = dirlist[flag]
-    #    print("testing subdirs: ",vf, subdirs)
-    #    #make_plots(subdirs, vf)
-    #    #make_plots_mags(subdirs, vf)
-    #    make_plots_mags_cutouts(subdirs, vf, singleflag = True)
-    #    break
+    for vf in duplist:
+        # get list of subdirectories starting with vf
+        flag = vfid == vf
+        subdirs = dirlist[flag]
+        print("testing subdirs: ",vf, subdirs)
+        #make_plots(subdirs, vf)
+        #make_plots_mags(subdirs, vf)
+        make_plots_mags_cutouts(subdirs, vf, singleflag = True)
+        break
     
     for vf in singlelist:
         # get list of subdirectories starting with vf
