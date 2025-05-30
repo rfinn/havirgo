@@ -460,7 +460,7 @@ def make_plots_mags_cutouts(subdirs,vf, singleflag=False):
         np += 1
         
     # plot mstar, sfr profiles
-    plot_mstar_sfr_profiles(subdirs, ncol, nrow, isubplot=[5,5,10,10,15]):        
+    plot_mstar_sfr_profiles(subdirs, ncol, nrow, isubplot=[5,5,10,10,15])        
     if singleflag:
         outfile = f"duplicates/{vf}_profiles_mag_cutouts.png"
     else:
