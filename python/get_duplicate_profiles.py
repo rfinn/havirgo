@@ -247,15 +247,15 @@ def plot_mstar_sfr_profiles(subdirlist, ncol, nrow, isubplot=[5,5,10,10,15]):
 
             plt.subplot(nrow,ncol,isubplot[i])
 
-            if i < 2:
-                plt.fill_between(x,y1,y2,alpha=alphas[i])#,color=mycolors[icolor[i]])
+            #if i < 2:
+            plt.fill_between(x,y1,y2,alpha=alphas[i])#,color=mycolors[icolor[i]])
             # also plot line because you can't see the result when the error is small
             # this should fix issue #18 in Virgo github
 
-            if i == 0:
-                xmin,xmax = plt.xlim()
-            else:
-                plt.xlim(xmin,xmax)
+            #if i == 0:
+            #    xmin,xmax = plt.xlim()
+            #else:
+            #    plt.xlim(xmin,xmax)
             plt.xlabel('SMA (arcsec)',fontsize=16)
             #total = np.max(y0[x < xmax])
             shortlab = labels[i].split('-')[0]
@@ -296,10 +296,10 @@ def make_plots_mags_cutouts(subdirs,vf, singleflag=False):
 
     ncol = 5
     nrow = 3
-    figs = (16,14)
+    figs = (20,14)
     if len(subdirs) == 3:
         nrow = 4
-        figs = (16,18)
+        figs = (20,18)
     fig = plt.figure(figsize=figs)
     plt.subplots_adjust(bottom=.05, top=.95,left=.1, right=.95)
     for i,sd in enumerate(subdirs):
