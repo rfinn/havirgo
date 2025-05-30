@@ -241,9 +241,9 @@ def plot_mstar_sfr_profiles(subdirlist, ncol, nrow, isubplot=[5,5,10,10,15]):
             
             # cut the profiles at SNR > 3
             snrflag = np.abs(yerr/y0) > 3
-            #x = x[snrflag]
-            #y0 = y0[snrflag]        
-            #yerr = yerr[snrflag]
+            x = x[snrflag]
+            y0 = y0[snrflag]        
+            #err = yerr[snrflag]
 
             y1 = y0+yerr
             y2 = y0-yerr
@@ -267,7 +267,7 @@ def plot_mstar_sfr_profiles(subdirlist, ncol, nrow, isubplot=[5,5,10,10,15]):
             plt.ylabel(shortlab,fontsize=16)
             if i < 4:
                 plt.gca().set_yscale('log')
-                plt.gca().set_xscale('log')
+            plt.gca().set_xscale('log')
             plt.legend(loc='lower right')
             #plt.gca().set_yscale('log')
    
@@ -279,6 +279,7 @@ def plot_mstar_sfr_profiles(subdirlist, ncol, nrow, isubplot=[5,5,10,10,15]):
         i += 1
         plt.plot(x,np.log10(y0),'-',lw=2,color=mycolors[0])
         #plt.xlim(xmin,xmax)
+        plt.gca().set_xscale('log')        
         plt.ylabel('log10(sSFR)',fontsize=16)
         plt.xlabel('SMA (arcsec)',fontsize=16)
         #plt.gca().set_yscale('log')
