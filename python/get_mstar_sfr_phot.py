@@ -171,7 +171,8 @@ if __name__ == "__main__":
     
     ###################################################################    
     # move to subdirectory
-    ###################################################################    
+    ###################################################################
+    print(f"trying to move to subdir {subdirname} from {os.getcwd()}  ...")
     os.chdir(subdirname)
 
     # get R and CS-gr image

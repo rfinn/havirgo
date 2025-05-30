@@ -447,7 +447,9 @@ def make_plots_mags_cutouts(subdirs,vf, singleflag=False):
         plt.xlabel(sd + "-CSgr",fontsize=8)
         plt.text(0.95, 0.92, thistel+" CS-gr Halpha", transform=plt.gca().transAxes, color='white',fontsize=14, horizontalalignment='right')        
         np += 1
-    
+
+    # plot mstar, sfr profiles
+        
     if singleflag:
         outfile = f"duplicates/{vf}_profiles_mag_cutouts.png"
     else:
