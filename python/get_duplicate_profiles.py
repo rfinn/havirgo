@@ -421,12 +421,12 @@ def make_plots_mags_cutouts(subdirs,vf, singleflag=False):
     nsubplots = [4,9,14]
     np = 0
 
-    for i,sd in enumerate(subdirs[0]): # just need to plot one image - hopefully zero is a good choice
+    for i,sd in enumerate(subdirs): # just need to plot one image - hopefully zero is a good choice
         fileroot = f"{sd}/{sd}"
         
         mstarfilename = fileroot+"-mstar-vr.fits"
         mstardata, mstarheader = fits.getdata(mstarfilename, header=True)
-        mstarwcs = wcs.WCS(csgrheader)
+        mstarwcs = wcs.WCS(mstarheader)
         
         sfrfilename = fileroot+"-sfr-vr.fits"
         sfrdata, sfrheader = fits.getdata(sfrfilename, header=True)
@@ -458,6 +458,7 @@ def make_plots_mags_cutouts(subdirs,vf, singleflag=False):
         plt.xlabel("sSFR/1e10",fontsize=8)
         #plt.text(0.95, 0.92, thistel+" CS-gr Halpha", transform=plt.gca().transAxes, color='white',fontsize=14, horizontalalignment='right') 
         np += 1
+        break
         
     # plot mstar, sfr profiles
     plot_mstar_sfr_profiles(subdirs, ncol, nrow, isubplot=[5,5,10,10,15])        
