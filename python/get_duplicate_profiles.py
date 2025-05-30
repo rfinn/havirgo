@@ -240,9 +240,10 @@ def plot_mstar_sfr_profiles(subdirlist, ncol, nrow, isubplot=[5,5,10,10,15]):
             yerr = ptab['sb_err']
             
             # cut the profiles at SNR > 3
-            snrflag = np.abs(yerr/y0) > 3
-            x = x[snrflag]
-            y0 = y0[snrflag]        
+            if i == 0:
+                snrflag = np.abs(yerr/y0) > 3
+                x = x[snrflag]
+                y0 = y0[snrflag]        
             #err = yerr[snrflag]
 
             y1 = y0+yerr
@@ -255,10 +256,10 @@ def plot_mstar_sfr_profiles(subdirlist, ncol, nrow, isubplot=[5,5,10,10,15]):
             # also plot line because you can't see the result when the error is small
             # this should fix issue #18 in Virgo github
             plt.plot(x,y0)
-            #if i == 0:
-            #    xmin,xmax = plt.xlim()
-            #else:
-            #    plt.xlim(xmin,xmax)
+            if i == 0:
+                xmin,xmax = plt.xlim()
+            else:
+                plt.xlim(xmin,xmax)
             plt.xlabel('SMA (arcsec)',fontsize=16)
             #total = np.max(y0[x < xmax])
             shortlab = labels[i].split('-')[0]
