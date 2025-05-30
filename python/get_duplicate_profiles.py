@@ -238,9 +238,9 @@ def plot_mstar_sfr_profiles(subdirlist, ncol, nrow, isubplot=[5,5,10,10,15]):
 
             # cut the profiles at SNR > 3
             snrflag = np.abs(yerr/y0) > 3
-            x = x[snrflag]
-            y0 = y0[snrflag]        
-            yerr = yerr[snrflag]
+            #x = x[snrflag]
+            #y0 = y0[snrflag]        
+            #yerr = yerr[snrflag]
 
             y1 = y0+yerr
             y2 = y0-yerr
@@ -251,7 +251,7 @@ def plot_mstar_sfr_profiles(subdirlist, ncol, nrow, isubplot=[5,5,10,10,15]):
             plt.fill_between(x,y1,y2,alpha=alphas[i])#,color=mycolors[icolor[i]])
             # also plot line because you can't see the result when the error is small
             # this should fix issue #18 in Virgo github
-
+            plt.plot(x,y0)
             #if i == 0:
             #    xmin,xmax = plt.xlim()
             #else:
