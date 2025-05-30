@@ -257,10 +257,10 @@ def plot_mstar_sfr_profiles(subdirlist, ncol, nrow, isubplot=[5,5,10,10,15]):
             else:
                 plt.xlim(xmin,xmax)
             plt.xlabel('SMA (arcsec)',fontsize=16)
-            total = np.max(y0[x < xmax])
+            #total = np.max(y0[x < xmax])
             shortlab = labels[i].split('-')[0]
-            label=f"{labels[i]} ({np.log10(total):.2f})"
-            plt.plot(x,y0,'-',label=label,lw=2,color=mycolors[icolor[i]])        
+            #label=f"{labels[i]} ({np.log10(total):.2f})"
+            #plt.plot(x,y0,'-',label=label,lw=2,color=mycolors[icolor[i]])        
             plt.ylabel(shortlab,fontsize=16)
 
             #plt.gca().set_yscale('log')
