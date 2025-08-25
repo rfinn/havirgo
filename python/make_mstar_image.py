@@ -186,12 +186,16 @@ class galaxy():
         # https://www.overleaf.com/project/5ede62d7c2853b0001731d73
 
         # combination of conversion from AB to cgs, and then to SFR
+        # 60.710 = 48.6/2.5 (from fnu_cgs to mAB conversion) + 41.27 (kennicutt & evans conversion)
         a = 10.**(-0.4*hZP - 60.710)
 
         # conversion from fnu to flambda to flux
         dlambda = filter_width_AA[self.telescope]
         clambda = filter_lambda_c_AA[self.telescope]
-        b = 3.e18*dlambda/clambda**2
+        # c = 3e18 A/s
+        # dlambda = filter width in A
+        # clambda = center wavelength in A
+        b = 3.e18*dlambda/clambda**2 # frequency in Hz
 
         # convert flux to lumininosity
         c_vr = 4*np.pi*self.d_vr.cgs.value[0]**2
@@ -205,8 +209,6 @@ class galaxy():
             print(f"scale factors for sfr image: a={a:3.2e}, b={b:3.2e}, c={c_vr:3.2e}, product={a*b*c_vr:3.2e}")
 
         product = a*b*c_vr
-
-        
         self.sfr_vr = hahdu[0].data*product
 
         product = a*b*c_vcosmic        
@@ -219,6 +221,7 @@ class galaxy():
 
         # write out images
         outimage = self.dirname+'-sfr-vr.fits'
+        # why am I multiplying by a factor of 1000?
         hdu = fits.PrimaryHDU(self.sfr_vr*1.e3, header=hahdu[0].header)
         hdu.writeto(outimage, overwrite=True) 
         
