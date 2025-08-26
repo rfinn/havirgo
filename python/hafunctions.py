@@ -324,11 +324,23 @@ def convert_alma_header(inheader,outheader):
     
     delcards = ['CTYPE','CRVAL','CDELT','CRPIX','CROTA','CUNIT']
 
-    #for c in outheader.cards:
-    for c in delcards:
-        for i in range(2):
-            ci = c+str(i+1)
-            outheader.set(ci,inheader[ci])
+    for c in inheader.cards:
+        field = c[0]
+        if field == 'NAXIS':
+            outheader.set(field,2)
+        if field.endswith('3'):
+            continue
+        else:
+            outheader.set(field,inheader[field])
+    #for c in delcards:
+    #    for i in range(2):
+    #        ci = c+str(i+1)
+    #        outheader.set(ci,inheader[ci])
+
+    #addcards = ['BMAJ','BMIN','BPA','OBJECT','BUNIT']
+    #for c in addcards:
+    #    outheader.set(c,inheader[c])
+
     
     #outheader['NAXIS'] = 2
     #outheader['Number of WCS axes'] = 2
@@ -337,13 +349,11 @@ def convert_alma_header(inheader,outheader):
 
 def convert_alma3d_alma2d(alma3d_image,nhdu=0):
     hdu = fits.open(alma3d_image)
-
-   
-
     outdata = hdu[0].data[nhdu]
 
+    # create a new HDU with input data and no header
     newhdu = fits.PrimaryHDU(outdata)
-    
+    # build new header
     outheader = convert_alma_header(hdu[0].header,newhdu.header)
     newhdu.header = outheader
     return outdata, outheader
@@ -2592,8 +2602,11 @@ def plot_mstar_sfr_COall(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xticks=
 
     return ax1
 
-def get_depletion_map(dirname,vr=None, H0=74.):
+def get_depletion_map(dirname,vr=None, H0=74., cmap='magenta'):
     """
+    GOAL:
+    * get depletion map for CO
+
     PARAMS:
     * dirname - root name on halpha cutout directory
     * vr - this should actually be Vcosmis
@@ -2601,6 +2614,8 @@ def get_depletion_map(dirname,vr=None, H0=74.):
 
 
     assume the haimage is linear, in units of SFR/pix/1.e3
+
+    Note in alma_sources.ipynb
     """
     from astropy.wcs import WCS
     vfid = dirname.split('-')[0]
@@ -2624,10 +2639,8 @@ def get_depletion_map(dirname,vr=None, H0=74.):
     # need to get the header from Francoise's version
     cdat, cheader = convert_alma3d_alma2d(COfilename)
 
-    # cdat is in Jy/beam * km/s
-    # convert CO flux to H2 mass based on eqn 1 from Castignani+2022
-    alpha_CO = 4.3
-    cdat = cdat * 1.05e4 * alpha_CO/4.3 * (D_Mpc)**2 # in Msun/beam
+    # print CO header
+    print(cheader)
     
     co_imwcs = WCS(cheader)
     COheader = cheader
@@ -2635,6 +2648,25 @@ def get_depletion_map(dirname,vr=None, H0=74.):
     maskdat = fits.getdata(COmask_filename)
 
     co_mdat = np.ma.array(cdat,mask=maskdat)
+
+    # cdat is in Jy/beam * km/s
+    # convert CO flux to H2 mass based on eqn 1 from Castignani+2022
+    alpha_CO = 4.3
+    cdat = cdat * 1.05e4 * alpha_CO/4.3 * (D_Mpc)**2 # in Msun/beam
+
+    # add correction to convert from Jy/beam to Jy/pixel
+
+    #pixscale_deg_out = np.abs(cheader['CDELT1'])
+    pixscale_deg_out = wcs.utils.proj_plane_pixel_scales(WCS(cheader))[0]
+    pixscale_area_sr_out = (pixscale_deg_out * np.pi/180)**2
+        
+    beam_area_sq_deg = np.pi/4 * float(cheader['BMAJ']) * float(cheader['BMIN'])
+    pixel_area_sq_deg = pixscale_deg_out**2
+    
+    scale_factor = beam_area_sq_deg/pixel_area_sq_deg
+
+    cdat = cdat / scale_factor # this should now be Msun/pixel
+    
 
     ##################################################
     ## SFR Image
@@ -2644,10 +2676,7 @@ def get_depletion_map(dirname,vr=None, H0=74.):
     # sfr maps are scaled by a factor of 1e3 for convenience
     # divide sfr by 1e3 to get true values.
     hdu = fits.open(sfrim)[0]
-    hdu.data = hdu.data/1.e3
-    #hdu.header['CDELT1'] = hdu.header['CD1_1']
-    #hdu.header['CDELT2'] = hdu.header['CD2_2']    
-    #print(hdu.header)
+    hdu.data = hdu.data
     # convert to surface brightness
     # times by area in sr
     #pixscale_deg_in = np.abs(hdu.header['CDELT1'])
@@ -2660,18 +2689,20 @@ def get_depletion_map(dirname,vr=None, H0=74.):
     
     #print(WCS(hdu.header))
     print(f"pix scale in input image = {pixscale_deg_in*3600:.2f}")
-    pixscale_area_sr_in = (pixscale_deg_in**2*np.pi/180)**2 # pixel area in steradians
+    pixscale_area_sr_in = (pixscale_deg_in * np.pi/180)**2 # pixel area in steradians
 
+    ###
+    # CONVERT TO SB UNITS - DON'T NEED TO ANYMORE WITH reproject_adaptive, conserve_flux=True
     # input data is in flux/pixel -> sb, or flux/sr
-    hdu.data = hdu.data / pixscale_area_sr_in
+    ###
+    #hdu.data = hdu.data #/ pixscale_area_sr_in
     
     # replace nans with zero
-    hdu.data[hdu.data == np.nan] = 0
+    #hdu.data[hdu.data == np.nan] = 0
     
     hdat = hdu.data
     #hdat = hdu.data/1.e3
     hheader = hdu.header
-
 
     hmaskdat, hmaskheader = fits.getdata(hamask_filename, header=True)
     ha_mdat = np.ma.array(hdat, mask=hmaskdat)
@@ -2680,37 +2711,33 @@ def get_depletion_map(dirname,vr=None, H0=74.):
     ##################################################
     ## Reproject Image
     ##################################################
-    from reproject import reproject_interp 
+    #from reproject import reproject_interp 
     from reproject import reproject_adaptive
-    from reproject import reproject_exact    
+    #from reproject import reproject_exact   # best solution 
     # figure out which has better resolution
 
-    #pixscale_deg_out = np.abs(cheader['CDELT1'])
-    pixscale_deg_out = wcs.utils.proj_plane_pixel_scales(WCS(cheader))[0]
-    # for testing, setting this to halpha header
-    pixscale_deg_out = wcs.utils.proj_plane_pixel_scales(ha_imwcs)[0]    
-    print(f"pixscale_deg_out = {pixscale_deg_out:.2e} deg, {pixscale_deg_out*3600:.2f} arcsec")
-    pixscale_area_sr_out = (pixscale_deg_out**2 * np.pi/180)**2
-    print(f"pixscale_sr_out = {pixscale_area_sr_out:.3e}")
 
     # reproject SFR image to CO wcs
     #rsfr_sb, rfootprint = reproject_interp(hdu,  co_imwcs) # output of reproject is in sfr/sr
     #rsfr_sb, rfootprint = reproject_exact(hdu, co_imwcs)
     print("ha_imwcs:\n",ha_imwcs)
     print()
-    #rsfr_sb, rfootprint = reproject_adaptive(hdu, ha_imwcs, conserve_flux=True)
-    out_header = cheader
-    out_header = hdu.header
-    rsfr_sb, rfootprint = reproject_adaptive(hdu, hdu.header, conserve_flux=True)        
-    
-    # need to convert back to flux
-    rsfr_dat = rsfr_sb * (pixscale_area_sr_out)#/pixscale_area_sr_in)
-    print("ratio of out/in pixel areas = ",(pixscale_area_sr_out/pixscale_area_sr_in))
 
-    print(f"ratio of rsfr_dat / rsfr_sb = {np.nanmean(rsfr_dat/rsfr_sb)}")
+    out_header = cheader
+    #out_header = hdu.header
+    rsfr_dat, rfootprint = reproject_adaptive(hdu, out_header, conserve_flux=True)
+
+    # when using reproject_exact, need to be in sb units
+    #rsfr_sb, rfootprint = reproject_exact(hdu, out_header)#, conserve_flux=True)        
+    # need to convert back to flux
+    #rsfr_dat = rsfr_sb #* (pixscale_area_sr_out)#/pixscale_area_sr_in)
+    
+    #print("ratio of out/in pixel areas = ",(pixscale_area_sr_out/pixscale_area_sr_in))
+
+    #print(f"ratio of rsfr_dat / rsfr_sb = {np.nanmean(rsfr_dat/rsfr_sb)}")
     
     # write out reprojected halpha image
-    fits.writeto(f"{vfid}_reproject_adaptive_true_2halpha_WCSheader_alma.fits",rsfr_dat, header = out_header, overwrite=True)
+    fits.writeto(f"{vfid}_reproject_adaptive_True_alma.fits",rsfr_dat, header = out_header, overwrite=True)
 
     # compare the sum of the original and reprojected images
     flux_in = np.nansum(hdu.data) * pixscale_area_sr_in
@@ -2732,22 +2759,23 @@ def get_depletion_map(dirname,vr=None, H0=74.):
 
     try:
         # then divide CO by SFR
-        depletion = cdat / rsfr_dat
+        extinction_correction = 2.5 # assume one magnitude until we have something better
+        depletion = cdat / (rsfr_dat * extinction_correction)
 
         # plot result
 
         plt.figure(figsize=(12,3))
         plt.subplot(1,3,1, projection=co_imwcs)
-        plt.imshow(cdat)
+        plt.imshow(cdat)#, cmap=cmap)
         plt.title("CO")
         plt.colorbar(fraction=.08)
         plt.subplot(1,3,2, projection=co_imwcs)
-        plt.imshow(rsfr_dat)#, vmin=0.0,vmax=1e-5)
+        plt.imshow(rsfr_dat, vmin=0.0,vmax=1.e-5)#, cmap=cmap)
         plt.title("SFR")    
         plt.colorbar(fraction=.08)
         plt.subplot(1,3,3, projection=co_imwcs)
         plt.title("Depletion Map")
-        plt.imshow(np.log10(depletion))#, vmin=7, vmax=8)
+        plt.imshow(np.log10(depletion), vmin=9, vmax=10.5)#, cmap=cmap)
         plt.colorbar(fraction=.08, label='log10(t_depletion)')
     except ValueError:
         print("WARNING: could not make depletion map!")
