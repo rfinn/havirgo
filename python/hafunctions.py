@@ -2667,7 +2667,8 @@ def get_depletion_map(dirname,vr=None, H0=74., cmap='magenta'):
 
     cdat = cdat / scale_factor # this should now be Msun/pixel
     
-
+    # test comment
+    
     ##################################################
     ## SFR Image
     ##################################################
