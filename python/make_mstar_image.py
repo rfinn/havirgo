@@ -222,11 +222,13 @@ class galaxy():
         # write out images
         outimage = self.dirname+'-sfr-vr.fits'
         # why am I multiplying by a factor of 1000?
-        hdu = fits.PrimaryHDU(self.sfr_vr*1.e3, header=hahdu[0].header)
+        #hdu = fits.PrimaryHDU(self.sfr_vr*1.e3, header=hahdu[0].header)
+        hdu = fits.PrimaryHDU(self.sfr_vr, header=hahdu[0].header)
         hdu.writeto(outimage, overwrite=True) 
         
         outimage = self.dirname+'-sfr-vcosmic.fits'
-        hdu = fits.PrimaryHDU(self.sfr_vcosmic*1.e3, header=hahdu[0].header)
+        #hdu = fits.PrimaryHDU(self.sfr_vcosmic*1.e3, header=hahdu[0].header)
+        hdu = fits.PrimaryHDU(self.sfr_vcosmic, header=hahdu[0].header)
         hdu.writeto(outimage, overwrite=True) 
         hahdu.close()        
         pass
