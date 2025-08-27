@@ -169,7 +169,7 @@ class duplicates():
         print("number of galaxies observed in halpha = ",len(self.fulltab))
         self.htab = self.fulltab[~self.fulltab['badflag']]
         self.hvfindex = self.vfindex[~self.fulltab['badflag']]
-        print("number after removing bad flag = ",len(self.htab))
+        print("number after removing galaxies using bad flag from excel spreadsheet = ",len(self.htab))
 
         self.rflag =  (self.htab['M26'] > 10)& (self.htab['M24'] <20) \
             & (self.htab['C30'] < 1) \
@@ -613,7 +613,7 @@ if __name__ == '__main__':
     tabledir = homedir+"/research/Virgo/halpha-tables/"
     #hafilename = os.path.join(tabledir,"hgui_csgrphot_combined.fits")
     hafilename = os.path.join(tabledir,"hgui_csgrphot_combined_2024-Oct-18.fits")
-    #hafilename = os.path.join(tabledir,"hgui_csgrphot_combined_2025-May-20.fits")    
+    hafilename = os.path.join(tabledir,"hgui_csgrphot_combined_2025-May-20.fits")    
     googlesheet = tabledir+'hagalaxies-including-duplicates.csv'
     d = duplicates(hafilename,googlesheet,v)
     d.get_sample()
