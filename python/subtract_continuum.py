@@ -66,6 +66,20 @@ Initial bias/scatter:             -0.0682/0.0491
 Corr linear fit              :    0.0000/0.0193
 Corr quadratic fit           :    0.0000/0.0192
 ——————————————————————————————————
+
+---------------------------------------------------------------------
+Number of stars meeting the color and brightness cuts: 54842
+---------------------------------------------------------------------
+Best fit linear    Ha4 - BASSr = -0.1274 * (PS1_g-PS1_r) + 0.0151
+Best fit quadratic Ha4 - BASSr = -0.0230*(PS1_g-PS1_r)^2 + -0.0976*(PS1_g-PS1_r) + 0.0063
+---------------------------------------------------------------------
+Initial bias/scatter:             -0.0608/0.0276
+Corr linear fit              :    -0.0000/0.0125
+Corr quadratic fit           :    0.0000/0.0125
+---------------------------------------------------------------------
+
+
+
 """
 import sys
 import os
@@ -159,6 +173,9 @@ def filter_transformation(telescope,rfilter, gr_col):
 
     QFM: is it ok that I am using these transformations on legacy g-r
     when they were derived for panstarrs g-r
+
+    RETURN:
+    * ha_r_no_nan - (Ha - r) color as a function of (g-r) color
     """
     if (telescope == 'BOK') :
         # need to get updated transformation from matteo that is using the
@@ -180,7 +197,6 @@ def filter_transformation(telescope,rfilter, gr_col):
         ha_r = -0.1274*gr_col + 0.0151 # Ha4 vs BASS r
     
     elif ((telescope == 'HDI') and (rfilter == 'r')):
-        
         #Ha4_KPSr = -0.1804 * (gr_col) + 0.0158
         ha_r = -0.1804*gr_col + 0.0158
     elif telescope == 'INT': # should be another case for the redder halpha, right?
