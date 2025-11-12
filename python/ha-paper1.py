@@ -17,8 +17,10 @@ sys.path.append(homedir+'/github/Virgo/programs/')
 import virgoCommon
 
 from scipy.stats import spearmanr
-from scipy.stats import median_absolute_deviation as MAD
-
+try:
+    from scipy.stats import median_absolute_deviation as MAD
+except ImportError:
+    from scipy.stats import median_abs_deviation as MAD
 from readtablesv2 import vtables
 
 plotdir = homedir+"/research/Virgo/plots/halpha/"
@@ -749,7 +751,9 @@ class haplots(vtables):
 
 if __name__ == "__main__":
     # read in v2 tables
-    h = haplots(tabledir='/home/rfinn/research/Virgo/tables-north/v2/',tableprefix='vf_v2_')
+    mytabledir = os.getenv("HOME")+"/research/Virgo/tables-north/v2/"
+    print("tabledir = ",mytabledir)
+    h = haplots(tabledir=mytabledir,tableprefix='vf_v2_')
     h.read_all()
     h.get_detect_flag()
     h.get_sample_flag()

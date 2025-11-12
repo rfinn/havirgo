@@ -65,6 +65,29 @@ plotdir = homedir+'/research/Virgo/plots/halpha/'
 #                   #'VFID6362':COdir+'u9661-co10-mean.fits',\                   
 #                   }
 
+# rms in the halpha images, measuring this using a box
+halpha_rms = {
+            'VFID5855': 1.29e-6,
+            'VFID5842': 1.15e-6,\
+            'VFID5709': 6.50e-7,\
+            'VFID6018': 1.80e-6,\
+            'VFID6033': 1.60e-6,\
+            'VFID6091': 1.35e-6,\
+            'VFID6362': 1.25e-6,\
+           }
+
+
+co_rms = {
+            'VFID5855': 0.025,
+            'VFID5842': 0.025,\
+            'VFID5709': 0.025,\
+            'VFID6018': 0.025,\
+            'VFID6033': 0.025,\
+            'VFID6091': 0.025,\
+            'VFID6362': 0.025,\
+           }
+
+
 
 # new coords to fit HI contours
 zoom_coords_INT = {'VFID5889':[100,1300,850,2100],\
@@ -80,7 +103,16 @@ zoom_coords_INT = {'VFID5889':[100,1300,850,2100],\
                    'VFID6033':[1600,2750,1500,2800],\
                    'VFID6091':[900,1600,1020,1520],\
                    'VFID6362':[150,240,150,240],\
+                   'VFID2822':[50,135,50,130],\
+                   'VFID2140':[225,390,180,440],\
                        }
+zoom_coords_HDI = {'VFID5889':[250,1200,750,1700],\
+                   'VFID5842':[400,1300,550,1130],\
+                   'VFID5892':[200,600,190,550],\
+                   'VFID5859':[35,115,25,115],\
+                   'VFID3574':[175,445,175,420]
+                   
+                   }
 
 CO_zoom_coords_INT = {'VFID5889':[100,1300,850,2100],\
                    'VFID5709':[550,1050,650,950],\
@@ -105,7 +137,44 @@ cofigsize = {
             'VFID6033':[10,8],\
             'VFID6091':[10,5.25],\
             'VFID6362':[10,6.5],\
+            'VFID2140':[10,8],\
+            'VFID2822':[10,8],\
+            'VFID3574':[10,8],\
+            
+            
            }
+                     
+codepletion_figsize = {
+            'VFID5855':[6,10],\
+            'VFID5842':[6,10],\
+            'VFID5709':[10,5],\
+            'VFID6018':[9,5.2],\
+            'VFID6033':[9,8],\
+            'VFID6091':[9,5.25],\
+            'VFID6362':[9,6.5],\
+           }
+
+    
+codepletion_levels = {
+            'VFID5855':[8,9],\
+            'VFID5842':[9,10.5],\
+            'VFID5709':[9.5,11],\
+            'VFID6018':[8.5,11],\
+            'VFID6033':[8.5,9.75],\
+            'VFID6091':[8.5,9.75],\
+            'VFID6362':[8.,9.75],\
+           }
+
+codepletion_zoom = {
+            'VFID5855':[0.55,0.6],\
+            'VFID5842':[0.5,0.6],\
+            'VFID5709':[0.65,0.6],\
+            'VFID6018':[0.5,0.4],\
+            'VFID6033':[0.6,0.65],\
+            'VFID6091':[0.6,0.6],\
+            'VFID6362':[0.5,0.5],\
+            }
+    
 
 allratio90 = {'VFID5859':.6,\
               'VFID5892':.35,\
@@ -127,7 +196,9 @@ meerkat_HI_mass = {'VFID5859':7.84,\
                    'VFID5844':np.nan,\
                    'VFID5879':np.nan}
 
-#'VFID5851': 
+
+
+                   #'VFID5851': 
 HIdir = homedir+'/research/Virgo/alma/2023/MeerKAT_ALMA_target_list/'
 HIdir2 = homedir+'/research/Virgo/MeerKAT/final_24Jan2025/'
 HI_file = {'VFID5709': HIdir2+'J1406_p_0601_lw00_final_1_mom0.fits',\
@@ -143,7 +214,12 @@ HI_file = {'VFID5709': HIdir2+'J1406_p_0601_lw00_final_1_mom0.fits',\
                'VFID5859':HIdir+'J1355_p_0512_lw05_final_15_mom0.fits',\
                'VFID5892':HIdir+'ngc5363_ngc5364_ngc5360.fits',\
                'VFID5879':None,\
-               'VFID5844':None 
+               'VFID5844':None,\
+               'VFID2140':None,\
+               'VFID2822':None,\
+               'VFID3574':None,\
+               
+               
 }
 
 
@@ -151,6 +227,7 @@ COdir = homedir+'/research/Virgo/alma/combes_data/'
 COveldir = homedir+'/research/Virgo/alma/combes_data/masked_velocity_maps/'
 COwidthdir = homedir+'/research/Virgo/alma/combes_data/masked_velocity_width_maps/'
 COmaskdir = homedir+'/research/Virgo/alma/combes_data/masked/'
+noema_base = homedir+'/research/Virgo/noema/NOEMA_maps/'
 CO_file = {'VFID5889':None,\
            'VFID5851':None,\
            #'VFID5851':None, \
@@ -168,6 +245,9 @@ CO_file = {'VFID5889':None,\
            'VFID6033':COdir+'n5566-co10-mean.fits',\
            'VFID6091':COdir+'n5577-co10-mean.fits',\
            'VFID6362':COdir+'u9661-co10-mean.fits',\
+           'VFID2140':noema_base+'moment_maps_fits_s18cd002/s18cd002-usb-bas-CO10-mean.fits',\
+           'VFID2822':noema_base+'moment_maps_fits_s18cd001/s18cd001-usb-bas-CO10-mean.fits',\
+           'VFID3574':noema_base+'moment_maps_fits_s18cd003/s18cd003-usb-full-bas-CO10-mean.fits',
            
 }
 
@@ -193,6 +273,10 @@ CO_mask = {'VFID5889':None,\
            'VFID6033':COmaskdir+'n5566_intensity_COmap_masked.fits',\
            'VFID6091':COmaskdir+'n5577_intensity_COmap_masked.fits',\
            'VFID6362':COmaskdir+'u9661_intensity_COmap_masked.fits',\
+           'VFID2140':None,\
+           'VFID2822':None,\
+           'VFID3574':None,\
+           
 }
 
 CO_vel = { 'VFID5709':COveldir+'n5470_velocity_COmap_masked.fits',\
@@ -201,7 +285,11 @@ CO_vel = { 'VFID5709':COveldir+'n5470_velocity_COmap_masked.fits',\
            'VFID6018':COveldir+'n5560_velocity_COmap_masked.fits',\
            'VFID6033':COveldir+'n5566_velocity_COmap_masked.fits',\
            'VFID6091':COveldir+'n5577_velocity_COmap_masked.fits',\
-           'VFID6362':COveldir+'u9661_velocity_COmap_masked.fits'
+           'VFID6362':COveldir+'u9661_velocity_COmap_masked.fits',\
+           'VFID2140':noema_base+'moment_maps_fits_s18cd002/s18cd002-usb-bas-CO10-velo.fits',\
+           'VFID2822':noema_base+'moment_maps_fits_s18cd001/s18cd001-usb-bas-CO10-velo.fits',\
+           'VFID3574':noema_base+'moment_maps_fits_s18cd003/s18cd003-usb-full-bas-CO10-velo.fits',
+           
 }
 CO_width = {'VFID5709':COwidthdir+'n5470_width_COmap_masked.fits',\
            'VFID5855':COwidthdir+'n5348_width_COmap_masked.fits',\
@@ -209,14 +297,13 @@ CO_width = {'VFID5709':COwidthdir+'n5470_width_COmap_masked.fits',\
            'VFID6018':COwidthdir+'n5560_width_COmap_masked.fits',\
            'VFID6033':COwidthdir+'n5566_width_COmap_masked.fits',\
            'VFID6091':COwidthdir+'n5577_width_COmap_masked.fits',\
-           'VFID6362':COwidthdir+'u9661_width_COmap_masked.fits'
+           'VFID6362':COwidthdir+'u9661_width_COmap_masked.fits',\
+           'VFID2140':noema_base+'moment_maps_fits_s18cd002/s18cd002-usb-bas-CO10-width.fits',\
+           'VFID2822':noema_base+'moment_maps_fits_s18cd001/s18cd001-usb-bas-CO10-width.fits',\
+           'VFID3574':noema_base+'moment_maps_fits_s18cd003/s18cd003-usb-full-bas-CO10-width.fits',
+           
 }
 
-zoom_coords_HDI = {'VFID5889':[250,1200,750,1700],\
-                   'VFID5842':[400,1300,550,1130],\
-                   'VFID5892':[200,600,190,550],\
-                   'VFID5859':[35,115,25,115]
-                   }
 
 
 acbfrac = {'VFID5889':.045,\
@@ -243,6 +330,10 @@ afigsize = {'VFID5889':[14.5,4],\
             'VFID6018':[14,3.5],\
             'VFID6033':[14,3.5],\
             'VFID6091':[14,3.5],\
+           'VFID2140':[12,5],\
+           'VFID2822':[14,5],\
+           'VFID3574':[14,5],\
+            
            }
            
 alevels = {'VFID5889':[3.5],\
@@ -257,7 +348,12 @@ alevels = {'VFID5889':[3.5],\
            'VFID6018':[4.2],\
            'VFID6033':[4.5],\
            'VFID6091':[4.2],\
-           'VFID6362':[3.9]
+           'VFID6362':[3.9],\
+           'VFID2140':[4.5],\
+           'VFID2822':[4.5],\
+           'VFID3574':[5],\
+
+           
            }
 
 
@@ -1826,7 +1922,8 @@ def plot_mstar_sfr_profiles(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xtic
 
 def plot_mstar_sfr_CO(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xticks=True,figsize=[16,6],\
                             cbfrac=.08,cbaspect=20,clevels=[4],contourFlag=True,rmax=None,\
-                            logMstar=None,cmap='magma_r',markGroupCenter=False,COcolor='white',COlevels=None):
+                            logMstar=None,cmap='magma_r',markGroupCenter=False,COcolor='white',COlevels=None,\
+                          noHI=False,alt_title=None,vr=None):
     """
     same plot as mstar_sfr, but swap out ssfr for radial profiles in the 4th panel
 
@@ -1845,22 +1942,34 @@ def plot_mstar_sfr_CO(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xticks=Tru
     ssfrim = dirname+"-ssfr.fits"
     mask = dirname+'-R-mask.fits'
     #titles = [r'$\log_{10}(M_\star/M_\odot)$',r'$H\alpha \ SFR$','log sSFR']
-    titles = [r'$\log_{10}(\Sigma_\star)$',r'$\Sigma_{SFR} \ w/HI$',r'$\Sigma_{SFR} \ w/CO$']
-    vmin = [2,0e-5,0e-5]
-    vmax = [6,.6e-5,.6e-5]
+    if noHI:
+        titles = [r'$\log_{10}(\Sigma_\star)$',r'$\Sigma_{SFR}$',r'$\Sigma_{SFR} \ w/CO$']
+    else:
+        titles = [r'$\log_{10}(\Sigma_\star)$',r'$\Sigma_{SFR} \ w/HI$',r'$\Sigma_{SFR} \ w/CO$']
+
+    #vmin = [2,0e-5,0e-5,0,-200,0]
+    #vmax = [6,.6e-5,.6e-5,2,200,100]
+
+    vmin = [4,0e-5,0e-5]
+    vmax = [7,3e-5,3e-5]
+
+
+    
     allim = [massim,sfrim,ssfrim]
     #allim = [massim,sfrim]
     allim = [massim,sfrim,sfrim] # show halpha with HI and CO    
     cblabels = [r'$\rm \log_{10}(M_\star/M_\odot)/pixel$',r'$\rm SFR(M_\star/yr)/pixel$',r'$\rm SFR(M_\star/yr)/pixel$']
-    
+
+
     vfid = dirname.split('-')[0]
     print("VFID = ",vfid)
-    if 'INT' in dirname:
+    if ('INT' in dirname) | ('BOK' in dirname):
         try:
             xmin,xmax,ymin,ymax = zoom_coords_INT[vfid]
         except KeyError:
             # use the full image
             # read in massim
+            print("WARNING: no zoom coords found ",dirname)
             data = fits.getdata(massim)
             ymax,xmax = data.shape
             xmin=1
@@ -1929,7 +2038,14 @@ def plot_mstar_sfr_CO(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xticks=Tru
         #else:
         ax2=plt.subplot(1,4,i+2,projection=imwcs)
         
-                        
+        if i > 0:              
+            if vr is not None:
+                # scale data to convert to flux/kpc^2
+                kpc_per_pixel = get_kpc_per_pixel(imwcs,vr)
+                dat = dat/(kpc_per_pixel**2)
+                vmin[i] = 0 # vmin[i]/kpc_per_pixel**2 
+                vmax[i] = 0.02#1e-5/kpc_per_pixel**2
+                cblabels[i] = r'$\rm SFR(M_\star/yr)/kpc^2$'
 
 
         mdat = np.ma.array(dat,mask=maskdat)
@@ -2032,6 +2148,12 @@ def plot_mstar_sfr_CO(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xticks=Tru
     ax1 = plt.subplot(1,4,1,projection=legwcs)
     plt.imshow(jpeg_data)
 
+
+    # check if HI moment zero map is available
+    COfilename = CO_file[vfid]
+    COmask_filename = CO_mask[vfid]
+    plot_CO_contours(ax1,COfilename,color=COcolor,mask=COmask_filename,levels=COlevels)
+    
     #ax1.set_xlabel("RA",fontsize=16)
     #ax1.set_ylabel("DEC",fontsize=16)    
 
@@ -2057,7 +2179,10 @@ def plot_mstar_sfr_CO(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xticks=Tru
     
 
     #plt.title(f"{t[0]} Legacy grz",fontsize=18)
-    plt.title(f"{t[0]}-{t[1]}",fontsize=18)    
+    if alt_title is not None:
+        plt.title(alt_title,fontsize=18)
+    else:
+        plt.title(f"{t[0]}-{t[1]}",fontsize=18)    
 
     #############################################################
     # add arrow showing direction to group center
@@ -2264,16 +2389,18 @@ def plot_mstar_sfr_COall(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xticks=
             cdat, cheader = convert_alma3d_alma2d(COfilename)
             imwcs = WCS(cheader)
             COheader = cheader
-            if i == 3:
-                COmask_filename = CO_mask[vfid]
-            
-                dat = fits.getdata(COmask_filename)
-            elif i == 4:
-                COmask_filename = CO_vel[vfid]
-                dat = fits.getdata(COmask_filename)
-            elif i== 5:
-                COmask_filename = CO_width[vfid]
-                dat = fits.getdata(COmask_filename)
+            if CO_mask[vfid] is not None:
+                if i == 3:
+                    COmask_filename = CO_mask[vfid]
+                    dat = fits.getdata(COmask_filename)
+                elif i == 4:
+                    COmask_filename = CO_vel[vfid]
+                    dat = fits.getdata(COmask_filename)
+                elif i== 5:
+                    COmask_filename = CO_width[vfid]
+                    dat = fits.getdata(COmask_filename)
+            else:
+                dat = cdat
         
         else:
             hdu = fits.open(im)[0]
@@ -2602,7 +2729,17 @@ def plot_mstar_sfr_COall(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xticks=
 
     return ax1
 
-def get_depletion_map(dirname,vr=None, H0=74., cmap='magenta'):
+def hide_xyticks_wcs(ax):
+    lon = ax.coords[0]
+    lat = ax.coords[1]
+    lon.set_ticklabel_visible(False)
+    lon.set_ticks_visible(False)            
+    lat.set_ticklabel_visible(False)
+    lat.set_ticks_visible(False)         
+    
+
+
+def get_depletion_map(dirname,vr=None, H0=74., cmap='magma_r', verbose=False):
     """
     GOAL:
     * get depletion map for CO
@@ -2632,27 +2769,36 @@ def get_depletion_map(dirname,vr=None, H0=74., cmap='magenta'):
     
     D_Mpc = vr / H0
 
+    cblabels = [ r'$\rm Jy~beam^{-1}~ km~s^{-1}$',\
+                    r'$\rm SFR(M_\star/yr)/kpc^2$',\
+                    r'$\rm \log_{10}(\tau_{dep}/yr)$',]
+
+    titles = ['$CO~ Intensity$',r'$\Sigma_{SFR}$',r'$Depletion \ time$']
+    temp = dirname.split('-')
+    galname = temp[0]+'-'+temp[1]
     ##################################################
     ## CO Image
     ##################################################
     COfilename = CO_file[vfid]
     # need to get the header from Francoise's version
-    cdat, cheader = convert_alma3d_alma2d(COfilename)
+    cdat_unmasked, cheader = convert_alma3d_alma2d(COfilename)
 
     # print CO header
-    print(cheader)
+    #print(cheader)
     
     co_imwcs = WCS(cheader)
     COheader = cheader
+    
     COmask_filename = CO_mask[vfid]
-    maskdat = fits.getdata(COmask_filename)
+    cdat_masked = fits.getdata(COmask_filename)
 
-    co_mdat = np.ma.array(cdat,mask=maskdat)
+    #co_mdat = np.ma.array(cdat,mask=maskdat)
 
     # cdat is in Jy/beam * km/s
     # convert CO flux to H2 mass based on eqn 1 from Castignani+2022
     alpha_CO = 4.3
-    cdat = cdat * 1.05e4 * alpha_CO/4.3 * (D_Mpc)**2 # in Msun/beam
+    #cdat = cdat_unmasked * 1.05e4 * alpha_CO/4.3 * (D_Mpc)**2 # in Msun/beam
+    cdat = cdat_masked * 1.05e4 * alpha_CO/4.3 * (D_Mpc)**2 # in Msun/beam
 
     # add correction to convert from Jy/beam to Jy/pixel
 
@@ -2666,6 +2812,10 @@ def get_depletion_map(dirname,vr=None, H0=74., cmap='magenta'):
     scale_factor = beam_area_sq_deg/pixel_area_sq_deg
 
     cdat = cdat / scale_factor # this should now be Msun/pixel
+
+    # convert units for the CO rms value
+    co_rms_Msun_beam =co_rms[vfid] * 1.05e4 * alpha_CO/4.3 * (D_Mpc)**2
+    co_rms_Msun_pixel = (co_rms_Msun_beam / scale_factor)
     
     # test comment
     
@@ -2678,6 +2828,7 @@ def get_depletion_map(dirname,vr=None, H0=74., cmap='magenta'):
     # divide sfr by 1e3 to get true values.
     hdu = fits.open(sfrim)[0]
     hdu.data = hdu.data
+    
     # convert to surface brightness
     # times by area in sr
     #pixscale_deg_in = np.abs(hdu.header['CDELT1'])
@@ -2721,9 +2872,14 @@ def get_depletion_map(dirname,vr=None, H0=74., cmap='magenta'):
     # reproject SFR image to CO wcs
     #rsfr_sb, rfootprint = reproject_interp(hdu,  co_imwcs) # output of reproject is in sfr/sr
     #rsfr_sb, rfootprint = reproject_exact(hdu, co_imwcs)
-    print("ha_imwcs:\n",ha_imwcs)
-    print()
+    #print("ha_imwcs:\n",ha_imwcs)
+    #print()
 
+    ##
+    # project the halpha image onto the CO image
+    ##
+
+    # TODO - are we doing the reprojection right - 
     out_header = cheader
     #out_header = hdu.header
     rsfr_dat, rfootprint = reproject_adaptive(hdu, out_header, conserve_flux=True)
@@ -2758,35 +2914,199 @@ def get_depletion_map(dirname,vr=None, H0=74., cmap='magenta'):
     #    kpc_per_pixel = get_kpc_per_pixel(co_imwcs,vr)
     #    rsfr_dat = rsfr_dat/(kpc_per_pixel**2)
 
-    try:
-        # then divide CO by SFR
-        extinction_correction = 2.5 # assume one magnitude until we have something better
-        depletion = cdat / (rsfr_dat * extinction_correction)
 
+
+    # get zoom in region
+    ymax,xmax = cdat.shape
+    xcenter = xmax/2
+    ycenter = ymax/2
+    xzoom, yzoom = codepletion_zoom[vfid]
+
+    x1 = int(xcenter - (xmax/2)*xzoom)
+    x2 = int(xcenter + (xmax/2)*xzoom)
+
+    y1 = int(ycenter - (ymax/2)*yzoom)
+    y2 = int(ycenter + (ymax/2)*yzoom)
+    print(f"Testing: xmax,ymax={xmax},{ymax}, x1,x2,y1,y2={x1,x2,y1,y2}")
+
+
+    ################################################
+    ## CALCULATE EXTINCTION MAP WITH UPPER LIMITS
+    ################################################
+
+    # one magnitude of extinction at halpha
+    extinction_correction = 2.5 # assume one magnitude until we have something better
+    depletion = cdat / (rsfr_dat * extinction_correction)
+
+    # cdat is nan but halpha is > 3*image_std
+    halpha_nan_flag = rsfr_dat < 3*halpha_rms[vfid]
+    
+    co_nan_flag = ~(cdat == cdat)
+
+    
+    if verbose:
+        plt.figure()
+        plt.imshow(halpha_nan_flag, cmap='viridis', origin="lower")
+        plt.colorbar()
+        plt.title("halpha_nan_flag")
+        
+        plt.figure()
+        plt.imshow(co_nan_flag, cmap='viridis', origin="lower")
+        plt.colorbar()
+        plt.title("co_nan_flag")
+    
+    # if CO is detected (not nan), but SFR isn't
+    tdep_lower_flag = ~co_nan_flag & halpha_nan_flag
+    tdep_upper_flag = co_nan_flag & ~halpha_nan_flag
+
+    # create an image that just has the upper and lower limts so we can visualize
+    tdep_limits_image = np.zeros_like(depletion)
+
+    # set upper limits to CO upper limit / SFR
+    tdep_limits_image[tdep_upper_flag] = (3 * co_rms_Msun_pixel) / (rsfr_dat[tdep_upper_flag] * extinction_correction)
+
+    # we detect CO but not SFR
+    tdep_limits_image[tdep_lower_flag] = cdat[tdep_lower_flag]/ (3 * halpha_rms[vfid] * extinction_correction)    
+
+
+    # combine limits with depletion map
+    limit_flag = tdep_lower_flag | tdep_upper_flag
+    depletion_with_limits = np.zeros_like(depletion)
+    depletion_with_limits[~limit_flag] = depletion[~limit_flag]
+
+    depletion_with_limits[limit_flag] = tdep_limits_image[limit_flag]
+
+    if verbose:
+        ####################################
+        # plot image of upper/lower limits 
+        ####################################   
+        plt.figure(figsize=(12,4))
+    
+        plt.subplot(1,3,1)
+        plt.imshow(tdep_lower_flag[y1:y2,x1:x2], cmap='viridis', origin="lower")#, vmin=0, vmax=1.5)
+        cb = plt.colorbar()
+        plt.title("lower limit flag")
+        plt.subplot(1,3,2)
+        plt.imshow(tdep_upper_flag[y1:y2,x1:x2], cmap='viridis', origin="lower")#, vmin=0, vmax=1.5)
+        cb = plt.colorbar() 
+        plt.title("upper limit flag")   
+        plt.subplot(1,3,3)
+        plt.imshow(np.log10(tdep_limits_image[y1:y2,x1:x2]), cmap='viridis', origin="lower")
+        cb = plt.colorbar()
+        plt.title("upper/lower limit image")    
+        
+
+
+    #################################################
+    ## FIGURE - CO, SIGMA_SFR, DEPLETION MAP
+    #################################################    
+
+    # set up figure parameters
+    myfigsize=codepletion_figsize[vfid]
+    plt.figure(figsize=(myfigsize[0],myfigsize[1]))
+    plt.subplots_adjust(wspace=0.05)
+
+    size_ratio = 486/ymax
+    size_ratio = 1
+    print(f"Testing: size_ratio={size_ratio:.2f}", codepletion_figsize['VFID5842'][1],myfigsize[1])
+
+    #################################################
+    ## PANEL 1 - CO
+    #################################################    
+    
+    ax1 = plt.subplot(1,3,1, projection=co_imwcs)
+    plt.imshow(cdat_masked[y1:y2,x1:x2], cmap='viridis')
+    plt.title(titles[0],fontsize=14)
+    plt.text(-.1,0.5,galname,verticalalignment='center',transform=plt.gca().transAxes,fontsize=14,rotation=90)
+    #plt.title("CO Intensity Map")
+    #plt.colorbar(fraction=.08)
+    #cbaxes = inset_axes(ax1, width="80%", height="5%", loc=8)
+    # Create inset axes for colorbar below the x-axis
+    cbaxes = inset_axes(
+        ax1, 
+        width="80%", # 80% of parent axes width
+        height=f"{10*size_ratio:.0f}%", # 5% of axes height
+        loc='lower center', 
+        bbox_to_anchor=(.1,-0.07*size_ratio,0.8,0.4*size_ratio), # shift below axes
+        bbox_transform=ax1.transAxes
+        )
+
+    cb = plt.colorbar(cax=cbaxes, orientation='horizontal')            
+    cb.set_label(label=cblabels[0],fontsize=12)
+    hide_xyticks_wcs(ax1)
+
+    #################################################
+    ## PANEL 2 - SIGMA_SFR
+    #################################################    
+
+    # plot 2
+    ax2 = plt.subplot(1,3,2, projection=co_imwcs)
+
+    # convert from SFR/pixel to SFR/kpc^2
+    if vr is not None:
+        # scale data to convert to flux/kpc^2
+        kpc_per_pixel = get_kpc_per_pixel(co_imwcs,vr)
+        rsfr_dat_kpc2 = rsfr_dat/(kpc_per_pixel**2)
+        v1 = 0 # vmin[i]/kpc_per_pixel**2 
+        v2 = 1e-5/kpc_per_pixel**2
+        #myclevels = myclevels/kpc_per_pixel**2
+        plt.imshow(rsfr_dat_kpc2[y1:y2,x1:x2], vmin=v1, vmax=v2, cmap=cmap)
+    else:
         # plot result
+        plt.imshow(rsfr_dat[y1:y2,x1:x2], vmin=0.0,vmax=1.e-5, cmap=cmap)
+    plt.title(titles[1],fontsize=14)
+    #plt.title("SFR")
+    #cbaxes = inset_axes(ax2, width="80%", height="5%", loc=8)
+    # Create inset axes for colorbar below the x-axis
+    cbaxes = inset_axes(
+        ax1, 
+        width="80%", # 80% of parent axes width
+        height="10%", # 5% of axes height
+        loc='lower center', 
+        bbox_to_anchor=(.1,-0.07*size_ratio,0.8,0.4*size_ratio), # shift below axes
+        bbox_transform=ax2.transAxes
+        )
 
-        plt.figure(figsize=(12,3))
-        plt.subplot(1,3,1, projection=co_imwcs)
-        plt.imshow(cdat)#, cmap=cmap)
-        plt.title("CO")
-        plt.colorbar(fraction=.08)
-        plt.subplot(1,3,2, projection=co_imwcs)
-        plt.imshow(rsfr_dat, vmin=0.0,vmax=1.e-5)#, cmap=cmap)
-        plt.title("SFR")    
-        plt.colorbar(fraction=.08)
-        plt.subplot(1,3,3, projection=co_imwcs)
-        plt.title("Depletion Map")
-        plt.imshow(np.log10(depletion), vmin=9, vmax=10.5)#, cmap=cmap)
-        plt.colorbar(fraction=.08, label='log10(t_depletion)')
-    except ValueError:
-        print("WARNING: could not make depletion map!")
 
-    #hdu.close()
-    #vmin = [2,0e-5,0e-5,0,-200,0]
-    #vmax = [6,.6e-5,.6e-5,2,200,100]
-    #i = 1 # sfr map
-    #v1 = vmin[i]/kpc_per_pixel**2 
-    #v2 = vmax[i]/kpc_per_pixel**2
+    cb = plt.colorbar(cax=cbaxes, orientation='horizontal')            
+    cb.set_label(label=cblabels[1],fontsize=12)                
+    #plt.colorbar(fraction=.08)
+
+    hide_xyticks_wcs(ax2)
+
+    #################################################
+    ## PANEL 3- DEPLETION MAP
+    #################################################    
+
+    ax3 = plt.subplot(1,3,3, projection=co_imwcs)
+    #plt.title("Depletion Map")
+    v1, v2 = codepletion_levels[vfid]
+
+    # adding upper/lower limits to depletion map
+    #plt.imshow(np.log10(depletion[y1:y2,x1:x2]), cmap='viridis', vmin=v1, vmax=v2)
+    plt.imshow(np.log10(depletion_with_limits[y1:y2,x1:x2]), cmap='viridis', vmin=v1, vmax=v2)    
+    plt.title(titles[2],fontsize=14)
+
+    #cbaxes = inset_axes(ax3, width="80%", height="5%", loc=8)
+    # Create inset axes for colorbar below the x-axis
+    cbaxes = inset_axes(
+        ax1, 
+        width="80%", # 80% of parent axes width
+        height="10%", # 5% of axes height
+        loc='lower center', 
+        bbox_to_anchor=(.1,-0.07*size_ratio**2,0.8,0.4*size_ratio), # shift below axes
+        bbox_transform=ax3.transAxes
+        )
+    
+    
+    cb = plt.colorbar(cax=cbaxes, orientation='horizontal')            
+    cb.set_label(label=cblabels[2],fontsize=12)        
+    #plt.colorbar(fraction=.08, label='log10(t_depletion)')
+
+    hide_xyticks_wcs(ax3)
+    plt.savefig(os.path.join(plotdir,galname)+'-depletion-map.png',dpi=150,bbox_inches="tight")
+    #plt.savefig(os.path.join(plotdir,dirname)+'-depletion-map.pdf',dpi=150,bbox_inches="tight")    
+
     
 def plot_alma_tdepletion(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xticks=True,figsize=[16,4],\
                             cbfrac=.08,cbaspect=20,clevels=[4],contourFlag=True,rmax=None,vr=None,\

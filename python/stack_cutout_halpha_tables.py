@@ -1,13 +1,13 @@
 #!/usr/bin/env python
 
 '''
-GOAL:
+OVERVIEW:
 * this is an updated Virgo/programs/stack-gui-halpha-tables.py
 * I am updating to run on the fits files that are in the cutouts/VFID* directories
 * the difference is that these were run AFTER the color-based continuum subtraction with the hand-tuned scale factor,
 so the sequencing is different from just running after running the gui in auto mode.
 
-
+GOAL:
 * combine tables that are created from get_gr_cont_phot.py
 * astropy.table vstack is really slow, so I am going to try to do it more manually
 
@@ -19,7 +19,6 @@ PROCEDURE:
 * count total lines in input files
 * create a new empty array with the right number of rows and dataype of the individual tables
 * write individual tables into the combined table
-
 
 OUTPUT:
 * combined table

@@ -38,7 +38,8 @@ def reproject_image(infile, reffile, outname):
     hinfile = fits.open(infile)
     href = fits.open(reffile)
     # reproject input to referece image
-    outim,footprint = reproject_interp(hinfile,href[0].header)
+    #outim,footprint = reproject_interp(hinfile,href[0].header)
+    outim,footprint = reproject_adaptive(hinfile,href[0].header, conserve_flux=True)
 
     fits.writeto(outname,outim,href[0].header,overwrite=True)
     hinfile.close()

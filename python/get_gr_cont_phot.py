@@ -34,7 +34,7 @@ from astropy.wcs import WCS
 homedir = os.getenv("HOME")
 sys.path.append(homedir+"/github/halphagui/")
 
-from halphamain import create_output_table
+#from halphamain import create_output_table
 
 from photwrapper import ellipse
 from fit_profile import profile, dualprofile, rprofile, haprofile, ratio_error
