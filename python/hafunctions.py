@@ -67,13 +67,17 @@ plotdir = homedir+'/research/Virgo/plots/halpha/'
 
 # rms in the halpha images, measuring this using a box
 halpha_rms = {
-            'VFID5855': 1.29e-6,
-            'VFID5842': 1.15e-6,\
-            'VFID5709': 6.50e-7,\
-            'VFID6018': 1.80e-6,\
-            'VFID6033': 1.60e-6,\
-            'VFID6091': 1.35e-6,\
-            'VFID6362': 1.25e-6,\
+            'VFID5855': (1.29e-6),
+            'VFID5842': (1.15e-6),\
+            'VFID5709': (6.50e-7),\
+            'VFID6018': (1.80e-6),\
+            'VFID6033': (1.60e-6),\
+            'VFID6091': (1.35e-6),\
+            'VFID6362': (1.25e-6),\
+            'VFID2822': 2.03e-6,\
+            'VFID2140': 4e-6,\
+            'VFID3574': 1.15e-5,
+            
            }
 
 
@@ -85,6 +89,9 @@ co_rms = {
             'VFID6033': 0.025,\
             'VFID6091': 0.025,\
             'VFID6362': 0.025,\
+            'VFID2822': 0.06234,\
+            'VFID2140': 0.0824269,\
+            'VFID3574': 0.0694
            }
 
 
@@ -152,6 +159,10 @@ codepletion_figsize = {
             'VFID6033':[9,8],\
             'VFID6091':[9,5.25],\
             'VFID6362':[9,6.5],\
+            'VFID2140':[10,8],\
+            'VFID2822':[10,8],\
+            'VFID3574':[10,8],\
+            
            }
 
     
@@ -163,6 +174,9 @@ codepletion_levels = {
             'VFID6033':[8.5,9.75],\
             'VFID6091':[8.5,9.75],\
             'VFID6362':[8.,9.75],\
+            'VFID2140':[8,9.75],\
+            'VFID2822':[8, 9.75],\
+            'VFID3574':[8., 9.75],\
            }
 
 codepletion_zoom = {
@@ -173,6 +187,10 @@ codepletion_zoom = {
             'VFID6033':[0.6,0.65],\
             'VFID6091':[0.6,0.6],\
             'VFID6362':[0.5,0.5],\
+            'VFID2140':[0.5,0.5],\
+            'VFID2822':[.3,.3],\
+            'VFID3574':[.65,.6],\
+            
             }
     
 
@@ -1923,7 +1941,7 @@ def plot_mstar_sfr_profiles(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xtic
 def plot_mstar_sfr_CO(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xticks=True,figsize=[16,6],\
                             cbfrac=.08,cbaspect=20,clevels=[4],contourFlag=True,rmax=None,\
                             logMstar=None,cmap='magma_r',markGroupCenter=False,COcolor='white',COlevels=None,\
-                          noHI=False,alt_title=None,vr=None):
+                          noHI=False,alt_title=None,vr=None, sfr_limits=None):
     """
     same plot as mstar_sfr, but swap out ssfr for radial profiles in the 4th panel
 
@@ -2054,11 +2072,22 @@ def plot_mstar_sfr_CO(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xticks=Tru
         #else:
         #    mdat = mdat[ymin:ymax,xmin:xmax]
         if i == 2:
-            plt.imshow(mdat,vmin=vmin[i],vmax=vmax[i],origin='lower',interpolation='nearest',cmap='gray_r')
-
-
-        else:
             #display_image(mdat,percent=99.5,cmap='viridis')#,vmin=vmin[i],vmax=vmax[i])
+            if sfr_limits is not None:
+                v1, v2 = sfr_limits
+            else:
+                v1, v2 = vmin[i], vmax[i]
+            plt.imshow(mdat,vmin=v1,vmax=v2,origin='lower',interpolation='nearest',cmap='gray_r')
+
+
+        elif i == 1:
+            #display_image(mdat,percent=99.5,cmap='viridis')#,vmin=vmin[i],vmax=vmax[i])
+            if sfr_limits is not None:
+                v1, v2 = sfr_limits
+            else:
+                v1, v2 = vmin[i], vmax[i]
+            plt.imshow(mdat,vmin=v1,vmax=v2,cmap=cmap)#cmap='viridis'
+        else:
             plt.imshow(mdat,vmin=vmin[i],vmax=vmax[i],cmap=cmap)#cmap='viridis'
         
         lon = ax2.coords[0]
@@ -2739,7 +2768,7 @@ def hide_xyticks_wcs(ax):
     
 
 
-def get_depletion_map(dirname,vr=None, H0=74., cmap='magma_r', verbose=False):
+def get_depletion_map(dirname,vr=None, H0=74., cmap='magma_r', verbose=False, sfr_limit=1e-5):
     """
     GOAL:
     * get depletion map for CO
@@ -2790,7 +2819,10 @@ def get_depletion_map(dirname,vr=None, H0=74., cmap='magma_r', verbose=False):
     COheader = cheader
     
     COmask_filename = CO_mask[vfid]
-    cdat_masked = fits.getdata(COmask_filename)
+    if COmask_filename is None:
+        cdat_masked = cdat_unmasked
+    else:
+        cdat_masked = fits.getdata(COmask_filename)
 
     #co_mdat = np.ma.array(cdat,mask=maskdat)
 
@@ -2827,7 +2859,7 @@ def get_depletion_map(dirname,vr=None, H0=74., cmap='magma_r', verbose=False):
     # sfr maps are scaled by a factor of 1e3 for convenience
     # divide sfr by 1e3 to get true values.
     hdu = fits.open(sfrim)[0]
-    hdu.data = hdu.data
+    #hdu.data = hdu.data
     
     # convert to surface brightness
     # times by area in sr
@@ -2859,6 +2891,9 @@ def get_depletion_map(dirname,vr=None, H0=74., cmap='magma_r', verbose=False):
     hmaskdat, hmaskheader = fits.getdata(hamask_filename, header=True)
     ha_mdat = np.ma.array(hdat, mask=hmaskdat)
 
+    if verbose:
+        print("CHECK")
+        print(f"{vfid}: max value in image before reprojection = {np.nanmax(hdat)}, halpha_rms = {halpha_rms[vfid]}")
 
     ##################################################
     ## Reproject Image
@@ -2940,7 +2975,9 @@ def get_depletion_map(dirname,vr=None, H0=74., cmap='magma_r', verbose=False):
 
     # cdat is nan but halpha is > 3*image_std
     halpha_nan_flag = rsfr_dat < 3*halpha_rms[vfid]
-    
+    if verbose:
+        print("CHECK")
+        print(f"{vfid}: max value in image = {np.nanmax(rsfr_dat)}, max value in image before reprojection = {np.nanmax(hdat)}, halpha_rms = {halpha_rms[vfid]}")
     co_nan_flag = ~(cdat == cdat)
 
     
@@ -3047,8 +3084,8 @@ def get_depletion_map(dirname,vr=None, H0=74., cmap='magma_r', verbose=False):
         # scale data to convert to flux/kpc^2
         kpc_per_pixel = get_kpc_per_pixel(co_imwcs,vr)
         rsfr_dat_kpc2 = rsfr_dat/(kpc_per_pixel**2)
-        v1 = 0 # vmin[i]/kpc_per_pixel**2 
-        v2 = 1e-5/kpc_per_pixel**2
+        v1 = 0 # vmin[i]/kpc_per_pixel**2
+        v2 = sfr_limit/kpc_per_pixel**2
         #myclevels = myclevels/kpc_per_pixel**2
         plt.imshow(rsfr_dat_kpc2[y1:y2,x1:x2], vmin=v1, vmax=v2, cmap=cmap)
     else:

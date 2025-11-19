@@ -196,93 +196,94 @@ def get_pixel_scale(instrument):
     return pixelScale
 
 
+if __name__ == '__main__':
 
-topdir = os.getcwd()
-dirlist = os.listdir()
-dirlist.sort()
-for d in dirlist: # loop through directories
-    if d.startswith('sn'): # not sure what these are - might be SN observations?
-        continue
-    if os.path.isdir(d):
+    topdir = os.getcwd()
+    dirlist = os.listdir()
+    dirlist.sort()
+    for d in dirlist: # loop through directories
+        if d.startswith('sn'): # not sure what these are - might be SN observations?
+            continue
+        if os.path.isdir(d):
 
-        # get list of files
-        # construct galname
-        # n4178 -> NGC4178
-        # ic3392 -> IC3398
-        if d.startswith('n'):
-            galname = 'NGC'+d[1:]
-        elif d.startswith('ic'):
-            galname = 'IC'+d[2:]
-        elif d.startswith('u'):
-            galname = 'UGC'+d[3:]
-        elif d.startswith('i'): # one duplicate observation in isolated sample has "i" instead of "ic"
-            galname = 'IC'+d[1:]
+            # get list of files
+            # construct galname
+            # n4178 -> NGC4178
+            # ic3392 -> IC3398
+            if d.startswith('n'):
+                galname = 'NGC'+d[1:]
+            elif d.startswith('ic'):
+                galname = 'IC'+d[2:]
+            elif d.startswith('u'):
+                galname = 'UGC'+d[3:]
+            elif d.startswith('i'): # one duplicate observation in isolated sample has "i" instead of "ic"
+                galname = 'IC'+d[1:]
 
-        # weird inconsistency
-        if galname == 'NGC4411':
-            galname = 'NGC4411B'
-        print()            
-        print("#################################")
-        print(f"###  {d}-{galname}   ###########")
-        print("#################################")        
+            # weird inconsistency
+            if galname == 'NGC4411':
+                galname = 'NGC4411B'
+            print()            
+            print("#################################")
+            print(f"###  {d}-{galname}   ###########")
+            print("#################################")        
 
-        # get info
-        ra, dec = get_coords(galname)
-        instrument = get_instrument(galname)
-        if instrument is None:
-            print(f"WARNING: could not find instrument for {galname}, {d}")
-            sys.exit()
-        pixelScale = get_pixel_scale(instrument)
-        pixelScaleDeg = float(pixelScale)/3600 # convert from arcsec/pix to deg/pix
-        
-        os.chdir(d) # move to directory            
-        filelist = os.listdir() # get list of fits images
-        for f in filelist:
-            if f.startswith('h'):
-                continue
-            if os.path.isfile(f) & ('.fits' in f):
-                hdu = fits.open(f)
-                
-                # get size of image (naxis1, naxis2)                
-                naxis1 = hdu[0].header['NAXIS1']
-                naxis2 = hdu[0].header['NAXIS2']                
+            # get info
+            ra, dec = get_coords(galname)
+            instrument = get_instrument(galname)
+            if instrument is None:
+                print(f"WARNING: could not find instrument for {galname}, {d}")
+                sys.exit()
+            pixelScale = get_pixel_scale(instrument)
+            pixelScaleDeg = float(pixelScale)/3600 # convert from arcsec/pix to deg/pix
 
-                # build WCS
+            os.chdir(d) # move to directory            
+            filelist = os.listdir() # get list of fits images
+            for f in filelist:
+                if f.startswith('h'):
+                    continue
+                if os.path.isfile(f) & ('.fits' in f):
+                    hdu = fits.open(f)
 
+                    # get size of image (naxis1, naxis2)                
+                    naxis1 = hdu[0].header['NAXIS1']
+                    naxis2 = hdu[0].header['NAXIS2']                
 
-                # add wcs info to header
-                hdu[0].header.set('CRVAL1', ra)
-                hdu[0].header.set('CRVAL2', dec)
-                hdu[0].header.set('CTYPE1', 'RA---TAN')
-                hdu[0].header.set('CTYPE2', 'DEC--TAN')
-
-                
-                hdu[0].header.set('CRPIX1', naxis1//2)
-                hdu[0].header.set('CRPIX2', naxis2//2)
+                    # build WCS
 
 
-                hdu[0].header.set('CD1_1', -1*pixelScaleDeg)
-                hdu[0].header.set('CD2_2', pixelScaleDeg)
-                hdu[0].header.set('CD1_2', 0)
-                hdu[0].header.set('CD2_1', 0)                
+                    # add wcs info to header
+                    hdu[0].header.set('CRVAL1', ra)
+                    hdu[0].header.set('CRVAL2', dec)
+                    hdu[0].header.set('CTYPE1', 'RA---TAN')
+                    hdu[0].header.set('CTYPE2', 'DEC--TAN')
 
 
-                # add instrument
-                hdu[0].header.set('INSTRUME', instrument)
+                    hdu[0].header.set('CRPIX1', naxis1//2)
+                    hdu[0].header.set('CRPIX2', naxis2//2)
 
-                # add filter
-                if 'ha' in f:
-                    hdu[0].header.set('FILTER', 'Ha4')
-                else:
-                    hdu[0].header.set('FILTER', 'R')
 
-                
-                # prepend an 'h' to image name and save
-                outfile = 'h'+f
-                print(f"\tWriting {f} -> {outfile}")
-                fits.writeto(outfile, hdu[0].data, hdu[0].header, overwrite=True)
+                    hdu[0].header.set('CD1_1', -1*pixelScaleDeg)
+                    hdu[0].header.set('CD2_2', pixelScaleDeg)
+                    hdu[0].header.set('CD1_2', 0)
+                    hdu[0].header.set('CD2_1', 0)                
 
-                
 
-        os.chdir(topdir)
-        #break
+                    # add instrument
+                    hdu[0].header.set('INSTRUME', instrument)
+
+                    # add filter
+                    if 'ha' in f:
+                        hdu[0].header.set('FILTER', 'Ha4')
+                    else:
+                        hdu[0].header.set('FILTER', 'R')
+
+
+                    # prepend an 'h' to image name and save
+                    outfile = 'h'+f
+                    print(f"\tWriting {f} -> {outfile}")
+                    fits.writeto(outfile, hdu[0].data, hdu[0].header, overwrite=True)
+
+
+
+            os.chdir(topdir)
+            #break
