@@ -94,6 +94,17 @@ co_rms = {
             'VFID3574': 0.0694
            }
 
+rms_dir = homedir+'/research/Virgo/alma/rms_maps/'
+co_rms_map = {
+            'VFID5855': f"{rms_dir}rms_map_n5348.fits",
+            'VFID5842': f"{rms_dir}rms_map_n5356.fits",\
+            'VFID5709': f"{rms_dir}rms_map_n5470.fits",\
+            'VFID6018': f"{rms_dir}rms_map_n5560.fits",\
+            'VFID6033': f"{rms_dir}rms_map_n5566.fits",\
+            'VFID6091': f"{rms_dir}rms_map_n5577.fits",\
+            'VFID6362': f"{rms_dir}rms_map_u9661.fits",\
+           }
+    
 
 
 # new coords to fit HI contours
@@ -167,13 +178,13 @@ codepletion_figsize = {
 
     
 codepletion_levels = {
-            'VFID5855':[8,9],\
-            'VFID5842':[9,10.5],\
-            'VFID5709':[9.5,11],\
-            'VFID6018':[8.5,11],\
-            'VFID6033':[8.5,9.75],\
-            'VFID6091':[8.5,9.75],\
-            'VFID6362':[8.,9.75],\
+            'VFID5855':[7.,9],\
+            'VFID5842':[8.5,10.5],\
+            'VFID5709':[9.,11],\
+            'VFID6018':[7.5,11],\
+            'VFID6033':[8.,9.75],\
+            'VFID6091':[7.,9.75],\
+            'VFID6362':[7.,9.75],\
             'VFID2140':[8,9.75],\
             'VFID2822':[8, 9.75],\
             'VFID3574':[8., 9.75],\
@@ -2768,7 +2779,7 @@ def hide_xyticks_wcs(ax):
     
 
 
-def get_depletion_map(dirname,vr=None, H0=74., cmap='magma_r', verbose=False, sfr_limit=1e-5):
+def get_depletion_map(dirname,vr=None, H0=74., cmap='magma_r', verbose=False, sfr_limit=1e-5, alma=False):
     """
     GOAL:
     * get depletion map for CO
@@ -2846,9 +2857,16 @@ def get_depletion_map(dirname,vr=None, H0=74., cmap='magma_r', verbose=False, sf
     cdat = cdat / scale_factor # this should now be Msun/pixel
 
     # convert units for the CO rms value
-    co_rms_Msun_beam =co_rms[vfid] * 1.05e4 * alpha_CO/4.3 * (D_Mpc)**2
-    co_rms_Msun_pixel = (co_rms_Msun_beam / scale_factor)
-    
+    if alma:
+        rms_map = fits.getdata(co_rms_map[vfid]) # rms per beam
+        co_rms_Msun_beam = rms_map * 1.05e4 * alpha_CO/4.3 * (D_Mpc)**2
+        co_rms_Msun_pixel = (co_rms_Msun_beam )/ np.sqrt(scale_factor)  # GL thinks we should scale by sqrt of beam area/pixel area
+        # signal scales with scale_factor, but rms scales as sqrt(scale_factor)
+        # so snr scales as sqrt(scale_factor)
+    else:
+        co_rms_Msun_beam =co_rms[vfid] * 1.05e4 * alpha_CO/4.3 * (D_Mpc)**2
+        co_rms_Msun_pixel = (co_rms_Msun_beam / scale_factor)
+
     # test comment
     
     ##################################################
@@ -3000,7 +3018,10 @@ def get_depletion_map(dirname,vr=None, H0=74., cmap='magma_r', verbose=False, sf
     tdep_limits_image = np.zeros_like(depletion)
 
     # set upper limits to CO upper limit / SFR
-    tdep_limits_image[tdep_upper_flag] = (3 * co_rms_Msun_pixel) / (rsfr_dat[tdep_upper_flag] * extinction_correction)
+    if alma:
+        tdep_limits_image[tdep_upper_flag] = (3 * co_rms_Msun_pixel[tdep_upper_flag]) / (rsfr_dat[tdep_upper_flag] * extinction_correction)
+    else:
+        tdep_limits_image[tdep_upper_flag] = (3 * co_rms_Msun_pixel) / (rsfr_dat[tdep_upper_flag] * extinction_correction)        
 
     # we detect CO but not SFR
     tdep_limits_image[tdep_lower_flag] = cdat[tdep_lower_flag]/ (3 * halpha_rms[vfid] * extinction_correction)    
@@ -3071,6 +3092,9 @@ def get_depletion_map(dirname,vr=None, H0=74., cmap='magma_r', verbose=False, sf
     cb = plt.colorbar(cax=cbaxes, orientation='horizontal')            
     cb.set_label(label=cblabels[0],fontsize=12)
     hide_xyticks_wcs(ax1)
+
+    # plot CO beam
+    plot_HI_beam(ax1,COfilename,cheader,color='steelblue')     
 
     #################################################
     ## PANEL 2 - SIGMA_SFR
