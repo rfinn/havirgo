@@ -15,6 +15,8 @@ from readtablesv2 import vtables
 import numpy as np
 from matplotlib import pyplot as plt
 from matplotlib.patches import Ellipse, Rectangle
+import matplotlib.transforms as transforms
+from matplotlib.offsetbox import AnchoredOffsetbox, AuxTransformBox
 import matplotlib.ticker as ticker
 
 from astropy.io import fits
@@ -163,7 +165,7 @@ cofigsize = {
            }
                      
 codepletion_figsize = {
-            'VFID5855':[6,10],\
+            'VFID5855':[6,8],\
             'VFID5842':[6,10],\
             'VFID5709':[10,5],\
             'VFID6018':[9,5.2],\
@@ -557,45 +559,84 @@ def plot_HI_contours(ax,HIfilename,xmin=None,xmax=None,ymin=None,ymax=None,level
     #levels = np.append(levels,80)        
     ax.contour(hdu.data,transform=ax.get_transform(HI_WCS),levels=levels,colors=color,alpha=.4,lw=1)
 
-def plot_HI_beam(ax,HIfilename,hostim_header,color='white',expandBox=False):
+    
+def plot_HI_beam(ax,HIfilename,hostim_header,color='white',expandBox=False,halpha=False, fwhm=1.5):
+    """
+    DESCRIPTION:
+    plot a beam on the provided axis
+
+    PARAMS:
+    * ax - axis to plot the beam on.
+    * HIfilename - filename where we get the beam size using BPA, BMAJ, BMIN (except for halpha, see below)
+    * hostim_header - this is the image where we are plotting the beam.  It is used to set the size of the beam.
+    * halpha - set to use with halpha images.  hostim_header is ignored in this case.
+    * fwhm - provide the fwhm in arcsec when running on halpha
+    """
     ###
     # get size of the host image
     ###
     naxis1 = hostim_header['NAXIS1']
     naxis2 = hostim_header['NAXIS2']
-    pscale = wcs.utils.proj_plane_pixel_scales(WCS(hostim_header))*u.deg # in deg
-    image_x = naxis1*pscale[0]
-    image_y = naxis2*pscale[1] 
+    pscale = (wcs.utils.proj_plane_pixel_scales(WCS(hostim_header))*u.deg).to(u.arcsec) # in deg
+    print(f"pscale = {pscale}")
+    image_x_arcsec = naxis1*pscale[0]
+    image_y_arcsec = naxis2*pscale[1] 
 
     ###
-    # get dimensions of host image
+    # get PSF
     ###
-    hdu = fits.open(HIfilename)
-    HI_WCS = WCS(hdu[0].header)
-    PA = hdu[0].header['BPA']#*u.deg
-    a = hdu[0].header['BMAJ']*u.deg
-    b = hdu[0].header['BMIN']*u.deg
-    hdu.close()
+
+    if halpha:
+        PA = 90 # in degrees
+        a_arcsec = fwhm*u.arcsec
+        b_arcsec = a_arcsec
+    
+    else:
+        hdu = fits.open(HIfilename)
+        HI_WCS = WCS(hdu[0].header)
+        PA = hdu[0].header['BPA']# in degrees
+        a_arcsec = (hdu[0].header['BMAJ']*u.deg).to(u.arcsec)
+        b_arcsec = (hdu[0].header['BMIN']*u.deg).to(u.arcsec)
+        hdu.close()
     
     #patch_height = (cube_params['bmaj'] / opt_view).decompose()
     #patch_width = (cube_params['bmin'] / opt_view).decompose()
-    patch_height = a/image_x
-    patch_width = b/image_y    
+    patch_height = a_arcsec/pscale[0] # in pix
+    patch_width = b_arcsec/pscale[1] # in pix
     patch = {'width': patch_width, 'height': patch_height}
-    print(a,image_x,patch['height'], patch['width'], PA)
-    ax.add_patch(Ellipse((0.9, 0.9), height=patch['height'], width=patch['width'], angle=PA,\
-                         transform=ax.transAxes, edgecolor=color,facecolor=color, linewidth=1,alpha=.8))    
+    print(f"beam size info: a={a_arcsec:.3f},b={b_arcsec:.3f},image_x_arcsec={image_x_arcsec:.1f},pa={PA:.2f},patch_height={patch['height']:.4f}, patch_width={patch['width']:.4f}")
+    #ax.add_patch(Ellipse((0.9, 0.9), height=patch['height'], width=patch['width'], angle=PA,transform=ax.transAxes, edgecolor=color,facecolor=color, linewidth=1,alpha=.8))    
 
+    '''
     # add white box to highlight position of beam
-    dx = 0.1
-    dy = 0.1
+    dx = 0.1#10*u.arcsec/image_x_arcsec
+    dy = 0.1#10*u.arcsec/image_y_arcsec
     if expandBox:
         dx=.25
         dy=.25
     xc = .9
     yc = 0.9
-    rect = Rectangle((xc-0.5*dx,yc-0.5*dy),dx,dy,transform=ax.transAxes,edgecolor=color,facecolor='None',lw=1,alpha=.8)
-    ax.add_patch(rect)
+
+    if xcenter_box is not None:
+        dx = 10*u.arcsec/image_x_arcsec # box width in pixels
+        dy = 10*u.arcsec/image_y_arcsec # box height in pixels
+        # describe the box in pixel coordinates
+        rect = Rectangle((xcenter_box,ycenter_box),dx,dy,edgecolor=color,facecolor='None',lw=1,alpha=.8)
+    else:
+        rect = Rectangle((xc-0.5*dx,yc-0.5*dy),dx,dy,transform=ax.transAxes,edgecolor=color,facecolor='None',lw=1,alpha=.8)
+    #ax.add_patch(rect)
+    '''
+
+    # found this https://matplotlib.org/stable/gallery/misc/anchored_artists.html#sphx-glr-gallery-misc-anchored-artists-py
+    aux_tr_box = AuxTransformBox(ax.transData)
+    myellipse = Ellipse((0., 0.), height=patch['height'], width=patch['width'], angle=PA,\
+                         edgecolor=color,facecolor=color, linewidth=1,alpha=.8)    
+
+    aux_tr_box.add_artist(myellipse)
+    box = AnchoredOffsetbox(child=aux_tr_box, loc="upper right", frameon=True)
+    ax.add_artist(box)
+    
+
 
 def plot_CO_beam(ax,header,frac_loc_mean=.1,boxsize_x=10,boxsize_y=10,maptype='continuum'):
     """
@@ -2878,7 +2919,7 @@ def get_depletion_map(dirname,vr=None, H0=74., cmap='magma_r', verbose=False, sf
     # divide sfr by 1e3 to get true values.
     hdu = fits.open(sfrim)[0]
     #hdu.data = hdu.data
-    
+    sfr_header = hdu.header
     # convert to surface brightness
     # times by area in sr
     #pixscale_deg_in = np.abs(hdu.header['CDELT1'])
@@ -2932,7 +2973,7 @@ def get_depletion_map(dirname,vr=None, H0=74., cmap='magma_r', verbose=False, sf
     # project the halpha image onto the CO image
     ##
 
-    # TODO - are we doing the reprojection right - 
+    # TODONE - are we doing the reprojection right - yes, adaptive with conserve_flux=True is correct
     out_header = cheader
     #out_header = hdu.header
     rsfr_dat, rfootprint = reproject_adaptive(hdu, out_header, conserve_flux=True)
@@ -3094,7 +3135,7 @@ def get_depletion_map(dirname,vr=None, H0=74., cmap='magma_r', verbose=False, sf
     hide_xyticks_wcs(ax1)
 
     # plot CO beam
-    plot_HI_beam(ax1,COfilename,cheader,color='steelblue')     
+    plot_HI_beam(ax1,COfilename,cheader,color='steelblue')
 
     #################################################
     ## PANEL 2 - SIGMA_SFR
@@ -3135,6 +3176,17 @@ def get_depletion_map(dirname,vr=None, H0=74., cmap='magma_r', verbose=False, sf
 
     hide_xyticks_wcs(ax2)
 
+    #print(hheader)
+    # plot Halpha beam
+
+    try:
+        ha_fwhm = sfr_header['SEFWHM']
+    except KeyError:
+        ha_fwhm = 1.5
+
+    # plot halpha fwhm
+    plot_HI_beam(ax2,COfilename,cheader,color='steelblue', halpha=True, fwhm=ha_fwhm)
+    
     #################################################
     ## PANEL 3- DEPLETION MAP
     #################################################    
