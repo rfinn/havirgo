@@ -3165,9 +3165,9 @@ def get_depletion_map(dirname,vr=None, H0=74., cmap='magma_r', verbose=False, sf
     cbaxes = inset_axes(
         ax1, 
         width="80%", # 80% of parent axes width
-        height=f"{10*size_ratio:.0f}%", # 5% of axes height
+        height="5%", #f"{10*size_ratio:.0f}%", # 5% of axes height
         loc='lower center', 
-        bbox_to_anchor=(.1,-0.07*size_ratio,0.8,0.4*size_ratio), # shift below axes
+        #bbox_to_anchor=(.1,-0.07*size_ratio,0.8,0.4*size_ratio), # shift below axes
         bbox_transform=ax1.transAxes
         )
 
@@ -3202,11 +3202,11 @@ def get_depletion_map(dirname,vr=None, H0=74., cmap='magma_r', verbose=False, sf
     #cbaxes = inset_axes(ax2, width="80%", height="5%", loc=8)
     # Create inset axes for colorbar below the x-axis
     cbaxes = inset_axes(
-        ax1, 
+        ax2, 
         width="80%", # 80% of parent axes width
-        height="10%", # 5% of axes height
+        height="5%", # 5% of axes height
         loc='lower center', 
-        bbox_to_anchor=(.1,-0.07*size_ratio,0.8,0.4*size_ratio), # shift below axes
+        #bbox_to_anchor=(.1,-0.07*size_ratio,0.8,0.4*size_ratio), # shift below axes
         bbox_transform=ax2.transAxes
         )
 
@@ -3244,11 +3244,11 @@ def get_depletion_map(dirname,vr=None, H0=74., cmap='magma_r', verbose=False, sf
     #cbaxes = inset_axes(ax3, width="80%", height="5%", loc=8)
     # Create inset axes for colorbar below the x-axis
     cbaxes = inset_axes(
-        ax1, 
+        ax3, 
         width="80%", # 80% of parent axes width
-        height="10%", # 5% of axes height
+        height="5%", # 5% of axes height
         loc='lower center', 
-        bbox_to_anchor=(.1,-0.07*size_ratio**2,0.8,0.4*size_ratio), # shift below axes
+        #bbox_to_anchor=(.1,-0.07*size_ratio**2,0.8,0.4*size_ratio), # shift below axes
         bbox_transform=ax3.transAxes
         )
     
