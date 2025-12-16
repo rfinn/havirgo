@@ -28,6 +28,7 @@ from astropy import convolution
 from astropy.nddata import Cutout2D
 from astropy import stats as apstats
 from astropy import units as u
+from astropy.coordinates import SkyCoord
 
 from scipy.stats import spearmanr
 
@@ -485,6 +486,45 @@ def convert_alma3d_alma2d(alma3d_image,nhdu=0):
     newhdu.header = outheader
     return outdata, outheader
 
+
+def turn_off_ax_labels(ax):
+
+    lon = ax.coords[0]
+    lat = ax.coords[1]
+    lon.set_ticklabel_visible(False)
+    lon.set_ticks_visible(False)            
+    lat.set_ticklabel_visible(False)
+    lat.set_ticks_visible(False)      
+    
+def add_inset_colorbar(fig, ax, sc, orientation='horizontal',cblabel=None):
+    # Use inset_axes to create a new axes for the colorbar
+    # The parameters define the position [left, bottom, width, height] in axes coordinates (0 to 1)
+    # For positioning like an AnchoredOffsetbox, you can use the 'loc' keyword
+    cax = inset_axes(ax, 
+                 width="80%",  # width of the colorbar in percentage of parent axes width
+                 height="5%", # height of the colorbar in percentage of parent axes height
+                 loc='lower center', # location (e.g., 'upper right', 'lower left')
+                 borderpad=1 # padding from the border
+                )
+
+    # Add the colorbar to the created inset axes
+    cb = fig.colorbar(sc, cax=cax, orientation=orientation)
+
+    if cblabel is not None:
+        cb.set_label(cblabel, fontsize=12)
+        
+def add_metallicity_markers(ax,fig):
+    Zsolar = 8.69
+    # read in file
+    mtab = Table.read(homedir+'/research/Virgo/alma/legacy_metallicity/metallicity_subset.fits')
+
+    # convert RA DEC to skycoord
+
+    coords = SkyCoord(mtab['RA']*u.deg,mtab['DEC']*u.deg, frame='icrs')
+
+    sc = ax.scatter(coords.ra, coords.dec, c=mtab['METALLICITY_R23']-Zsolar, facecolors='none', edgecolors='face',s=40, transform=ax.get_transform('world'),vmin=-0.2, vmax=0.2)#, c=mtab['METALLICITY_R23'])
+    #cb = fig.colorbar(sc, location='bottom', ax=ax)
+    add_inset_colorbar(fig, ax, sc, cblabel=r"$\rm \log_{10}(Z/Z_\odot)$")
 
 def get_cutouts(ra,dec,vfid,imsize):
     """
@@ -2635,7 +2675,7 @@ def plot_mstar_sfr_COall(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xticks=
             cbaxes = inset_axes(ax2, width="5%", height="60%", loc=7)        
             cb = plt.colorbar(cax=cbaxes, orientation='vertical')
         else:
-            cbaxes = inset_axes(ax2, width="80%", height="5%", loc=8)
+            cbaxes = inset_axes(ax2, width="80%", height="5%", loc='lower center')#loc=8)
             cb = plt.colorbar(cax=cbaxes, orientation='horizontal')            
         cb.set_label(label=cblabels[i],fontsize=12)
             
@@ -2663,6 +2703,8 @@ def plot_mstar_sfr_COall(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xticks=
     
     ax1 = plt.subplot(nrow,ncol,1,projection=legwcs)
     plt.imshow(jpeg_data)
+    turn_off_ax_labels(ax1)
+    add_metallicity_markers(ax1, fig)
 
     ax5 = plt.subplot(nrow,ncol,5,projection=legwcs)
     plt.imshow(jpeg_data)    
@@ -2885,30 +2927,29 @@ def get_depletion_map(dirname,vr=None, H0=74., cmap='magma_r', verbose=False, sf
     cdat = cdat_masked * 1.05e4 * alpha_CO/4.3 * (D_Mpc)**2 # in Msun/beam
 
     # add correction to convert from Jy/beam to Jy/pixel
-
-    #pixscale_deg_out = np.abs(cheader['CDELT1'])
-    pixscale_deg_out = wcs.utils.proj_plane_pixel_scales(WCS(cheader))[0]
-    pixscale_area_sr_out = (pixscale_deg_out * np.pi/180)**2
-        
-    beam_area_sq_deg = np.pi/4 * float(cheader['BMAJ']) * float(cheader['BMIN'])
-    pixel_area_sq_deg = pixscale_deg_out**2
+    pixscale_deg_out = wcs.utils.proj_plane_pixel_scales(WCS(cheader))[0] # pixel scale
+    pixscale_area_sr_out = (pixscale_deg_out * np.pi/180)**2 # area per pixel
+    pixel_area_sq_deg = pixscale_deg_out**2 # pixel area in sq deg
     
-    scale_factor = beam_area_sq_deg/pixel_area_sq_deg
+    # get beam area in sq deg
+    beam_area_sq_deg = np.pi/4 * float(cheader['BMAJ']) * float(cheader['BMIN'])
 
-    cdat = cdat / scale_factor # this should now be Msun/pixel
+    # scale factor between beam area / pixel area
+    scale_factor = beam_area_sq_deg/pixel_area_sq_deg # beam area/pixel area
+
+    cdat = cdat / scale_factor # this should now be Msun/(pixel area)
 
     # convert units for the CO rms value
-    if alma:
+    if alma: # use rms image for alma
         rms_map = fits.getdata(co_rms_map[vfid]) # rms per beam
-        co_rms_Msun_beam = rms_map * 1.05e4 * alpha_CO/4.3 * (D_Mpc)**2
-        co_rms_Msun_pixel = (co_rms_Msun_beam )/ np.sqrt(scale_factor)  # GL thinks we should scale by sqrt of beam area/pixel area
-        # signal scales with scale_factor, but rms scales as sqrt(scale_factor)
-        # so snr scales as sqrt(scale_factor)
-    else:
+        co_rms_Msun_beam = rms_map * 1.05e4 * alpha_CO/4.3 * (D_Mpc)**2 # Msun/beam
+    else: # use the fixed rms value for noema
         co_rms_Msun_beam =co_rms[vfid] * 1.05e4 * alpha_CO/4.3 * (D_Mpc)**2
-        co_rms_Msun_pixel = (co_rms_Msun_beam / scale_factor)
 
-    # test comment
+    # GL thinks we should scale by sqrt of beam area/pixel area
+    # signal scales with scale_factor, but rms scales as sqrt(scale_factor)
+    # so snr scales as sqrt(scale_factor)
+    co_rms_Msun_pixel = (co_rms_Msun_beam ) / np.sqrt(scale_factor) # Msun/pixel
     
     ##################################################
     ## SFR Image
