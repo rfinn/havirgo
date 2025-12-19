@@ -748,6 +748,30 @@ class haplots(vtables):
         sns.pairplot(df[self.sampleflag],hue="environment",corner=True)#, diag_kind="hist")        
 
         # use seaborn to make pair plot!
+    def compare_r_halpha_centers(self):
+        ''' calculate offset between r and halpha centers from ellip phot '''
+
+        # ra offset, including cosine declination term
+        dra = (self.halpha['ELLIP_RA'] - self.halpha['ELLIP_HRA'])*np.cos(np.radians(self.halpha['ELLIP_DEC']))
+        # dec offset
+        ddec = (self.halpha['ELLIP_DEC'] - self.halpha['ELLIP_HDEC'])
+
+        dra_arcsec = dra*3600
+        ddec_arcsec = ddec*3600
+
+
+
+        # color according to offset/FWHM
+        fwhm = np.maximum(self.halpha['R_FWHM'], self.halpha['H_FWHM'])
+        dtheta = np.sqrt(dra_arcsec**2 + ddec_arcsec**2)
+        color_scale = dtheta/fwhm
+        # plot results
+        plt.figure()
+        flag = self.main['HAobsflag'] & (self.halpha['HF_TOT'] > 0)
+        sc = plt.scatter(dra_arcsec[flag], ddec_arcsec[flag], s=20,c=color_scale[flag],vmin=0,vmax=5,alpha=0.75)
+        cb = plt.colorbar(label='$\Delta \Theta/FWHM$')
+        plt.xlabel("$\Delta RA \ (arcsec)$", fontsize=14)
+        plt.ylabel("$\Delta DEC \ (arcsec)$", fontsize=14)        
 
 if __name__ == "__main__":
     # read in v2 tables
