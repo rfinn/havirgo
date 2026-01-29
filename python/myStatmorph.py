@@ -34,3 +34,7 @@ class myStatmorph(statmorph.SourceMorphology):
         return segmap[self._slice_stamp]
     
 
+    def print_quantities(self):
+        print("Measured Quantities")
+        for q in statmorph.statmorph._quantity_names:
+            print(f"{q}")

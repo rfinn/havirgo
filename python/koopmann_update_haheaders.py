@@ -24,9 +24,10 @@ KK06 table 4 - gives pixel scale for each detector
 
 
 method:
-* query NED using NGC/obj name
 * get RA and DEC
 * get pixelscale
+* get filter
+* update header
 
 """
 
@@ -195,7 +196,62 @@ def get_pixel_scale(instrument):
     
     return pixelScale
 
+def get_filters(galname):
+    """ match galaxy to its corresponding r and halpha filter """
+    # TODO: read in tables from KKY01 and KK06 and match halpha and r filter, or create a dictionary
+    
+    pass
 
+
+
+def get_filter_props(filter):
+    """ get filter center and width  """
+    filter_wave_dwave = {'Halpha1':[6563,80],\
+                             'Halpha2':[6608,76],\
+                             'Halpha3':[6573,68],\
+                             'Halpha4':[6618,74],\
+                             'Halpha5':[6563,78],\
+                             'Halpha6':[6606,75],\
+                             'R':[6425,1540],\
+                             'nmR':[6470,1110],\
+                             'sR':[7024,380]
+                             }
+    return filter_wave_dwave[filter]
+
+def get_zp(galname):
+    """  get PHOTZP based on flux ZP and filter width """
+    # CONSTANTS
+    c = 3e10 # speed of light in cm/s
+    f0 = 1e-18 # flux zp in erg/s/cm^2
+
+    ##################################################
+    # get filters
+    ##################################################    
+    rfilter, hafilter = get_filters(galname)
+
+    ##################################################
+    # get halpha ZP
+    ##################################################    
+    # get filter width
+    hcenter_A, hwidth_A = get_filter_props(hafilter)
+    hcenter_cm = hcenter_A * 1e-8
+    hwidth_cm = hwidth_A * 1e-8    
+    # calc ZP
+    HZP = f0 * c * hwidth_cm/hcenter_cm**2
+
+    ##################################################
+    # get r-band ZP
+    ##################################################    
+    # get filter width
+    rcenter_A, rwidth_A = get_filter_props(rfilter)
+    rcenter_cm = rcenter_A * 1e-8
+    rwidth_cm = rwidth_A * 1e-8    
+    # calc ZP
+    RZP = f0 * c * rwidth_cm/rcenter_cm**2
+
+    return RZP, HZP
+
+    
 if __name__ == '__main__':
 
     topdir = os.getcwd()
