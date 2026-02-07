@@ -1339,7 +1339,7 @@ if __name__ == '__main__':
     #hfiles.sort()
     rfiles.sort()
 
-    print(f"found {(len(rfiles)} in {coadd_dir}")
+    print(f"found {len(rfiles)} in {coadd_dir}")
 
     # just use one image if the argument flag was set
 
