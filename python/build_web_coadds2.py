@@ -1319,7 +1319,8 @@ if __name__ == '__main__':
         outdir = outpathbase+'/html_dev/coadds/'
 
         # get list of r-band coadded images
-        a = glob.glob(coadd_dir+'VF*INT*-r-shifted.fits')
+        #a = glob.glob(coadd_dir+'VF*INT*-r-shifted.fits')
+        a = glob.glob(coadd_dir+'VF*INT*-r.fits')
         b = glob.glob(coadd_dir+'VF*HDI*-r.fits')
         c = glob.glob(coadd_dir+'VF*HDI*-R.fits')
         d = glob.glob(coadd_dir+'VF*BOK*-r.fits')
