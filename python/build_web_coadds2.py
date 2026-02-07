@@ -1301,9 +1301,10 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     newnames = True
+    coadd_dir = args.coaddir
     if newnames:
-        coadd_dir = '/media/rfinn/hdata/coadds/all-virgo-coadds/'
-        coadd_dir = '/data-pool/Halpha/coadds/all-virgo-coadds/'                        
+        #coadd_dir = '/media/rfinn/hdata/coadds/all-virgo-coadds/'
+        #coadd_dir = '/data-pool/Halpha/coadds/all-virgo-coadds/'                        
         zpdir = coadd_dir+'/plots/'
         fratiodir = coadd_dir+'/plots-filterratio/'
         vtabledir = homedir+'/research/Virgo/tables-north/v2/'
