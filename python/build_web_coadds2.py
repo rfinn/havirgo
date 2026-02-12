@@ -286,6 +286,25 @@ class coadd_image():
         pointing = temp.split('-')[-2].replace('p','pointing')
         self.intprefix = "{}*_{}".format(pointing,temp[-1])
         #print('INT plot prefix = ',self.intprefix)
+        self.get_instrument()
+        self.get_filter()
+
+    def get_instrument(self):
+        instruments = ['BOK','HDI','INT','MOS']
+        for i in instruments:
+            if i in self.imagename:
+                self.instrument = i
+                break
+
+    def get_filter(self):
+        imheader = fits.getheader(self.imagename)
+        
+        try:
+            filter = imheader['FILTER']
+        except KeyError:
+            print("WARNING: did not find FILTER keyword in header for ",self.imagename)
+            filter = None
+            
     def generate_plots(self):
         self.get_image()
         self.make_coadd_png()
@@ -594,7 +613,7 @@ class coadd_image():
             filter='intha6657'
         elif header_filter.find('Halpha') > -1:
             filter='inthalpha'
-        myfilter = ft.filter_trace(filter)
+        myfilter = ft.filter_trace(self.filter, instrument=self.instrument)
         self.gals_filter_png = os.path.join(self.plotdir,'galaxies_in_filter.png')
         corrections = myfilter.get_trans_correction(redshift,outfile=self.gals_filter_png)
         filter_keepflag = corrections < 10 # this is a crazy big cut, but we can adjust with halphagui
