@@ -279,6 +279,9 @@ class coadd_image():
         if cat is None:
             self.cat = fits.getdata(VFMAIN_PATH)
         self.filter = filter
+
+        imheader = fits.getheader(imagename)
+        self.filter = imheader['FILTER']
         self.plotprefix = os.path.join(self.plotdir,filter+'-')
         self.zpdir = zpdir
         # might need to comment this out
