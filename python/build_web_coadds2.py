@@ -614,10 +614,8 @@ class coadd_image():
             filter='intha6657'
         elif header_filter.find('Halpha') > -1:
             filter='inthalpha'
-        imheader = fits.getheader(imagename)
-        hafilter = imheader['FILTER']
 
-        myfilter = ft.filter_trace(hafilter, instrument=self.instrument)
+        myfilter = ft.filter_trace(header_filter, instrument=self.instrument)
         self.gals_filter_png = os.path.join(self.plotdir,'galaxies_in_filter.png')
         corrections = myfilter.get_trans_correction(redshift,outfile=self.gals_filter_png)
         filter_keepflag = corrections < 10 # this is a crazy big cut, but we can adjust with halphagui
