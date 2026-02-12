@@ -651,6 +651,7 @@ class pointing():
 
         self.psfdir = psfdir
         self.zpdir = zpdir
+        print("testing\nzpdir = ", self.zpdir)
         self.fratiodir = fratiodir
         if not os.path.exists(outdir):
             os.mkdir(outdir)
@@ -1376,6 +1377,7 @@ if __name__ == '__main__':
             coadd_index = rfiles.index(args.oneimage)
             indices = [np.arange(len(rfiles))[coadd_index]]
             print('when selecting one image, indices = ',indices,rfiles[indices[0]])
+            #buildone(rimages,i,coadd_dir,psfdir,zpdir,fratiodir):
             buildone(rfiles,coadd_index,coadd_dir,psfdir,zpdir,fratiodir)
         except ValueError:
             rfiles = [args.oneimage]
