@@ -280,8 +280,6 @@ class coadd_image():
             self.cat = fits.getdata(VFMAIN_PATH)
         self.filter = filter
 
-        imheader = fits.getheader(imagename)
-        self.filter = imheader['FILTER']
         self.plotprefix = os.path.join(self.plotdir,filter+'-')
         self.zpdir = zpdir
         # might need to comment this out
@@ -616,7 +614,10 @@ class coadd_image():
             filter='intha6657'
         elif header_filter.find('Halpha') > -1:
             filter='inthalpha'
-        myfilter = ft.filter_trace(self.filter, instrument=self.instrument)
+        imheader = fits.getheader(imagename)
+        hafilter = imheader['FILTER']
+
+        myfilter = ft.filter_trace(hafilter, instrument=self.instrument)
         self.gals_filter_png = os.path.join(self.plotdir,'galaxies_in_filter.png')
         corrections = myfilter.get_trans_correction(redshift,outfile=self.gals_filter_png)
         filter_keepflag = corrections < 10 # this is a crazy big cut, but we can adjust with halphagui
@@ -651,7 +652,7 @@ class pointing():
 
         self.psfdir = psfdir
         self.zpdir = zpdir
-        print("testing\nzpdir = ", self.zpdir)
+        #print("testing\nzpdir = ", self.zpdir)
         self.fratiodir = fratiodir
         if not os.path.exists(outdir):
             os.mkdir(outdir)
