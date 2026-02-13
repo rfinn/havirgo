@@ -786,10 +786,15 @@ class pointing():
         
         # loop over galaxies in FOV
         gindex=np.arange(len(self.r.galfov_imx))
-        galnames = Table(self.r.cat)['prefix'][self.cs.keepflag]
-        galra = Table(self.r.cat)['RA'][self.cs.keepflag]
-        galdec = Table(self.r.cat)['DEC'][self.cs.keepflag]        
+        #galnames = Table(self.r.cat)['prefix'][self.cs.keepflag]
+        #galra = Table(self.r.cat)['RA'][self.cs.keepflag]
+        #galdec = Table(self.r.cat)['DEC'][self.cs.keepflag]        
 
+        # if we just want to keep galaxies within the filter trace, then use self.ha.keepflag
+        galnames = Table(self.r.cat)['prefix'][self.r.keepflag]
+        galra = Table(self.r.cat)['RA'][self.r.keepflag]
+        galdec = Table(self.r.cat)['DEC'][self.r.keepflag]        
+        
         ##
         # set size to 2.5 time size in coadd images
         ##
