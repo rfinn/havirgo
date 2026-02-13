@@ -836,9 +836,9 @@ class pointing():
 
         # columns: legacy, r, halpha, cs, CS-zp
         ncol = 5
-        nrow = np.sum(self.cs.keepflag)
+        nrow = np.sum(self.r.keepflag)
         # change to one row per galaxy
-        figsize = (12,3*np.sum(self.cs.keepflag))            
+        figsize = (12,3*np.sum(self.r.keepflag))            
         plt.figure(figsize=figsize)
         plt.subplots_adjust(top=.95,right=.95,left=.05,bottom=.05)        
         for j in range(len(galra)):
