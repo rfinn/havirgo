@@ -845,7 +845,7 @@ class pointing():
 
         # columns: legacy, r, halpha, cs, CS-zp
         ncol = 5
-        nrow = np.sum(self.r.keepflag)
+        nrow = np.sum(self.ha.keepflag)
         # change to one row per galaxy
         figsize = (12,3*np.sum(self.r.keepflag))            
         plt.figure(figsize=figsize)
@@ -862,7 +862,7 @@ class pointing():
             # get legacy cutout
             # TODO - finish this next line
             ax = plt.subplot(nrow,ncol,5*j+1)
-            print(f"getting legacy image for {galnames[j]}, size={imsize_arcsec}")
+            #print(f"getting legacy image for {galnames[j]}, size={imsize_arcsec}")
             jpeg_name = get_legacy_jpg(galra[j],galdec[j],galid=galnames[j],pixscale=1,imsize=imsize_arcsec,subfolder=self.outdir)
             #print(jpeg_name)
             # plot jpg
@@ -1257,7 +1257,7 @@ class build_html_pointing():
         labels=['Cont-Sub Image w/Filter Ratio']
         images = [os.path.basename(self.pointing.cs.coadd_png)]
         if self.pointing.cz.coadd_png is not None:
-            images.append(os.path.basename(self.pointing.cs.coadd_png))
+            images.append(os.path.basename(self.pointing.cz.coadd_png))
             labels.append('Cont-Sub Image w/ZPs')
         images.append(os.path.basename(self.pointing.filter_ratio_plot))
         labels.append('Filter Ratio')
