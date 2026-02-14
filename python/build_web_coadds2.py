@@ -599,6 +599,7 @@ class coadd_image():
             data.append("{:.2f}".format(self.sefwhm_arcsec))
         return labels,data
     def get_gredshift_filter_curve(self):
+        print("running get_gredshift_filter_curve")
         redshift = vmain['vr'][self.keepflag]/3.e5
         header_filter = self.imheader['FILTER']
         #print('filter from header = ',header_filter,self.filter)
