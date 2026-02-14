@@ -776,7 +776,7 @@ class pointing():
         if (self.czimage is not None) and os.path.exists(self.czimage):
             outprefix = self.outdir
             filter='CSZP'
-            self.cz = coadd_image(self.csimage,psfimage=None,plotdir=outprefix,zpdir=None,filter=filter)
+            self.cz = coadd_image(self.czimage,psfimage=None,plotdir=outprefix,zpdir=None,filter=filter)
             self.cz.generate_plots()
             self.czcoadd_flag=True
             #print()
