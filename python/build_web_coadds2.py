@@ -800,14 +800,14 @@ class pointing():
         #galdec = Table(self.r.cat)['DEC'][self.cs.keepflag]        
 
         # if we just want to keep galaxies within the filter trace, then use self.ha.keepflag
-        galnames = Table(self.r.cat)['prefix'][self.r.keepflag]
-        galra = Table(self.r.cat)['RA'][self.r.keepflag]
-        galdec = Table(self.r.cat)['DEC'][self.r.keepflag]        
+        galnames = Table(self.r.cat)['prefix'][self.ha.keepflag]
+        galra = Table(self.r.cat)['RA'][self.ha.keepflag]
+        galdec = Table(self.r.cat)['DEC'][self.ha.keepflag]        
         
         ##
         # set size to 2.5 time size in coadd images
         ##
-        galsizes = Table(self.r.cat)['radius'][self.cs.keepflag]*2
+        galsizes = Table(self.r.cat)['radius'][self.ha.keepflag]*2
         
         #galsizes = size#self.rcat['radius']/.4*2
         if 'INT' in self.rimage:
@@ -861,7 +861,8 @@ class pointing():
             imsize_arcsec = imsize*pixscale
             # get legacy cutout
             # TODO - finish this next line
-            ax = plt.subplot(nrow,ncol,5*j+1)            
+            ax = plt.subplot(nrow,ncol,5*j+1)
+            print(f"getting legacy image for {gnames[i]}, size={imsize_arcsec}")
             jpeg_name = get_legacy_jpg(galra[j],galdec[j],galid=galnames[j],pixscale=1,imsize=imsize_arcsec,subfolder=self.outdir)
             #print(jpeg_name)
             # plot jpg
