@@ -627,7 +627,7 @@ class coadd_image():
         print()
         print(f"HEY! number of galaxies before filter cut = {np.sum(self.keepflag)}")
         print("and...")
-        print(f"number of galaxies AFTER filter cut = {np.sum(self.keepflag[filter_keepflag])}")        
+        print(f"number of galaxies AFTER filter cut = {np.sum(filter_keepflag)}")        
         # storing the filter cut in a separate flag to distinguish those in FOV from those also in filter
         self.filter_keepflag = filter_keepflag
         #self.keepflag[self.keepflag] = filter_keepflag
