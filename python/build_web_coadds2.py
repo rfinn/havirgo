@@ -321,7 +321,7 @@ class coadd_image():
         #    print('WARNING: problem getting zp calibration images ',self.imagename)
         self.zp_flag = True
         #self.get_zpimage_firstpass()
-        if self.filter != 'CS':
+        if 'CS' not in self.filter:
             self.get_zpplot_firstpass()            
             self.get_zp_magcomp_firstpass()        
         #self.get_zpplot_secondpass()                
@@ -401,7 +401,7 @@ class coadd_image():
             plt.figure(figsize=(8,8))
             ax = plt.subplot(projection=wcs.WCS(self.imheader))
             plt.subplots_adjust(top=.95,right=.95,left=.15,bottom=.1)
-            if self.filter == 'CS':
+            if 'CS' not in self.filter:
                 display_image(self.imdata,csimage=True,sigclip=True)
             else:
                 display_image(self.imdata)
@@ -775,7 +775,7 @@ class pointing():
         ''' initiate an instance of coadd image class '''
         if (self.czimage is not None) and os.path.exists(self.czimage):
             outprefix = self.outdir
-            filter='CS'
+            filter='CSZP'
             self.cz = coadd_image(self.csimage,psfimage=None,plotdir=outprefix,zpdir=None,filter=filter)
             self.cz.generate_plots()
             self.czcoadd_flag=True
