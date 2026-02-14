@@ -913,8 +913,8 @@ class pointing():
 
     def get_params_for_gal_table(self):
         ''' setup arrays for galaxy table '''
-        self.groupgals = self.r.cat[self.cs.keepflag]
-        self.vffil = vffil[self.cs.keepflag]
+        self.groupgals = self.r.cat[self.ha.keepflag]
+        self.vffil = vffil[self.ha.keepflag]
 
     def write_gal_table(self):
         """ write out a list of with galaxies in FOV """
