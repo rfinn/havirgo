@@ -619,11 +619,18 @@ class coadd_image():
         self.gals_filter_png = os.path.join(self.plotdir,'galaxies_in_filter.png')
         corrections = myfilter.get_trans_correction(redshift,outfile=self.gals_filter_png)
         filter_keepflag = corrections < 10 # this is a crazy big cut, but we can adjust with halphagui
-        self.corrections = corrections[filter_keepflag]
+
+        # having trouble with galaxy table where not all galaxies have filter correction
+        # would like to show all for the table
+        self.corrections = corrections#[filter_keepflag]
         print()
         print(f"number of galaxies before filter cut = {np.sum(self.keepflag)}")
-        self.keepflag[self.keepflag] = filter_keepflag
-        print(f"number of galaxies AFTER filter cut = {np.sum(self.keepflag)}")        
+
+        # storing the filter cut in a separate flag to distinguish those in FOV from those also in filter
+        self.filter_keepflag = filter_keepflag
+        #self.keepflag[self.keepflag] = filter_keepflag
+        
+        print(f"number of galaxies AFTER filter cut = {np.sum(self.keepflag & self.filter_keepflag)}")        
         #self.gals_filter_png = os.path.join(self.plotdir,'galaxies_in_filter.png')
         #os.rename('galaxies_in_filter.png',self.gals_filter_png)
         #pass
@@ -1384,6 +1391,7 @@ if __name__ == '__main__':
             #buildone(rimages,i,coadd_dir,psfdir,zpdir,fratiodir):
             buildone(rfiles,coadd_index,coadd_dir,psfdir,zpdir,fratiodir)
         except ValueError:
+            
             rfiles = [args.oneimage]
             indices = np.arange(len(rfiles))
     else:
