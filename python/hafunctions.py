@@ -83,7 +83,8 @@ halpha_rms = {
             
            }
 
-
+# first estimate of CO rms
+# 'VFID2822': 0.06234,\
 co_rms = {
             'VFID5855': 0.025,
             'VFID5842': 0.025,\
@@ -92,7 +93,7 @@ co_rms = {
             'VFID6033': 0.025,\
             'VFID6091': 0.025,\
             'VFID6362': 0.025,\
-            'VFID2822': 0.06234,\
+            'VFID2822': 0.07,\
             'VFID2140': 0.0824269,\
             'VFID3574': 0.0694
            }
@@ -260,6 +261,7 @@ COveldir = homedir+'/research/Virgo/alma/combes_data/masked_velocity_maps/'
 COwidthdir = homedir+'/research/Virgo/alma/combes_data/masked_velocity_width_maps/'
 COmaskdir = homedir+'/research/Virgo/alma/combes_data/masked/'
 noema_base = homedir+'/research/Virgo/noema/NOEMA_maps/'
+noema_base_mask = homedir+'/research/Virgo/noema/NOEMA_maps_masked/'
 CO_file = {'VFID5889':None,\
            'VFID5851':None,\
            #'VFID5851':None, \
@@ -278,7 +280,7 @@ CO_file = {'VFID5889':None,\
            'VFID6091':COdir+'n5577-co10-mean.fits',\
            'VFID6362':COdir+'u9661-co10-mean.fits',\
            'VFID2140':noema_base+'moment_maps_fits_s18cd002/s18cd002-usb-bas-CO10-mean.fits',\
-           'VFID2822':noema_base+'moment_maps_fits_s18cd001/s18cd001-usb-bas-CO10-mean.fits',\
+           'VFID2822':noema_base_mask+'moment_maps_fits_s18cd001/s18cd001-usb-bas-CO10-mean-masked.fits',\
            'VFID3574':noema_base+'moment_maps_fits_s18cd003/s18cd003-usb-full-bas-CO10-mean.fits',
            
 }
@@ -459,7 +461,10 @@ def convert_alma_header(inheader,outheader):
         if field.endswith('3'):
             continue
         else:
-            outheader.set(field,inheader[field])
+            try:
+                outheader.set(field,inheader[field])
+            except:
+                print(f"WARNING: problem setting header {field}")# to {inheader[field]}")
     #for c in delcards:
     #    for i in range(2):
     #        ci = c+str(i+1)
@@ -521,8 +526,9 @@ def add_metallicity_markers(ax,fig):
     # convert RA DEC to skycoord
 
     coords = SkyCoord(mtab['RA']*u.deg,mtab['DEC']*u.deg, frame='icrs')
-
-    sc = ax.scatter(coords.ra, coords.dec, c=mtab['METALLICITY_R23']-Zsolar, facecolors='none', edgecolors='face',s=40, transform=ax.get_transform('world'),vmin=-0.2, vmax=0.2)#, c=mtab['METALLICITY_R23'])
+    Z_keyword = 'METALLICITY_R23'
+    Z_keyword = 'METALLICITY_O3N2'
+    sc = ax.scatter(coords.ra, coords.dec, c=mtab[Z_keyword]-Zsolar, facecolors='none', edgecolors='face',s=40, transform=ax.get_transform('world'),vmin=-0.2, vmax=0.2)#, c=mtab['METALLICITY_R23'])
     #cb = fig.colorbar(sc, location='bottom', ax=ax)
     add_inset_colorbar(fig, ax, sc, cblabel=r"$\rm \log_{10}(Z/Z_\odot)$")
 
@@ -3078,7 +3084,10 @@ def get_depletion_map(dirname,vr=None, H0=74., cmap='magma_r', verbose=False, sf
     if verbose:
         print("CHECK")
         print(f"{vfid}: max value in image = {np.nanmax(rsfr_dat)}, max value in image before reprojection = {np.nanmax(hdat)}, halpha_rms = {halpha_rms[vfid]}")
-    co_nan_flag = ~(cdat == cdat)
+
+    # Feb 13, 2026
+    # adding case for noema to disregard regions where co flux is < 3sigma
+    co_nan_flag = ~(cdat == cdat) | (cdat < 3*co_rms[vfid]) | (cdat == 0)
 
     
     if verbose:
@@ -3102,11 +3111,15 @@ def get_depletion_map(dirname,vr=None, H0=74., cmap='magma_r', verbose=False, sf
     # set upper limits to CO upper limit / SFR
     if alma:
         tdep_limits_image[tdep_upper_flag] = (3 * co_rms_Msun_pixel[tdep_upper_flag]) / (rsfr_dat[tdep_upper_flag] * extinction_correction)
-    else:
-        tdep_limits_image[tdep_upper_flag] = (3 * co_rms_Msun_pixel) / (rsfr_dat[tdep_upper_flag] * extinction_correction)        
+        # we detect CO but not SFR
+        tdep_limits_image[tdep_lower_flag] = cdat[tdep_lower_flag]/ (3 * halpha_rms[vfid] * extinction_correction)    
 
-    # we detect CO but not SFR
-    tdep_limits_image[tdep_lower_flag] = cdat[tdep_lower_flag]/ (3 * halpha_rms[vfid] * extinction_correction)    
+    else:
+        pass
+        tdep_limits_image[tdep_upper_flag] = (3 * co_rms_Msun_pixel) / (rsfr_dat[tdep_upper_flag] * extinction_correction)        
+        ## we detect CO but not SFR
+        tdep_limits_image[tdep_lower_flag] = cdat[tdep_lower_flag]/ (3 * halpha_rms[vfid] * extinction_correction)    
+
 
 
     # combine limits with depletion map
