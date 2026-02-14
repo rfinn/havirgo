@@ -862,7 +862,7 @@ class pointing():
             # get legacy cutout
             # TODO - finish this next line
             ax = plt.subplot(nrow,ncol,5*j+1)
-            print(f"getting legacy image for {galnames[i]}, size={imsize_arcsec}")
+            print(f"getting legacy image for {galnames[j]}, size={imsize_arcsec}")
             jpeg_name = get_legacy_jpg(galra[j],galdec[j],galid=galnames[j],pixscale=1,imsize=imsize_arcsec,subfolder=self.outdir)
             #print(jpeg_name)
             # plot jpg
