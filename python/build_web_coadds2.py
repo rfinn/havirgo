@@ -625,7 +625,7 @@ class coadd_image():
         # would like to show all for the table
         self.corrections = corrections#[filter_keepflag]
         print()
-        print(f"number of galaxies before filter cut = {np.sum(self.keepflag)}")
+        print(f"HEY! number of galaxies before filter cut = {np.sum(self.keepflag)}")
 
         # storing the filter cut in a separate flag to distinguish those in FOV from those also in filter
         self.filter_keepflag = filter_keepflag
