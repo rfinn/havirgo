@@ -873,7 +873,7 @@ class pointing():
             plt.imshow(t,origin='upper')
             plt.title(galnames[j][:20])# cutting names to avoid ridiculously long NED names
             plt.ylabel('arcsec')
-            position = (self.r.galfov_imx[j],self.r.galfov_imy[j])                
+            position = (self.ha.galfov_imx[j],self.ha.galfov_imy[j])                
             for k in range(len(images)):
                 #print("displaying cutout ",imtitles[k],imsize)
                 ax = plt.subplot(nrow,ncol,5*j+k+2)            
