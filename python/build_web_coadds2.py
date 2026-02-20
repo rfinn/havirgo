@@ -1432,7 +1432,7 @@ if __name__ == '__main__':
     cwd = os.getcwd()
     os.chdir(outdir)
     print("\nBuilding coadd index\n")
-    os.system("python ~/github/Virgo/programs/build_coadd_index.py")
+    os.system("python ~/github/havirgo/python/build_coadd_index.py")
     os.chdir(cwd)
 
     #buildone(rimages,i,psfdir=psfdir,zpdir=zpdir,fratiodir = fratiodir, outdir=poutdir)
