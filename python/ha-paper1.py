@@ -124,11 +124,13 @@ class haplots(vtables):
 
         std = np.std(y[flag])
         ave = np.mean(y[flag])
+        med = np.median(y[flag])
         x = x[flag]
         y = y[flag]        
         # FROM https://matplotlib.org/stable/gallery/lines_bars_and_markers/scatter_hist.html
         # Create a Figure, which doesn't have to be square.
-        fig = plt.figure()#layout='constrained')
+        fig = plt.figure(figsize=(6,4))#layout='constrained')
+        
         # Create the main axes, leaving 25% of the figure space at the top and on the
         # right to position marginals.
         ax = fig.add_gridspec(left=.2,top=0.75, right=0.75).subplots()
@@ -143,10 +145,10 @@ class haplots(vtables):
         ax_histy = ax.inset_axes([1.05, 0, 0.25, 1], sharey=ax)
         # Draw the scatter plot and marginals.
         scatter_hist(x, y, ax, ax_histx, ax_histy)
-        ax.set_xlabel("R-band FWHM (arcsec)",fontsize=16)
-        ax.set_ylabel(r"$\rm H\alpha - R \ FWHM \ (arcsec)$ ",fontsize=16)
+        ax.set_xlabel("R-band FWHM (arcsec)",fontsize=14)
+        ax.set_ylabel(r"$\rm H\alpha - R \ FWHM \ (arcsec)$ ",fontsize=14)
 
-
+        print(f"mean(med) diff b/w R and Halpha PSF = {ave:.2f}({med:.2f}) +/- {std:.2f}")
         
         #plt.plot(x[flag],y[flag],'bo',alpha=.7)
 
@@ -157,8 +159,8 @@ class haplots(vtables):
         plt.axhline(y=ave+std,ls='--',color='k')
         plt.axhline(y=ave-std,ls='--',color='k')        
         print(f"H FWHM - R FWHM = {np.mean(y):.2f} +/- {std:.2f}")
-        plt.savefig(plotdir+"R-H-FWHM.pdf")
-        plt.savefig(plotdir+"R-H-FWHM.png")
+        plt.savefig(plotdir+"FWHM-Halpha-vs-R.pdf")
+        plt.savefig(plotdir+"FWHM-Halpha-vs-R.png")
 
     def compare_m24_ephot(self):
         """compare r-band mag 24 with JM's ephot  """
