@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """
 GOAL:
-measure photometry of the continuum subtracted images that are created using the g-r color image
+measure photometry of Becky's Virgo and Isolated samples
 
 
 PROCEDURE:
@@ -16,7 +16,7 @@ python ~/github/havirgo/python/get_gr_cont_phot.py VFID6352-NGC5806-BOK-20210418
 
 * to run in parallel
 
-parallel --eta  python ~/github/havirgo/python/get_gr_cont_phot.py :::: virgo-cutouts.txt 
+parallel --eta  python ~/github/havirgo/python/koopmann_run_photwrapper.py :::: virgo-cutouts.txt 
 
 
 """
@@ -45,4 +45,10 @@ from get_gr_cont_phot import output_table
 
 if __name__ == '__main__':
     # loop through directory structures
+
+    # run photwrapper
+
+    # write output table
+
+    
     

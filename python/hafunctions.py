@@ -93,9 +93,22 @@ co_rms = {
             'VFID6033': 0.025,\
             'VFID6091': 0.025,\
             'VFID6362': 0.025,\
-            'VFID2822': 0.07,\
-            'VFID2140': 0.0824269,\
-            'VFID3574': 0.0694
+            #0.0623,\ - prior value for VFID2140
+            # PGC025063
+            #'VFID2822': 0.070, \
+            #'VFID2822': 0.0623,\
+            'VFID2822': 0.04,\
+            #'VFID2822': 0.05,\
+            # .082 - prior value for VFID2140
+            # rms in Jy/beam/km/s +/- 200 km/s
+            #'VFID2140': 0.064,\ # IC4336
+            #'VFID2140': 0.1020,\
+            'VFID2140': 0.04,\
+            #'VFID2140': 0.04,\
+            # NGC6186
+            #'VFID3574': 0.0479
+            #'VFID3574': 0.0694
+            'VFID3574': 0.05
            }
 
 rms_dir = homedir+'/research/Virgo/alma/rms_maps/'
@@ -133,7 +146,6 @@ zoom_coords_HDI = {'VFID5889':[250,1200,750,1700],\
                    'VFID5892':[200,600,190,550],\
                    'VFID5859':[35,115,25,115],\
                    'VFID3574':[175,445,175,420]
-                   
                    }
 
 CO_zoom_coords_INT = {'VFID5889':[100,1300,850,2100],\
@@ -149,7 +161,7 @@ CO_zoom_coords_INT = {'VFID5889':[100,1300,850,2100],\
                    'VFID6033':[1800,2500,1700,2600],\
                    'VFID6091':[980,1520,1080,1470],\
                    'VFID6362':[70,320,70,320],\
-                       }
+                          }
 
 cofigsize = {
             'VFID5855':[10,10],\
@@ -180,7 +192,6 @@ codepletion_figsize = {
             
            }
 
-    
 codepletion_levels = {
             'VFID5855':[7.,9],\
             'VFID5842':[8.5,10.5],\
@@ -189,9 +200,9 @@ codepletion_levels = {
             'VFID6033':[8.,9.75],\
             'VFID6091':[7.,9.75],\
             'VFID6362':[7.,9.75],\
-            'VFID2140':[8,9.75],\
-            'VFID2822':[8, 9.75],\
-            'VFID3574':[8., 9.75],\
+            'VFID2140':[8.75,10.],\
+            'VFID2822':[8.75, 10.],\
+            'VFID3574':[8.75, 10.],\
            }
 
 codepletion_zoom = {
@@ -279,8 +290,9 @@ CO_file = {'VFID5889':None,\
            'VFID6033':COdir+'n5566-co10-mean.fits',\
            'VFID6091':COdir+'n5577-co10-mean.fits',\
            'VFID6362':COdir+'u9661-co10-mean.fits',\
-           'VFID2140':noema_base+'moment_maps_fits_s18cd002/s18cd002-usb-bas-CO10-mean.fits',\
-           'VFID2822':noema_base_mask+'moment_maps_fits_s18cd001/s18cd001-usb-bas-CO10-mean-masked.fits',\
+           #'VFID2140':noema_base+'moment_maps_fits_s18cd002/s18cd002-usb-bas-CO10-mean.fits',\
+           'VFID2140':noema_base+'moment_maps_fits_s18cd002/s18cd002.fits',\
+           'VFID2822':noema_base+'moment_maps_fits_s18cd001/s18cd001.fits',\
            'VFID3574':noema_base+'moment_maps_fits_s18cd003/s18cd003-usb-full-bas-CO10-mean.fits',
            
 }
@@ -307,9 +319,13 @@ CO_mask = {'VFID5889':None,\
            'VFID6033':COmaskdir+'n5566_intensity_COmap_masked.fits',\
            'VFID6091':COmaskdir+'n5577_intensity_COmap_masked.fits',\
            'VFID6362':COmaskdir+'u9661_intensity_COmap_masked.fits',\
+           #'VFID2140':noema_base+'moment_maps_fits_s18cd002/s18cd002_COmap_masked.fits',\
+           #'VFID2822':noema_base+'moment_maps_fits_s18cd001/s18cd001_COmap_masked.fits',\
+           #'VFID3574':noema_base+'moment_maps_fits_s18cd003/s18cd003_COmap_masked.fits',
            'VFID2140':None,\
            'VFID2822':None,\
-           'VFID3574':None,\
+           'VFID3574':None
+
            
 }
 
@@ -2868,7 +2884,7 @@ def hide_xyticks_wcs(ax):
     
 
 
-def get_depletion_map(dirname,vr=None, H0=74., cmap='magma_r', verbose=False, sfr_limit=1e-5, alma=False):
+def get_depletion_map(dirname,vr=None, H0=74., cmap='magma_r', verbose=False, sfr_limit=1e-5, alma=False,convolveflag=False,alt_title=None):
     """
     GOAL:
     * get depletion map for CO
@@ -2905,6 +2921,8 @@ def get_depletion_map(dirname,vr=None, H0=74., cmap='magma_r', verbose=False, sf
     titles = ['$CO~ Intensity$',r'$\Sigma_{SFR}$',r'$Depletion \ time$']
     temp = dirname.split('-')
     galname = temp[0]+'-'+temp[1]
+    if alt_title is not None:
+        galname = alt_title
     ##################################################
     ## CO Image
     ##################################################
@@ -2920,8 +2938,10 @@ def get_depletion_map(dirname,vr=None, H0=74., cmap='magma_r', verbose=False, sf
     
     COmask_filename = CO_mask[vfid]
     if COmask_filename is None:
+        print("did not find masked CO file!")        
         cdat_masked = cdat_unmasked
     else:
+        print("reading masked CO file!")
         cdat_masked = fits.getdata(COmask_filename)
 
     #co_mdat = np.ma.array(cdat,mask=maskdat)
@@ -2967,6 +2987,13 @@ def get_depletion_map(dirname,vr=None, H0=74., cmap='magma_r', verbose=False, sf
     hdu = fits.open(sfrim)[0]
     #hdu.data = hdu.data
     sfr_header = hdu.header
+
+    try:
+        ha_fwhm = sfr_header['SEFWHM']
+    except KeyError:
+        print("WARNING: no SEFWHM is header, assuming 1.5 arcsec")
+        ha_fwhm = 1.5
+    
     # convert to surface brightness
     # times by area in sr
     #pixscale_deg_in = np.abs(hdu.header['CDELT1'])
@@ -3001,30 +3028,40 @@ def get_depletion_map(dirname,vr=None, H0=74., cmap='magma_r', verbose=False, sf
         print("CHECK")
         print(f"{vfid}: max value in image before reprojection = {np.nanmax(hdat)}, halpha_rms = {halpha_rms[vfid]}")
 
+
+    ##################################################
+    ## Convolve Halpha Image to match CO
+    ##################################################
+
+    if convolveflag:
+        # convolve halpha to radio
+        sys.path.append(homedir+'/github/havirgo/python/')
+        import convolve_halpha_2_radio as cr
+        radiobeam_PA = cheader['BPA']# in degrees
+        radiobeam_a = (cheader['BMAJ']*u.deg).to(u.arcsec).value
+        radiobeam_b = (cheader['BMIN']*u.deg).to(u.arcsec).value
+        
+        outname, csfr_dat = cr.convolve_image(sfrim, ha_fwhm, radiobeam_a, radiobeam_b, radiobeam_PA)
+
     ##################################################
     ## Reproject Image
     ##################################################
-    #from reproject import reproject_interp 
     from reproject import reproject_adaptive
-    #from reproject import reproject_exact   # best solution 
-    # figure out which has better resolution
-
-
-    # reproject SFR image to CO wcs
-    #rsfr_sb, rfootprint = reproject_interp(hdu,  co_imwcs) # output of reproject is in sfr/sr
-    #rsfr_sb, rfootprint = reproject_exact(hdu, co_imwcs)
-    #print("ha_imwcs:\n",ha_imwcs)
-    #print()
 
     ##
-    # project the halpha image onto the CO image
-    ##
-
+    # reproject the halpha image onto the CO image
+    ##    
     # TODONE - are we doing the reprojection right - yes, adaptive with conserve_flux=True is correct
     out_header = cheader
-    #out_header = hdu.header
-    rsfr_dat, rfootprint = reproject_adaptive(hdu, out_header, conserve_flux=True)
 
+    if convolveflag:
+        convolved_hdu = fits.ImageHDU(data=csfr_dat,header=hdu.header)
+        crsfr_dat, crfootprint = reproject_adaptive(convolved_hdu, out_header, conserve_flux=True)
+    else:
+        rsfr_dat, rfootprint = reproject_adaptive(hdu, out_header, conserve_flux=True)
+
+
+        
     # when using reproject_exact, need to be in sb units
     #rsfr_sb, rfootprint = reproject_exact(hdu, out_header)#, conserve_flux=True)        
     # need to convert back to flux
@@ -3035,17 +3072,25 @@ def get_depletion_map(dirname,vr=None, H0=74., cmap='magma_r', verbose=False, sf
     #print(f"ratio of rsfr_dat / rsfr_sb = {np.nanmean(rsfr_dat/rsfr_sb)}")
     
     # write out reprojected halpha image
-    fits.writeto(f"{vfid}_reproject_adaptive_True_alma.fits",rsfr_dat, header = out_header, overwrite=True)
+    if convolveflag:
+        outfile = f"{vfid}_reproject_adaptive_True_convolved_alma.fits"
+        fits.writeto(outfile,crsfr_dat, header = out_header, overwrite=True)
+    else:
+        outfile = f"{vfid}_reproject_adaptive_True_alma.fits"
+        fits.writeto(outfile,rsfr_dat, header = out_header, overwrite=True)
+    
 
     # compare the sum of the original and reprojected images
-    flux_in = np.nansum(hdu.data) * pixscale_area_sr_in
+    #flux_in = np.nansum(hdu.data) * pixscale_area_sr_in
 
-    flux_out = np.nansum(rsfr_dat) * pixscale_area_sr_out
+    #flux_out = np.nansum(rsfr_dat) * pixscale_area_sr_out
     #print("Output total flux:", flux_out)
-    print("Flux ratio (out/in):", flux_out/flux_in)
+    #print("Flux ratio (out/in):", flux_out/flux_in)
 
-    print(f"sum of original = {np.sum(hdat):.3e}, reprojected = {np.sum(rsfr_dat):.3e}")
-    print()
+    #print(f"sum of original = {np.sum(hdat):.3e}, reprojected = {np.sum(rsfr_dat):.3e}")
+    #print()
+
+        
     ##################################################
     ## Get Depletion Map
     ##################################################
@@ -3077,29 +3122,58 @@ def get_depletion_map(dirname,vr=None, H0=74., cmap='magma_r', verbose=False, sf
 
     # one magnitude of extinction at halpha
     extinction_correction = 2.5 # assume one magnitude until we have something better
-    depletion = cdat / (rsfr_dat * extinction_correction)
+    #extinction_correction = 10 # assume one magnitude until we have something better
+    if convolveflag:
+        sfr_dep_dat = crsfr_dat
+    else:
+        sfr_dep_dat = rsfr_dat
+    depletion = cdat / (sfr_dep_dat * extinction_correction)
 
+    NSIGMA=3 # noise cut
     # cdat is nan but halpha is > 3*image_std
-    halpha_nan_flag = rsfr_dat < 3*halpha_rms[vfid]
-    if verbose:
-        print("CHECK")
-        print(f"{vfid}: max value in image = {np.nanmax(rsfr_dat)}, max value in image before reprojection = {np.nanmax(hdat)}, halpha_rms = {halpha_rms[vfid]}")
+    #halpha_nan_flag = sfr_dep_dat < 3*halpha_rms[vfid] # halpha_rms measured from sfr image
+    halpha_nan_flag = sfr_dep_dat < NSIGMA*halpha_rms[vfid] # halpha_rms measured from sfr image
 
-    # Feb 13, 2026
-    # adding case for noema to disregard regions where co flux is < 3sigma
-    co_nan_flag = ~(cdat == cdat) | (cdat < 3*co_rms[vfid]) | (cdat == 0)
 
     
-    if verbose:
-        plt.figure()
-        plt.imshow(halpha_nan_flag, cmap='viridis', origin="lower")
-        plt.colorbar()
-        plt.title("halpha_nan_flag")
+    #if verbose:
+    #    print("CHECK")
+    #    print(f"{vfid}: max value in image = {np.nanmax(rsfr_dat)}, max value in image before reprojection = {np.nanmax(hdat)}, halpha_rms = {halpha_rms[vfid]}")
+
+
+    # don't need this b/c Gianluca redid the images with noise clipping
+    #if vfid in ['VFID3757', 'VFID2822', 'VFID2140']: # noema galaxies
+    #    # replace values in CO image with a nan if the value is < 2* rms
+    #    co_lowflux = cdat < 2.5*co_rms[vfid]
+    #    cdat[co_lowflux] = np.nan
+    #    cdat_masked[co_lowflux] = np.nan        
+    
+    # Feb 13, 2026
+    # adding case for noema to disregard regions where co flux is < 3sigma
+    #co_nan_flag = ~(cdat == cdat) | (cdat < 1.*co_rms[vfid]) | (cdat == 0)
+    #co_rms_Msun_pixel
+    co_nan_flag = ~(cdat == cdat) | (cdat < NSIGMA*co_rms_Msun_pixel) | (cdat == 0)
+
+    # testing a constant sfr map - should lead to continuous depletion time map WRT upper/lower limits
+    #sfr_med = 3 * halpha_rms[vfid] * extinction_correction
+    #sfr_dep_dat = sfr_med*np.ones_like(sfr_dep_dat)
+
+    
+    #plt.figure()
+    #plt.imshow(sfr_dep_dat)
+    #plt.colorbar()
+    #plt.title("TEST SFR Image")
+    
+    #if verbose:
+    #    plt.figure()
+    #    plt.imshow(halpha_nan_flag, cmap='viridis', origin="lower")
+    #    plt.colorbar()
+    #    plt.title("halpha_nan_flag")
         
-        plt.figure()
-        plt.imshow(co_nan_flag, cmap='viridis', origin="lower")
-        plt.colorbar()
-        plt.title("co_nan_flag")
+    #    plt.figure()
+    #    plt.imshow(co_nan_flag, cmap='viridis', origin="lower")
+    #    plt.colorbar()
+    #    plt.title("co_nan_flag")
     
     # if CO is detected (not nan), but SFR isn't
     tdep_lower_flag = ~co_nan_flag & halpha_nan_flag
@@ -3109,14 +3183,16 @@ def get_depletion_map(dirname,vr=None, H0=74., cmap='magma_r', verbose=False, sf
     tdep_limits_image = np.zeros_like(depletion)
 
     # set upper limits to CO upper limit / SFR
+    # TODO: make sure halpha_rms is actually in SFR units
     if alma:
-        tdep_limits_image[tdep_upper_flag] = (3 * co_rms_Msun_pixel[tdep_upper_flag]) / (rsfr_dat[tdep_upper_flag] * extinction_correction)
+        tdep_limits_image[tdep_upper_flag] = (NSIGMA * co_rms_Msun_pixel[tdep_upper_flag]) / (sfr_dep_dat[tdep_upper_flag] * extinction_correction)
         # we detect CO but not SFR
         tdep_limits_image[tdep_lower_flag] = cdat[tdep_lower_flag]/ (3 * halpha_rms[vfid] * extinction_correction)    
 
     else:
         pass
-        tdep_limits_image[tdep_upper_flag] = (3 * co_rms_Msun_pixel) / (rsfr_dat[tdep_upper_flag] * extinction_correction)        
+        tdep_limits_image[tdep_upper_flag] = (NSIGMA * co_rms_Msun_pixel) / (sfr_dep_dat[tdep_upper_flag] * extinction_correction)
+        #tdep_limits_image[tdep_upper_flag] = (co_rms_Msun_pixel) / (sfr_dep_dat[tdep_upper_flag] * extinction_correction)        
         ## we detect CO but not SFR
         tdep_limits_image[tdep_lower_flag] = cdat[tdep_lower_flag]/ (3 * halpha_rms[vfid] * extinction_correction)    
 
@@ -3129,6 +3205,9 @@ def get_depletion_map(dirname,vr=None, H0=74., cmap='magma_r', verbose=False, sf
 
     depletion_with_limits[limit_flag] = tdep_limits_image[limit_flag]
 
+    # testing if we remove limits
+
+    #depletion_with_limits = cdat / (sfr_dep_dat * extinction_correction)
     if verbose:
         ####################################
         # plot image of upper/lower limits 
@@ -3202,7 +3281,10 @@ def get_depletion_map(dirname,vr=None, H0=74., cmap='magma_r', verbose=False, sf
     if vr is not None:
         # scale data to convert to flux/kpc^2
         kpc_per_pixel = get_kpc_per_pixel(co_imwcs,vr)
-        rsfr_dat_kpc2 = rsfr_dat/(kpc_per_pixel**2)
+        if convolveflag:
+            rsfr_dat_kpc2 = crsfr_dat/(kpc_per_pixel**2)
+        else:
+            rsfr_dat_kpc2 = rsfr_dat/(kpc_per_pixel**2)
         v1 = 0 # vmin[i]/kpc_per_pixel**2
         v2 = sfr_limit/kpc_per_pixel**2
         #myclevels = myclevels/kpc_per_pixel**2
@@ -3233,12 +3315,9 @@ def get_depletion_map(dirname,vr=None, H0=74., cmap='magma_r', verbose=False, sf
     #print(hheader)
     # plot Halpha beam
 
-    try:
-        ha_fwhm = sfr_header['SEFWHM']
-    except KeyError:
-        ha_fwhm = 1.5
 
     # plot halpha fwhm
+    #if not convolveflag:
     plot_HI_beam(ax2,COfilename,cheader,color='steelblue', halpha=True, fwhm=ha_fwhm)
     
     #################################################
