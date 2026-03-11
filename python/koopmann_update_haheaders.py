@@ -164,6 +164,10 @@ def get_instrument(galname):
 
     return instrument
 
+def get_fwhm(galname):
+    # placeholder for Keith's function
+    # add documentation here
+    pass
 def get_pixel_scale(instrument):
     """
     get pixel scale from file
