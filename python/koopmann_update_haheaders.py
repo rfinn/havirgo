@@ -333,6 +333,7 @@ if __name__ == '__main__':
             if instrument is None:
                 print(f"WARNING: could not find instrument for {galname}, {d}")
                 sys.exit()
+            fwhm = get_fwhm(galname)
             pixelScale = get_pixel_scale(instrument)
             pixelScaleDeg = float(pixelScale)/3600 # convert from arcsec/pix to deg/pix
 
@@ -376,6 +377,9 @@ if __name__ == '__main__':
                         hdu[0].header.set('FILTER', 'Ha4')
                     else:
                         hdu[0].header.set('FILTER', 'R')
+
+                    # add fwhm
+                    hdu[0].header.set('FWHM', fwhm)
 
 
                     # prepend an 'h' to image name and save
