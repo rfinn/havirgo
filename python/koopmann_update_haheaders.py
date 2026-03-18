@@ -165,9 +165,49 @@ def get_instrument(galname):
     return instrument
 
 def get_fwhm(galname):
-    # placeholder for Keith's function
-    # add documentation here
-    pass
+    """
+        INPUT:
+            galname: e.g. NGC4178, IC3392
+
+        RETURN:
+            FWHM value in arcsec
+        """
+
+    foundMatch = False
+    fwhm = None
+
+    # search first table
+    with open(os.path.join(tabledir, 'KKY01-table3.txt'), 'r') as f:
+        for line in f:
+            if line.startswith(('NGC', 'IC', 'UGC')):
+                # normalize names in line
+                clean_line = line.replace('/', ' ').split()
+                # build names like NGC4298
+                names = []
+                for i in range(len(clean_line) - 1):
+                    if clean_line[i] in ['NGC', 'IC', 'UGC']:
+                        names.append(clean_line[i] + clean_line[i + 1])
+                if galname in names:
+                    t = line.split()
+                    fwhm = float(t[-5])
+                    foundMatch = True
+                    break
+
+    # searching second table if needed
+    if not foundMatch:
+        with open(os.path.join(tabledir, 'KK06-table3.txt'), 'r') as f:
+            for line in f:
+                if line.startswith(('NGC', 'IC', 'UGC')):
+                    t = line.split()
+                    testname = t[0] + t[1]
+                    if testname == galname:
+                        fwhm = float(t[-5])
+                        foundMatch = True
+                        break
+
+    return fwhm
+
+
 def get_pixel_scale(instrument):
     """
     get pixel scale from file
@@ -293,6 +333,7 @@ if __name__ == '__main__':
             if instrument is None:
                 print(f"WARNING: could not find instrument for {galname}, {d}")
                 sys.exit()
+            fwhm = get_fwhm(galname)
             pixelScale = get_pixel_scale(instrument)
             pixelScaleDeg = float(pixelScale)/3600 # convert from arcsec/pix to deg/pix
 
@@ -336,6 +377,9 @@ if __name__ == '__main__':
                         hdu[0].header.set('FILTER', 'Ha4')
                     else:
                         hdu[0].header.set('FILTER', 'R')
+
+                    # add fwhm
+                    hdu[0].header.set('FWHM', fwhm)
 
 
                     # prepend an 'h' to image name and save
