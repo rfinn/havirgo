@@ -2052,6 +2052,28 @@ def plot_mstar_sfr_profiles(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xtic
     return ax1
 
 
+def get_image_footprint(image_name):
+    hdu = fits.open(image_name)[0]
+    wcs = WCS(hdu.header)
+    # Calculate the celestial footprint (4 corners)
+    footprint = wcs.calc_footprint() # Returns (4, 2) array of RA/Dec
+    return footprint
+
+def plot_footprint(ax, footprint, color='c', label="footprint"):
+    ax.plot(footprint[:, 0], footprint[:, 1], 'r-', color=color, label=label)
+
+
+def get_CO_footprint(ax, COfilename):
+    try:
+        codata, coheader = convert_alma3d_alma2d(COfilename)
+    except KeyError:
+        codata, coheader = fits.getdata(COfilename, header=True)
+    #print(coheader)
+    CO_WCS = WCS(coheader)
+    footprint = CO_WCS.calc_footprint()
+    print("DEBUG: footprint = ",footprint)
+    return footprint
+    
 def plot_mstar_sfr_CO(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xticks=True,figsize=[16,6],\
                             cbfrac=.08,cbaspect=20,clevels=[4],contourFlag=True,rmax=None,\
                             logMstar=None,cmap='magma_r',markGroupCenter=False,COcolor='white',COlevels=None,\
@@ -2296,7 +2318,12 @@ def plot_mstar_sfr_CO(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xticks=Tru
     COfilename = CO_file[vfid]
     COmask_filename = CO_mask[vfid]
     plot_CO_contours(ax1,COfilename,color=COcolor,mask=COmask_filename,levels=COlevels)
-    
+
+    # plot CO footprint
+    #footprint = get_CO_footprint(ax1, COfilename)
+    #footcoords = SkyCoord(footprint, unit=u.deg)
+    #print("DEBUG: footcoords.ra",footcoords.ra.hms)
+    #plt.scatter(footcoords.ra.deg, footcoords.dec.deg)
     #ax1.set_xlabel("RA",fontsize=16)
     #ax1.set_ylabel("DEC",fontsize=16)    
 

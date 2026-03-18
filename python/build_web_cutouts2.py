@@ -200,21 +200,31 @@ def display_image(image,percentile1=.5,percentile2=99.5,stretch='asinh',mask=Non
     plt.imshow(imdata, norm=norm,origin='lower')#,vmin=v1,vmax=v2)
     
 
-def make_png(fitsimage,outname,mask=None,ellipseparams=None):
-    imdata,imheader = fits.getdata(fitsimage,header=True)
+def make_png(fitsimage, outname, mask=None, ellipseparams=None, ellipseparams2=None):
+    imdata, imheader = fits.getdata(fitsimage, header=True)
+
     fig = plt.figure(figsize=(6,6))
     ax = plt.subplot(projection=wcs.WCS(imheader))
+
     plt.subplots_adjust(top=.95,right=.95,left=.2,bottom=.15)
-    display_image(imdata,sigclip=True,mask=mask)
+
+    display_image(imdata, sigclip=True, mask=mask)
+
     plt.xlabel('RA (deg)',fontsize=16)
     plt.ylabel('DEC (deg)',fontsize=16)
+
     if ellipseparams is not None:
-        ax = plt.gca()
-        plot_ellipse(ax,ellipseparams)
-    plt.savefig(outname)        
+        plot_ellipse(ax, ellipseparams, color='red')
+
+    if ellipseparams2 is not None:
+        plot_ellipse(ax, ellipseparams2, color='cyan')
+
+    plt.savefig(outname)
     plt.close(fig)
 
-def plot_ellipse(ax,ellipseparams):
+
+
+def plot_ellipse(ax,ellipseparams, color='red'):
 
     xc,yc,r,BA,PA = ellipseparams
 
@@ -234,7 +244,9 @@ def plot_ellipse(ax,ellipseparams):
         theta = (t) # orientation in radians
     # EllipticalAperture gives rotation angle in radians from +x axis, CCW
     # matplotlib uses total width and height, not semi-major /minor axes
-    ellipse = Ellipse((xc,yc), 2*r, 2*b, angle=theta,facecolor='None',edgecolor='r',lw=2)
+    ellipse = Ellipse((xc,yc), 2*r, 2*b, angle=theta,
+                  facecolor='None', edgecolor=color, lw=2)
+    #ellipse = Ellipse((xc,yc), 2*r, 2*b, angle=theta,facecolor='None',edgecolor='r',lw=2)
     ax.add_patch(ellipse)
 
     
@@ -383,10 +395,12 @@ class cutout_dir():
         self.make_cs_png(gr=True)
         self.make_cs_png(grauto=True)                
         self.get_galfit_model()
-        try:
-            self.get_phot_tables()
-        except FileNotFoundError:
-            print('WARNING: no phot files found - check this out')
+        self.read_phot_tables()
+        self.plot_phot_tables()
+        #try:
+        #    self.get_phot_tables()
+        #except FileNotFoundError:
+        #    print('WARNING: no phot files found - check this out')
     def get_halpha_names(self):
         search_string = os.path.join(self.cutoutdir,self.gname+'*-R.fits')
         #print(search_string)
@@ -510,14 +524,20 @@ class cutout_dir():
                 continue
             try:
                 if i < 4:
-                    make_png(self.fitsimages[f],pngfile,mask=mask)
+                    make_png(self.fitsimages[f],pngfile,mask=mask,
+                                 ellipseparams=self.ellipseparams,
+                                 ellipseparams2=self.galfit_ellipseparams)
                 elif i == (len(self.fitsimages)-2): # add ellipse to mask image
                     if self.ellipseparams is not None:
-                        make_png(self.fitsimages[f],pngfile,ellipseparams=self.ellipseparams)
+                        make_png(self.fitsimages[f],pngfile,
+                                     ellipseparams=self.ellipseparams,
+                                     ellipseparams2=self.galfit_ellipseparams)
                     else:
                         make_png(self.fitsimages[f],pngfile)
                 else:
-                    make_png(self.fitsimages[f],pngfile)                    
+                    make_png(self.fitsimages[f],pngfile,
+                                 ellipseparams=self.ellipseparams,
+                                 ellipseparams2=self.galfit_ellipseparams)                    
                 self.pngimages[f] = pngfile
             except FileNotFoundError:
                 print('WARNING: can not find ',self.fitsimages[f])
@@ -619,17 +639,179 @@ class cutout_dir():
         pass
     
 
+    def read_phot_tables(self):
+        """Read photutils photometry tables for R and Halpha images."""
+        from astropy.table import Table
+
+        self.r_phot_file = self.rimage.replace('.fits', '_phot.fits')
+        self.cs_phot_file = self.csimage.replace('.fits', '_phot.fits')
+
+        self.r_phot = Table.read(self.r_phot_file)
+        self.cs_phot = Table.read(self.cs_phot_file)
+
+    def plot_phot_tables(self):
+        """Plot flux, magnitude, and surface-brightness profiles from photutils tables."""
+
+        tabs = [self.r_phot, self.cs_phot]
+        labels = ['photutils r', 'photutils Halpha x100']
+        alphas = [1.0, 0.4]
+        mycolors = plt.rcParams['axes.prop_cycle'].by_key()['color']
+
+        def get_plotflag(tab):
+            if 'snr_per_pixel' in tab.colnames:
+                return np.isfinite(tab['snr_per_pixel']) & (tab['snr_per_pixel'] > 2)
+            elif 'sb_avg_snr' in tab.colnames:
+                return np.isfinite(tab['sb_avg_snr']) & (tab['sb_avg_snr'] > 2)
+            else:
+                return np.ones(len(tab), dtype=bool)
+
+        # --------------------------------------------------
+        # enclosed flux
+        # --------------------------------------------------
+        fig = plt.figure(figsize=(6, 6))
+        plt.subplots_adjust(left=.15, bottom=.1, right=.95, top=.95)
+
+        for i, t in enumerate(tabs):
+            plotflag = get_plotflag(t)
+
+            x = np.asarray(t['sma_arcsec'])[plotflag]
+            y0 = np.asarray(t['flux_cgs'])[plotflag]
+            yerr = np.asarray(t['flux_cgs_err'])[plotflag]
+
+            y1 = y0 + yerr
+            y2 = y0 - yerr
+
+            if i == 1:
+                y0 = y0 * 100
+                y1 = y1 * 100
+                y2 = y2 * 100
+
+            good = np.isfinite(x) & np.isfinite(y0) & np.isfinite(y1) & np.isfinite(y2) & (y0 > 0)
+            if np.any(good):
+                plt.fill_between(x[good], y1[good], y2[good],
+                                 label=labels[i], alpha=alphas[i], color=mycolors[i])
+                plt.plot(x[good], y0[good], '-', lw=2, color=mycolors[i])
+
+        plt.xlabel('SMA (arcsec)', fontsize=16)
+        plt.ylabel('Flux (erg/s/cm$^2$)', fontsize=16)
+        plt.gca().set_yscale('log')
+        plt.legend(loc='lower right')
+        self.efluxsma_png = os.path.join(self.outdir, self.gname + '-enclosed-flux.png')
+        plt.savefig(self.efluxsma_png)
+        plt.close(fig)
+
+        # --------------------------------------------------
+        # enclosed magnitude
+        # --------------------------------------------------
+        fig = plt.figure(figsize=(6, 6))
+        plt.subplots_adjust(left=.15, bottom=.1, right=.95, top=.95)
+
+        labels_mag = ['photutils r', 'photutils Halpha']
+
+        for i, t in enumerate(tabs):
+            plotflag = get_plotflag(t)
+
+            x = np.asarray(t['sma_arcsec'])[plotflag]
+            y0 = np.asarray(t['mag_cum'])[plotflag]
+            yerr = np.asarray(t['mag_cum_err'])[plotflag]
+
+            y1 = y0 + yerr
+            y2 = y0 - yerr
+
+            good = np.isfinite(x) & np.isfinite(y0) & np.isfinite(y1) & np.isfinite(y2)
+            if np.any(good):
+                plt.fill_between(x[good], y1[good], y2[good],
+                                 label=labels_mag[i], alpha=alphas[i], color=mycolors[i])
+                plt.plot(x[good], y0[good], '-', lw=2, color=mycolors[i])
+
+        plt.xlabel('SMA (arcsec)', fontsize=16)
+        plt.ylabel('Magnitude (AB)', fontsize=16)
+        plt.gca().invert_yaxis()
+        plt.legend(loc='lower right')
+        self.emagsma_png = os.path.join(self.outdir, self.gname + '-mag-sma.png')
+        plt.savefig(self.emagsma_png)
+        plt.close(fig)
+
+        # --------------------------------------------------
+        # surface brightness in cgs
+        # --------------------------------------------------
+        fig = plt.figure(figsize=(6, 6))
+        plt.subplots_adjust(left=.15, bottom=.1, right=.95, top=.95)
+
+        for i, t in enumerate(tabs):
+            plotflag = get_plotflag(t)
+
+            x = np.asarray(t['sma_arcsec'])[plotflag]
+            y0 = np.asarray(t['sb_cgs_arcsec2'])[plotflag]
+            yerr = np.asarray(t['sb_cgs_arcsec2_err'])[plotflag]
+
+            y1 = y0 + yerr
+            y2 = y0 - yerr
+
+            if i == 1:
+                y0 = y0 * 100
+                y1 = y1 * 100
+                y2 = y2 * 100
+
+            good = np.isfinite(x) & np.isfinite(y0) & np.isfinite(y1) & np.isfinite(y2) & (y0 > 0)
+            if np.any(good):
+                plt.fill_between(x[good], y1[good], y2[good],
+                                 label=labels[i], alpha=alphas[i], color=mycolors[i])
+                plt.plot(x[good], y0[good], '-', lw=2, color=mycolors[i])
+
+        plt.xlabel('SMA (arcsec)', fontsize=16)
+        plt.ylabel('SB (erg/s/cm$^2$/arcsec$^2$)', fontsize=16)
+        plt.gca().set_yscale('log')
+        plt.legend()
+        self.sbfluxsma_png = os.path.join(self.outdir, self.gname + '-sb-sma.png')
+        plt.savefig(self.sbfluxsma_png)
+        plt.close(fig)
+
+        # --------------------------------------------------
+        # surface brightness in mag / arcsec^2
+        # --------------------------------------------------
+        fig = plt.figure(figsize=(6, 6))
+        plt.subplots_adjust(left=.15, bottom=.1, right=.95, top=.95)
+
+        labels_sbmag = ['photutils r', 'photutils Halpha']
+
+        for i, t in enumerate(tabs):
+            plotflag = get_plotflag(t)
+
+            x = np.asarray(t['sma_arcsec'])[plotflag]
+            y0 = np.asarray(t['sb_mag_arcsec2'])[plotflag]
+            yerr = np.asarray(t['sb_mag_arcsec2_err'])[plotflag]
+
+            y1 = y0 + yerr
+            y2 = y0 - yerr
+
+            good = np.isfinite(x) & np.isfinite(y0) & np.isfinite(y1) & np.isfinite(y2)
+            if np.any(good):
+                plt.fill_between(x[good], y1[good], y2[good],
+                                 label=labels_sbmag[i], alpha=alphas[i], color=mycolors[i])
+                plt.plot(x[good], y0[good], '-', lw=2, color=mycolors[i])
+
+        plt.xlabel('SMA (arcsec)', fontsize=16)
+        plt.ylabel('Surface Brightness (mag/arcsec$^2$)', fontsize=16)
+        plt.gca().invert_yaxis()
+        plt.legend()
+        self.sbmagsma_png = os.path.join(self.outdir, self.gname + '-sbmag-sma.png')
+        plt.savefig(self.sbmagsma_png)
+        plt.close(fig)
+    
     def get_phot_tables(self):
         ''' read in phot tables and make plot of flux and sb vs sma '''
 
 
         # open data files
-        cs_galfit_phot = self.csimage.replace('.fits','-GAL_phot.fits')
-        cs_gphot = fits.getdata(cs_galfit_phot)
-        #cs_phot = self.csimage.replace('.fits','-phot.fits')        
-        r_galfit_phot = self.rimage.replace('.fits','-GAL_phot.fits')
-        r_gphot = fits.getdata(r_galfit_phot)
-
+        try:
+            cs_galfit_phot = self.csimage.replace('.fits','-GAL_phot.fits')
+            cs_gphot = fits.getdata(cs_galfit_phot)
+            #cs_phot = self.csimage.replace('.fits','-phot.fits')        
+            r_galfit_phot = self.rimage.replace('.fits','-GAL_phot.fits')
+            r_gphot = fits.getdata(r_galfit_phot)
+        except FileNotFound:
+            print("no galfit phot files")
         # photutils flux
         cs_galfit_phot = self.csimage.replace('.fits','_phot.fits')
         cs_phot = fits.getdata(cs_galfit_phot)
@@ -644,27 +826,32 @@ class cutout_dir():
         # plot enclosed flux        
         fig = plt.figure(figsize=(6,6))
         plt.subplots_adjust(left=.15,bottom=.1,right=.95,top=.95)
-        tabs = [r_gphot,cs_gphot,r_phot,cs_phot]
-        labels = ['galfit r','galfit Halphax100','photutil r','photutil Halphax100']
-        alphas = [1,.4,.6,.4]
+        #tabs = [r_gphot,cs_gphot,r_phot,cs_phot]
+        #labels = ['galfit r','galfit Halphax100','photutil r','photutil Halphax100']
+        alphas = [1,.4,.6,.4]        
+        tabs = [r_phot,cs_phot]
+        labels = ['photutil r','photutil Halphax100']
+        alphas = [1,.4]
+        plotflag = t['snr_per_pixel'] > 2
+        
         for i,t in enumerate(tabs):
-            y0 = t['flux_erg']            
-            y1 = t['flux_erg']+t['flux_erg_err']
-            y2 = t['flux_erg']-t['flux_erg_err']
+            y0 = t['flux_erg'][plotflag]            
+            y1 = t['flux_erg'][plotflag] +t['flux_erg_err'][plotflag] 
+            y2 = t['flux_erg'][plotflag] -t['flux_erg_err'][plotflag] 
 
             if (i == 1) + (i == 3):
                 y0=y0*100
                 y1 = y1*100
                 y2 = y2*100
-            plt.fill_between(t['sma_arcsec'],y1,y2,label=labels[i],alpha=alphas[i],color=mycolors[i])
+            plt.fill_between(t['sma_arcsec'][plotflag] ,y1,y2,label=labels[i],alpha=alphas[i],color=mycolors[i])
             # also plot line because you can't see the result when the error is small
             # this should fix issue #18 in Virgo github
-            plt.plot(t['sma_arcsec'],y0,'-',lw=2,color=mycolors[i])
+            plt.plot(t['sma_arcsec'][plotflag] ,y0,'-',lw=2,color=mycolors[i])
 
         plt.xlabel('SMA (arcsec)',fontsize=16)
         plt.ylabel('Flux (erg/s/cm^2/Hz)',fontsize=16)
         plt.gca().set_yscale('log')
-        plt.gca().set_xscale('log')
+        #plt.gca().set_xscale('log')
         plt.legend(loc='lower right')        
         self.efluxsma_png = os.path.join(self.outdir,self.gname+'-enclosed-flux.png')
         plt.savefig(self.efluxsma_png)
@@ -679,23 +866,23 @@ class cutout_dir():
         labels = ['galfit r','galfit Halpha','photutil r','photutil Halpha']
         ncolor = 0
         for i,t in enumerate(tabs):
-            y0 = t['mag']
-            y1 = t['mag']+t['mag_err']
-            y2 = t['mag']-t['mag_err']
+            y0 = t['mag'][plotflag] 
+            y1 = t['mag'][plotflag] +t['mag_err'][plotflag] 
+            y2 = t['mag'][plotflag] -t['mag_err'][plotflag] 
             if (i == 1) + (i == 3):
                 alpha=.4
             else:
                 alpha=1
 
-            plt.fill_between(t['sma_arcsec'],y1,y2,label=labels[i],alpha=alphas[i],color=mycolors[i])
+            plt.fill_between(t['sma_arcsec'][plotflag] ,y1,y2,label=labels[i],alpha=alphas[i],color=mycolors[i])
             # also plot line because you can't see the result when the error is small
             # this should fix issue #18 in Virgo github
-            plt.plot(t['sma_arcsec'],y0,'-',lw=2,color=mycolors[i])
+            plt.plot(t['sma_arcsec'][plotflag] ,y0,'-',lw=2,color=mycolors[i])
 
             
         plt.xlabel('SMA (arcsec)',fontsize=16)
         plt.ylabel('magnitude (AB)',fontsize=16)
-        plt.gca().set_xscale('log')
+        #plt.gca().set_xscale('log')
         plt.gca().invert_yaxis()        
         self.emagsma_png = os.path.join(self.outdir,self.gname+'-mag-sma.png')
         plt.legend(loc='lower right')        
@@ -705,27 +892,29 @@ class cutout_dir():
         # plot sb erg vs sma
         fig = plt.figure(figsize=(6,6))
         plt.subplots_adjust(left=.15,bottom=.1,right=.95,top=.95)
-        tabs = [r_gphot,cs_gphot,r_phot,cs_phot]
-        labels = ['galfit r','galfit Halphax100','photutil r','photutil Halphax100']
+        #tabs = [r_gphot,cs_gphot,r_phot,cs_phot]
+        #labels = ['galfit r','galfit Halphax100','photutil r','photutil Halphax100']
+        tabs = [r_phot,cs_phot]
+        labels = ['photutil r','photutil Halphax100']
 
         for i,t in enumerate(tabs):
-            y0 = t['sb_erg_sqarcsec']
-            y1 = t['sb_erg_sqarcsec']+t['sb_erg_sqarcsec_err']
-            y2 = t['sb_erg_sqarcsec']-t['sb_erg_sqarcsec_err']
+            y0 = t['sb_erg_sqarcsec'][plotflag] 
+            y1 = t['sb_erg_sqarcsec'][plotflag] +t['sb_erg_sqarcsec_err'][plotflag] 
+            y2 = t['sb_erg_sqarcsec'][plotflag] -t['sb_erg_sqarcsec_err'][plotflag] 
             if (i == 1) + (i == 3):
                 y0 = y0*100
                 y1 = y1*100
                 y2 = y2*100
-            plt.fill_between(t['sma_arcsec'],y1,y2,label=labels[i],alpha=alphas[i],color=mycolors[i])
+            plt.fill_between(t['sma_arcsec'][plotflag] ,y1,y2,label=labels[i],alpha=alphas[i],color=mycolors[i])
             # also plot line because you can't see the result when the error is small
             # this should fix issue #18 in Virgo github
-            plt.plot(t['sma_arcsec'],y0,'-',lw=2,color=mycolors[i])
+            plt.plot(t['sma_arcsec'][plotflag] ,y0,'-',lw=2,color=mycolors[i])
 
                 
         plt.xlabel('SMA (arcsec)',fontsize=16)
         plt.ylabel('SB (erg/s/cm^2/Hz/arcsec^2)',fontsize=16)
         plt.gca().set_yscale('log')
-        plt.gca().set_xscale('log')
+        #plt.gca().set_xscale('log')
         plt.legend()
         self.sbfluxsma_png = os.path.join(self.outdir,self.gname+'-sb-sma.png')
         plt.savefig(self.sbfluxsma_png)
@@ -786,6 +975,25 @@ class build_html_cutout():
 
         
         #self.build_html()
+
+    def _get_result(self, key, default=np.nan):
+        if getattr(self.cutout, "results", None) is None:
+            return default
+        try:
+            return self.cutout.results[key]
+        except Exception:
+            return default
+
+    def _fmt_result(self, key, fmt="{:.2f}", default="--"):
+        val = self._get_result(key, np.nan)
+        try:
+            if np.isfinite(val):
+                return fmt.format(val)
+        except Exception:
+            if isinstance(val, str) and len(val) > 0:
+                return val
+        return default
+    
     def build_html(self):
         print("building html ",self.html)
         self.write_header()
@@ -794,6 +1002,7 @@ class build_html_cutout():
         # can remove once we are done with masks
 
         self.write_image_stats()
+        self.write_pipeline_status()
         #self.write_galfit_images()        
         if self.cutout.legacy_flag:
             self.write_legacy_images()
@@ -806,10 +1015,10 @@ class build_html_cutout():
         if self.cutout.galimage is not None:
             self.write_galfit_images()
             self.write_galfit_table()
-        try:
-            self.write_phot_profiles()
-        except AttributeError:
-            pass
+        #try:
+        self.write_phot_profiles()
+        #except AttributeError:
+        #    pass
         self.write_mag_table()
         self.write_morph_table()
         self.write_statmorph_table()        
@@ -967,7 +1176,8 @@ class build_html_cutout():
         #images = [self.cutout.pngimages['r'],self.cutout.pngimages['ha'],self.cutout.cs_png1,self.cutout.csgr_png1,self.cutout.csgrauto_png1]
 
         # removing r-band
-        images = [self.cutout.pngimages['ha'],self.cutout.cs_png1,self.cutout.csgr_png1,self.cutout.csgrauto_png1]
+        #images = [self.cutout.pngimages['ha'],self.cutout.cs_png1,self.cutout.csgr_png1,self.cutout.csgrauto_png1]
+        images = [self.cutout.pngimages['r'],self.cutout.pngimages['ha'],self.cutout.cs_png1]#,self.cutout.csgr_png1,self.cutout.csgrauto_png1]        
         # just changing order to see if halpha image is still the biggest in the table, re issue #15
         # the second was still the biggest
         # so what if we also change the label
@@ -975,10 +1185,12 @@ class build_html_cutout():
         #images = [self.cutout.pngimages['ha'],self.cutout.pngimages['r'],self.cutout.cs_png1,self.cutout.cs_png2]        
         images = [os.path.basename(i) for i in images]
 
-        #labels = ['R-band Image','H&alpha;+Cont','CS, stretch 1','CS, stretch 2']
+        labels = ['R-band Image','H&alpha;+Cont','CS-ZP']#,'CS, stretch 2']
 
         #labels = ['R-band Image','H&alpha;+Cont','CS from ZP ratio','CS from ZP and g-r cor',f'CS g-r auto scale={self.cutout.conscale_auto:.2f}']
-        labels = ['H&alpha;+Cont','CS from ZP ratio','CS from ZP and g-r cor',f'CS g-r auto scale={self.cutout.conscale_auto:.2f}']        
+
+        #labels = ['H&alpha;+Cont','CS from ZP ratio','CS from ZP and g-r cor',f'CS g-r auto scale={self.cutout.conscale_auto:.2f}']
+        
         #labels = ['Halpha+Cont','R','CS, stretch 1','CS, stretch 2']        
         write_table(self.html,images=images,labels=labels)
 
@@ -1059,9 +1271,11 @@ class build_html_cutout():
 
     def write_phot_profiles(self):
         ''' photometry table with galfit and photutil results '''
+        
         self.html.write('<h2>Elliptical Photometry</h2>\n')
-        self.html.write('<p>using galfit and photutil geometry</p>\n')                        
+        #self.html.write('<p>using galfit and photutil geometry</p>\n')                        
         images = [self.cutout.efluxsma_png,self.cutout.emagsma_png,self.cutout.sbfluxsma_png,self.cutout.sbmagsma_png]
+        print("DEBUG: in write_phot_profiles: ",images)
         images = [os.path.basename(i) for i in images]
         labels = ['Enclosed Flux','Enclosed Magnitude','Surface Brightness','Surface Brightness']
         write_table(self.html,images=images,labels=labels)

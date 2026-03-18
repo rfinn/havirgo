@@ -62,38 +62,40 @@ residual_stretch = LinearStretch(slope=0.5, intercept=0.5) + SinhStretch() + \
 ####  FUNCTIONS
 ###########################################################
 
-def display_image(image,percentile1=.5,percentile2=99.5,stretch='asinh',mask=None,sigclip=True):
-    lowrange=False
-    # use inner 80% of image
-    xdim,ydim = image.shape
-    xmin = int(.1*xdim)
-    xmax = int(.9*xdim)    
-    ymin = int(.1*ydim)
-    ymax = int(.9*ydim)
-    if mask is not None:
-        imdata = np.ma.array(image,mask=mask)
+# def display_image(image,percentile1=.5,percentile2=99.5,stretch='asinh',mask=None,sigclip=True):
+#     lowrange=False
+#     # use inner 80% of image
+#     xdim,ydim = image.shape
+#     xmin = int(.1*xdim)
+#     xmax = int(.9*xdim)    
+#     ymin = int(.1*ydim)
+#     ymax = int(.9*ydim)
+#     if mask is not None:
+#         imdata = np.ma.array(image,mask=mask)
         
-    else:
-        imdata = image
-    v1 = scoreatpercentile(imdata,percentile1)    
-    v2 = scoreatpercentile(imdata,percentile2)
+#     else:
+#         imdata = image
+#     v1 = scoreatpercentile(imdata,percentile1)    
+#     v2 = scoreatpercentile(imdata,percentile2)
     
-    if mask is not None:
-        mask = mask[xmin:xmax,ymin:ymax]
+#     if mask is not None:
+#         mask = mask[xmin:xmax,ymin:ymax]
 
-    if sigclip:
-        clipped_data = sigma_clip(image[xmin:xmax,ymin:ymax],sigma_lower=1.5,sigma_upper=1.5)#,grow=3)
-    else:
-        clipped_data = image[xmin:xmax,ymin:ymax]
+#     if sigclip:
+#         clipped_data = sigma_clip(image[xmin:xmax,ymin:ymax],sigma_lower=1.5,sigma_upper=1.5)#,grow=3)
+#     else:
+#         clipped_data = image[xmin:xmax,ymin:ymax]
 
-    if mask is not None:
-        norm = simple_norm(clipped_data[mask], stretch=stretch,max_percent=percentile2)
-    else:
-        norm = simple_norm(clipped_data, stretch=stretch,max_percent=percentile2)
+#     if mask is not None:
+#         norm = simple_norm(clipped_data[mask], stretch=stretch,max_percent=percentile2)
+#     else:
+#         norm = simple_norm(clipped_data, stretch=stretch,max_percent=percentile2)
 
-    plt.imshow(image, norm=norm,cmap='gray_r',origin='lower',vmin=v1,vmax=v2)
+#     plt.imshow(image, norm=norm,cmap='gray_r',origin='lower',vmin=v1,vmax=v2)
     
 
+
+    
 def make_png(fitsimage,outname):
     imdata,imheader = fits.getdata(fitsimage,header=True)
     fig = plt.figure(figsize=(6,6))
