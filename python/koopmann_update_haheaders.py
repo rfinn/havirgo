@@ -250,23 +250,38 @@ def get_filters(galname):
             R and H-alpha filters
         """
 
+    galname = galname.replace(' ', '')
+
     foundMatch = False
     filter_R = []
     filter_Ha = []
 
+    def extract_names(line):
+        clean_line = line.replace('/', ' ')
+        tokens = clean_line.split()
+
+        names = []
+        i = 0
+        while i < len(tokens) - 1:
+            if tokens[i] in ['NGC', 'IC', 'UGC']:
+                names.append(tokens[i] + tokens[i + 1])
+                i += 2
+            else:
+                i += 1
+        return names
+
     with open(os.path.join(tabledir, 'KKY01-table3.txt'), 'r') as f:
         for line in f:
             if line.startswith(('NGC', 'IC', 'UGC')):
-                clean_line = line.replace('/', ' ').split()
 
-                names = []
-                for i in range(len(clean_line) - 1):
-                    if clean_line[i] in ['NGC', 'IC', 'UGC']:
-                        names.append(clean_line[i] + clean_line[i + 1])
+                names = extract_names(line)
 
                 if galname in names:
                     t = line.split()
                     i = 6
+
+                    if '/' in t[i]:
+                        i += 1
 
                     r_parts = [t[i]]
                     i += 1
@@ -280,7 +295,7 @@ def get_filters(galname):
                     if i < len(t) and t[i].isdigit():
                         ha_parts.append(t[i])
                         i += 1
-                        col_Ha = ''.join(ha_parts)
+                    col_Ha = ''.join(ha_parts)
 
                     filter_R = col_R.split(', ')
                     filter_Ha = [col_Ha]
@@ -292,16 +307,15 @@ def get_filters(galname):
         with open(os.path.join(tabledir, 'KK06-table3.txt'), 'r') as f:
             for line in f:
                 if line.startswith(('NGC', 'IC', 'UGC')):
-                    clean_line = line.replace('/', ' ').split()
 
-                    names = []
-                    for i in range(len(clean_line) - 1):
-                        if clean_line[i] in ['NGC', 'IC', 'UGC']:
-                            names.append(clean_line[i] + clean_line[i + 1])
+                    names = extract_names(line)
 
                     if galname in names:
                         t = line.split()
                         i = 6
+
+                        if '/' in t[i]:
+                            i += 1
 
                         r_parts = [t[i]]
                         i += 1
@@ -315,7 +329,7 @@ def get_filters(galname):
                         if i < len(t) and t[i].isdigit():
                             ha_parts.append(t[i])
                             i += 1
-                            col_Ha = ''.join(ha_parts)
+                        col_Ha = ''.join(ha_parts)
 
                         filter_R = col_R.split(', ')
                         filter_Ha = [col_Ha]
