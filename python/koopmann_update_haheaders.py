@@ -241,10 +241,89 @@ def get_pixel_scale(instrument):
     return pixelScale
 
 def get_filters(galname):
-    """ match galaxy to its corresponding r and halpha filter """
-    # TODO: read in tables from KKY01 and KK06 and match halpha and r filter, or create a dictionary
-    
-    pass
+    """
+        INPUT:
+            galname: e.g. NGC4178, IC3392
+            (does not work for galaxies with multiple names and multiple observations)
+
+        RETURN:
+            R and H-alpha filters
+        """
+
+    foundMatch = False
+    filter_R = []
+    filter_Ha = []
+
+    with open(os.path.join(tabledir, 'KKY01-table3.txt'), 'r') as f:
+        for line in f:
+            if line.startswith(('NGC', 'IC', 'UGC')):
+                clean_line = line.replace('/', ' ').split()
+
+                names = []
+                for i in range(len(clean_line) - 1):
+                    if clean_line[i] in ['NGC', 'IC', 'UGC']:
+                        names.append(clean_line[i] + clean_line[i + 1])
+
+                if galname in names:
+                    t = line.split()
+                    i = 6
+
+                    r_parts = [t[i]]
+                    i += 1
+                    while r_parts[-1].endswith(','):
+                        r_parts.append(t[i])
+                        i += 1
+                    col_R = ' '.join(r_parts)
+
+                    ha_parts = [t[i]]
+                    i += 1
+                    if i < len(t) and t[i].isdigit():
+                        ha_parts.append(t[i])
+                        i += 1
+                        col_Ha = ''.join(ha_parts)
+
+                    filter_R = col_R.split(', ')
+                    filter_Ha = [col_Ha]
+
+                    foundMatch = True
+                    break
+
+    if not foundMatch:
+        with open(os.path.join(tabledir, 'KK06-table3.txt'), 'r') as f:
+            for line in f:
+                if line.startswith(('NGC', 'IC', 'UGC')):
+                    clean_line = line.replace('/', ' ').split()
+
+                    names = []
+                    for i in range(len(clean_line) - 1):
+                        if clean_line[i] in ['NGC', 'IC', 'UGC']:
+                            names.append(clean_line[i] + clean_line[i + 1])
+
+                    if galname in names:
+                        t = line.split()
+                        i = 6
+
+                        r_parts = [t[i]]
+                        i += 1
+                        while r_parts[-1].endswith(','):
+                            r_parts.append(t[i])
+                            i += 1
+                        col_R = ' '.join(r_parts)
+
+                        ha_parts = [t[i]]
+                        i += 1
+                        if i < len(t) and t[i].isdigit():
+                            ha_parts.append(t[i])
+                            i += 1
+                            col_Ha = ''.join(ha_parts)
+
+                        filter_R = col_R.split(', ')
+                        filter_Ha = [col_Ha]
+
+                        foundMatch = True
+                        break
+
+    return filter_R, filter_Ha
 
 
 
@@ -371,6 +450,11 @@ if __name__ == '__main__':
 
                     # add instrument
                     hdu[0].header.set('INSTRUME', instrument)
+
+                    # add filter type
+                    hdu[0].header.set('R Filters',filter_R)
+                    hdu[0].header.set('Ha Filters', filter_Ha)
+
 
                     # add filter
                     if 'ha' in f:
