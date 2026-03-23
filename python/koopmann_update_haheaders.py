@@ -339,7 +339,7 @@ def get_filters(galname):
 
     return filter_R, filter_Ha
 
-
+#possibly combine with get_filter_props to access table 5
 
 def get_filter_props(filter):
     """ get filter center and width  """
