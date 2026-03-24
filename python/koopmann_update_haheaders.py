@@ -240,15 +240,15 @@ def get_pixel_scale(instrument):
     
     return pixelScale
 
+
 def get_filters(galname):
     """
-        INPUT:
-            galname: e.g. NGC4178, IC3392
-            (does not work for galaxies with multiple observations)
+    INPUT:
+        galname: e.g. NGC4178, IC3392
 
-        RETURN:
-            R and H-alpha filters
-        """
+    RETURN:
+        filter_R, filter_Ha
+    """
 
     galname = galname.replace(' ', '')
 
@@ -271,7 +271,81 @@ def get_filters(galname):
         return names
 
     with open(os.path.join(tabledir, 'KKY01-table3.txt'), 'r') as f:
-        for line in f:
+        lines = f.readlines()
+
+    for idx, line in enumerate(lines):
+        if line.startswith(('NGC', 'IC', 'UGC')):
+
+            names = extract_names(line)
+
+            if galname in names:
+                t = line.split()
+                i = 6
+
+                if '/' in t[i]:
+                    i += 1
+
+                r_parts = [t[i]]
+                i += 1
+                while r_parts[-1].endswith(','):
+                    r_parts.append(t[i])
+                    i += 1
+                col_R = ' '.join(r_parts)
+
+                ha_parts = [t[i]]
+                i += 1
+                if i < len(t) and t[i].isdigit():
+                    ha_parts.append(t[i])
+                    i += 1
+                col_Ha = ''.join(ha_parts)
+
+                filter_R = col_R.split(', ')
+                filter_Ha = [col_Ha]
+
+                # handle continuation row (nan galaxy row)
+                if idx + 1 < len(lines):
+                    next_line = lines[idx + 1]
+
+                    if not next_line.startswith(('NGC', 'IC', 'UGC')):
+
+                        # only override if Ha is missing in row 1
+                        if '\\ldots' in col_Ha or 'ldots' in col_Ha:
+                            t2 = next_line.split()
+
+                            i2 = 4
+                            if i2 < len(t2) and '/' in t2[i2]:
+                                i2 += 1
+
+                            # extract additional R filters
+                            r_parts2 = [t2[i2]]
+                            i2 += 1
+                            while i2 < len(t2) and r_parts2[-1].endswith(','):
+                                r_parts2.append(t2[i2])
+                                i2 += 1
+                            col_R2 = ' '.join(r_parts2)
+
+                            # extract Ha from row 2
+                            if i2 < len(t2):
+                                ha_parts2 = [t2[i2]]
+                                i2 += 1
+                                if i2 < len(t2) and t2[i2].isdigit():
+                                    ha_parts2.append(t2[i2])
+                                col_Ha2 = ''.join(ha_parts2)
+
+                                # merging
+                                filter_R.extend(col_R2.split(', '))
+                                filter_Ha = [col_Ha2]
+
+                                filter_R = [r for r in filter_R if r != '\\ldots']
+
+                foundMatch = True
+                break
+
+    if not foundMatch:
+        with open(os.path.join(tabledir, 'KK06-table3.txt'), 'r') as f:
+            lines = f.readlines()
+
+        for idx, line in enumerate(lines):
             if line.startswith(('NGC', 'IC', 'UGC')):
 
                 names = extract_names(line)
@@ -300,42 +374,40 @@ def get_filters(galname):
                     filter_R = col_R.split(', ')
                     filter_Ha = [col_Ha]
 
+                    # handle continuation row (nan galaxy row)
+                    if idx + 1 < len(lines):
+                        next_line = lines[idx + 1]
+
+                        if not next_line.startswith(('NGC', 'IC', 'UGC')):
+
+                            if '\\ldots' in col_Ha or 'ldots' in col_Ha:
+                                t2 = next_line.split()
+
+                                i2 = 4
+                                if i2 < len(t2) and '/' in t2[i2]:
+                                    i2 += 1
+
+                                r_parts2 = [t2[i2]]
+                                i2 += 1
+                                while i2 < len(t2) and r_parts2[-1].endswith(','):
+                                    r_parts2.append(t2[i2])
+                                    i2 += 1
+                                col_R2 = ' '.join(r_parts2)
+
+                                if i2 < len(t2):
+                                    ha_parts2 = [t2[i2]]
+                                    i2 += 1
+                                    if i2 < len(t2) and t2[i2].isdigit():
+                                        ha_parts2.append(t2[i2])
+                                    col_Ha2 = ''.join(ha_parts2)
+
+                                    filter_R.extend(col_R2.split(', '))
+                                    filter_Ha = [col_Ha2]
+
+                                    filter_R = [r for r in filter_R if r != '\\ldots']
+
                     foundMatch = True
                     break
-
-    if not foundMatch:
-        with open(os.path.join(tabledir, 'KK06-table3.txt'), 'r') as f:
-            for line in f:
-                if line.startswith(('NGC', 'IC', 'UGC')):
-
-                    names = extract_names(line)
-
-                    if galname in names:
-                        t = line.split()
-                        i = 6
-
-                        if '/' in t[i]:
-                            i += 1
-
-                        r_parts = [t[i]]
-                        i += 1
-                        while r_parts[-1].endswith(','):
-                            r_parts.append(t[i])
-                            i += 1
-                        col_R = ' '.join(r_parts)
-
-                        ha_parts = [t[i]]
-                        i += 1
-                        if i < len(t) and t[i].isdigit():
-                            ha_parts.append(t[i])
-                            i += 1
-                        col_Ha = ''.join(ha_parts)
-
-                        filter_R = col_R.split(', ')
-                        filter_Ha = [col_Ha]
-
-                        foundMatch = True
-                        break
 
     return filter_R, filter_Ha
 
