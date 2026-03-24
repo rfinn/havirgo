@@ -576,12 +576,12 @@ def get_kpc_per_arcsec(vr):
     
     from astropy.cosmology import WMAP9 as cosmo
     # get Mpc/radians
-    add = cosmo.angular_diameter_distance(z)
+    dA = cosmo.angular_diameter_distance(z)
 
     # convert to kpc/arcsec
-    add_kpc_arcsec = add.value*1000*np.pi/(180*3600)
+    dA_kpc_arcsec = dA.value*1000*np.pi/(180*3600)
     
-    return add_kpc_arcsec
+    return dA_kpc_arcsec
 
 def get_kpc_per_pixel(imwcs,vr):
     """
@@ -801,6 +801,7 @@ def plot_CO_image(ax,COfilename,mask=None,xmin=None,xmax=None,ymin=None,ymax=Non
     ax.imshow(codata,transform=ax.get_transform(CO_WCS))
     
 
+
 def plot_INT_footprint(center_ra,center_dec,plotguide=False):
     #using full detector sizes for now because 
     detector_dra = 4100.*0.33/3600.*1.05 # 2154 pixels * 0.33"/pix, /3600 to get deg
@@ -837,6 +838,24 @@ def plot_INT_footprint(center_ra,center_dec,plotguide=False):
         # this chip is rotated 90 deg, so detecter_dra and detector_ddec are interchanged
         rect= plt.Rectangle((center_ra+offset_ra,center_dec+offset_dec), -7./60., 7./60,fill=False, color='k')
         plt.gca().add_artist(rect)
+
+def plot_noema_footprint(ax,COfilename, r=22.):
+    """ add circle to axis  """
+    header = fits.getheader(COfilename)
+    
+    # get RA and DEC from header
+    ra = header['CRVAL1']
+    dec = header['CRVAL2']
+
+    # convert radius to deg
+    rad = r/3600.
+
+    # for testing
+    plt.plot(ra,dec,'cX')
+    # make a circle
+    c = plt.Circle((ra,dec),rad)
+    # add to axis
+    ax.add_patch(c)
     
 def plot_sfr_contours(dirname,ax,legwcs=None,xmin=None,xmax=None,ymin=None,ymax=None,levels=None):
     from astropy import convolution
@@ -2077,7 +2096,7 @@ def get_CO_footprint(ax, COfilename):
 def plot_mstar_sfr_CO(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xticks=True,figsize=[16,6],\
                             cbfrac=.08,cbaspect=20,clevels=[4],contourFlag=True,rmax=None,\
                             logMstar=None,cmap='magma_r',markGroupCenter=False,COcolor='white',COlevels=None,\
-                          noHI=False,alt_title=None,vr=None, sfr_limits=None):
+                          noHI=False,alt_title=None,vr=None, sfr_limits=None,noema=False):
     """
     same plot as mstar_sfr, but swap out ssfr for radial profiles in the 4th panel
 
@@ -2327,6 +2346,32 @@ def plot_mstar_sfr_CO(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xticks=Tru
     #ax1.set_xlabel("RA",fontsize=16)
     #ax1.set_ylabel("DEC",fontsize=16)    
 
+    # add noema primary beam of 22" circle
+    if noema:
+        #plot_noema_footprint(ax1, COfilename, r=22.)
+
+        from astropy.visualization.wcsaxes import SphericalCircle
+        from astropy.coordinates import SkyCoord
+        import astropy.units as u
+
+
+        # center of image from WCS
+        ny, nx = np.shape(jpeg_data)[0], np.shape(jpeg_data)[1]
+        xc, yc = nx/2, ny/2
+        ra_c, dec_c = legwcs.wcs_pix2world(xc, yc, 0)
+        center = SkyCoord(ra_c*u.deg, dec_c*u.deg, frame='icrs')
+
+        # 22 arcsec circle
+        circ = SphericalCircle(
+            center,
+            22*u.arcsec,
+            edgecolor='cyan',
+            facecolor='none',
+            linewidth=2,
+            transform=ax1.get_transform('world')
+            )
+        ax1.add_patch(circ)
+    
     if xmin is not None:
         # plot the legacy image in panel 1
         xcoords = np.array([xmin,xmax])
@@ -3003,7 +3048,14 @@ def get_depletion_map(dirname,vr=None, H0=74., cmap='magma_r', verbose=False, sf
     # signal scales with scale_factor, but rms scales as sqrt(scale_factor)
     # so snr scales as sqrt(scale_factor)
     co_rms_Msun_pixel = (co_rms_Msun_beam ) / np.sqrt(scale_factor) # Msun/pixel
-    
+    print(f"CO rms Msun/pixel = {co_rms_Msun_pixel:.3e}")
+    if vr is not None:
+        # scale data to convert to flux/kpc^2
+        kpc_per_pixel = get_kpc_per_pixel(co_imwcs,vr)
+        print(f"CO rms Msun/kpc^2 = {co_rms_Msun_pixel/kpc_per_pixel**2:.3e}, kpc/pixel={kpc_per_pixel:.2e}, vr={vr:.1f}")
+
+        print()
+        
     ##################################################
     ## SFR Image
     ##################################################
@@ -3140,7 +3192,7 @@ def get_depletion_map(dirname,vr=None, H0=74., cmap='magma_r', verbose=False, sf
 
     y1 = int(ycenter - (ymax/2)*yzoom)
     y2 = int(ycenter + (ymax/2)*yzoom)
-    print(f"Testing: xmax,ymax={xmax},{ymax}, x1,x2,y1,y2={x1,x2,y1,y2}")
+    #print(f"Testing: xmax,ymax={xmax},{ymax}, x1,x2,y1,y2={x1,x2,y1,y2}")
 
 
     ################################################
@@ -3161,6 +3213,13 @@ def get_depletion_map(dirname,vr=None, H0=74., cmap='magma_r', verbose=False, sf
     #halpha_nan_flag = sfr_dep_dat < 3*halpha_rms[vfid] # halpha_rms measured from sfr image
     halpha_nan_flag = sfr_dep_dat < NSIGMA*halpha_rms[vfid] # halpha_rms measured from sfr image
 
+    print(f"SFR rms Msun/yr/pixel = {halpha_rms[vfid]:.3e}")
+    if vr is not None:
+        # scale data to convert to flux/kpc^2
+        sfr_wcs = WCS(sfr_header)
+        kpc_per_pixel = get_kpc_per_pixel(sfr_wcs,vr)
+        print(f"SFR rms Msun/yr/kpc^2 = {halpha_rms[vfid]/kpc_per_pixel**2:.3e}")
+        print()
 
     
     #if verbose:
@@ -3217,14 +3276,30 @@ def get_depletion_map(dirname,vr=None, H0=74., cmap='magma_r', verbose=False, sf
         tdep_limits_image[tdep_lower_flag] = cdat[tdep_lower_flag]/ (3 * halpha_rms[vfid] * extinction_correction)    
 
     else:
-        pass
         tdep_limits_image[tdep_upper_flag] = (NSIGMA * co_rms_Msun_pixel) / (sfr_dep_dat[tdep_upper_flag] * extinction_correction)
+
+        upper_limit = tdep_limits_image[tdep_upper_flag]
+
+        if upper_limit.size:
+            print(f"tau_dep upper limits: min={upper_limit.min():.2e}, max={upper_limit.max():.2e}, med={np.nanmedian(upper_limit):.2e}")
+        else:
+            print("tau_dep upper limits: no upper-limit pixels")        
         #tdep_limits_image[tdep_upper_flag] = (co_rms_Msun_pixel) / (sfr_dep_dat[tdep_upper_flag] * extinction_correction)        
         ## we detect CO but not SFR
-        tdep_limits_image[tdep_lower_flag] = cdat[tdep_lower_flag]/ (3 * halpha_rms[vfid] * extinction_correction)    
+        #tdep_limits_image[tdep_lower_flag] = cdat[tdep_lower_flag]/ (3 * halpha_rms[vfid] * extinction_correction)    
+        # print out min of lower limits
+        #lower_limit = (cdat[tdep_lower_flag]/ (3 * halpha_rms[vfid] * extinction_correction)).flatten()
+        #print(f"tau_dep lower limits: min={np.min(lower_limit)}, max={np.min(lower_limit)}")
 
+        tdep_limits_image[tdep_lower_flag] = cdat[tdep_lower_flag] / (3 * halpha_rms[vfid] * extinction_correction)
 
+        lower_limit = tdep_limits_image[tdep_lower_flag]
 
+        if lower_limit.size:
+            print(f"tau_dep lower limits: min={lower_limit.min():.2e}, max={lower_limit.max():.2e}, med={np.nanmedian(lower_limit):.2e}")
+        else:
+            print("tau_dep lower limits: no lower-limit pixels")
+    
     # combine limits with depletion map
     limit_flag = tdep_lower_flag | tdep_upper_flag
     depletion_with_limits = np.zeros_like(depletion)
@@ -3267,7 +3342,7 @@ def get_depletion_map(dirname,vr=None, H0=74., cmap='magma_r', verbose=False, sf
 
     size_ratio = 486/ymax
     size_ratio = 1
-    print(f"Testing: size_ratio={size_ratio:.2f}", codepletion_figsize['VFID5842'][1],myfigsize[1])
+    #print(f"Testing: size_ratio={size_ratio:.2f}", codepletion_figsize['VFID5842'][1],myfigsize[1])
 
     #################################################
     ## PANEL 1 - CO

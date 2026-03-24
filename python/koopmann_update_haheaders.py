@@ -189,7 +189,11 @@ def get_fwhm(galname):
                         names.append(clean_line[i] + clean_line[i + 1])
                 if galname in names:
                     t = line.split()
-                    fwhm = float(t[-5])
+                    try:
+                        fwhm = float(t[-5])
+                    except ValueError:
+                        print(f"WARNING: could not determine FWHM for {galname}. Setting fwhm=2")
+                        fwhm = 2
                     foundMatch = True
                     break
 
@@ -201,7 +205,11 @@ def get_fwhm(galname):
                     t = line.split()
                     testname = t[0] + t[1]
                     if testname == galname:
-                        fwhm = float(t[-5])
+                        try:
+                            fwhm = float(t[-5])
+                        except ValueError:
+                            print(f"WARNING: could not determine FWHM for {galname}. Setting fwhm=2")
+                            fwhm = 2
                         foundMatch = True
                         break
 
@@ -315,7 +323,7 @@ if __name__ == '__main__':
             elif d.startswith('ic'):
                 galname = 'IC'+d[2:]
             elif d.startswith('u'):
-                galname = 'UGC'+d[3:]
+                galname = 'UGC'+d[1:]
             elif d.startswith('i'): # one duplicate observation in isolated sample has "i" instead of "ic"
                 galname = 'IC'+d[1:]
 
