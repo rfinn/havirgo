@@ -244,7 +244,7 @@ def get_filters(galname):
     """
         INPUT:
             galname: e.g. NGC4178, IC3392
-            (does not work for galaxies with multiple names and multiple observations)
+            (does not work for galaxies with multiple observations)
 
         RETURN:
             R and H-alpha filters
@@ -339,54 +339,79 @@ def get_filters(galname):
 
     return filter_R, filter_Ha
 
-#possibly combine with get_filter_props to access table 5
 
-def get_filter_props(filter):
-    """ get filter center and width  """
-    filter_wave_dwave = {'Halpha1':[6563,80],\
-                             'Halpha2':[6608,76],\
-                             'Halpha3':[6573,68],\
-                             'Halpha4':[6618,74],\
-                             'Halpha5':[6563,78],\
-                             'Halpha6':[6606,75],\
-                             'R':[6425,1540],\
-                             'nmR':[6470,1110],\
-                             'sR':[7024,380]
-                             }
-    return filter_wave_dwave[filter]
+def get_filter_props(galname=None, filter_name=None):
+    """Get filter central wavelength and width.
+
+    INPUT:
+        galname: e.g. NGC4178, IC3392
+        OR
+        filter_name: e.g. 'H\\alpha1', 'R'
+
+    RETURN:
+        If galname is provided:
+            filter_R_props: list of [center, width] for R filters
+            filter_Ha_props: list of [center, width] for H-alpha filters
+        If filter_name is provided:
+            [center, width] for that filter
+
+        Units are in Angstroms.
+    """
+    filter_wave_dwave = {
+        'H\\alpha1':[6563,80],
+        'H\\alpha2':[6608,76],
+        'H\\alpha3':[6573,68],
+        'H\\alpha4':[6618,74],
+        'H\\alpha5':[6563,78],
+        'H\\alpha6':[6606,75],
+        'R':[6425,1540],
+        'nmR':[6470,1110],
+        'sR':[7024,380]
+    }
+
+    if galname:
+        filter_R, filter_Ha = get_filters(galname)
+        filter_R_props = [filter_wave_dwave[f] for f in filter_R]
+        filter_Ha_props = [filter_wave_dwave[f] for f in filter_Ha]
+        return filter_R_props, filter_Ha_props
+
+    elif filter_name:
+        return filter_wave_dwave[filter_name]
+
+    else:
+        raise ValueError("You must provide either galname or filter_name")
 
 def get_zp(galname):
-    """  get PHOTZP based on flux ZP and filter width """
+    """Get PHOTZP based on flux ZP and filter width for all R and H-alpha filters.
+
+    INPUT:
+        galname: e.g. NGC4178, IC3392
+
+    RETURN:
+        RZPs: list of ZPs for R filters
+        HZPs: list of ZPs for H-alpha filters
+
+        Units are in erg/s/cm^2
+    """
     # CONSTANTS
-    c = 3e10 # speed of light in cm/s
-    f0 = 1e-18 # flux zp in erg/s/cm^2
+    c = 3e10       # speed of light in cm/s
+    f0 = 1e-18     # flux zp in erg/s/cm^2
 
-    ##################################################
-    # get filters
-    ##################################################    
-    rfilter, hafilter = get_filters(galname)
+    filter_R_props, filter_Ha_props = get_filter_props(galname)
 
-    ##################################################
-    # get halpha ZP
-    ##################################################    
-    # get filter width
-    hcenter_A, hwidth_A = get_filter_props(hafilter)
-    hcenter_cm = hcenter_A * 1e-8
-    hwidth_cm = hwidth_A * 1e-8    
-    # calc ZP
-    HZP = f0 * c * hwidth_cm/hcenter_cm**2
+    RZPs = []
+    for rcenter_A, rwidth_A in filter_R_props:
+        rcenter_cm = rcenter_A * 1e-8
+        rwidth_cm = rwidth_A * 1e-8
+        RZPs.append(f0 * c * rwidth_cm / rcenter_cm**2)
 
-    ##################################################
-    # get r-band ZP
-    ##################################################    
-    # get filter width
-    rcenter_A, rwidth_A = get_filter_props(rfilter)
-    rcenter_cm = rcenter_A * 1e-8
-    rwidth_cm = rwidth_A * 1e-8    
-    # calc ZP
-    RZP = f0 * c * rwidth_cm/rcenter_cm**2
+    HZPs = []
+    for hcenter_A, hwidth_A in filter_Ha_props:
+        hcenter_cm = hcenter_A * 1e-8
+        hwidth_cm = hwidth_A * 1e-8
+        HZPs.append(f0 * c * hwidth_cm / hcenter_cm**2)
 
-    return RZP, HZP
+    return RZPs, HZPs
 
     
 if __name__ == '__main__':
@@ -426,7 +451,12 @@ if __name__ == '__main__':
             if instrument is None:
                 print(f"WARNING: could not find instrument for {galname}, {d}")
                 sys.exit()
+
             fwhm = get_fwhm(galname)
+            rfilters, hafilters = get_filters(galname)
+            filter_r_props, filter_ha_props = get_filter_props(galname)
+            rzps, hzps = get_zp(galname)
+
             pixelScale = get_pixel_scale(instrument)
             pixelScaleDeg = float(pixelScale)/3600 # convert from arcsec/pix to deg/pix
 
@@ -465,20 +495,27 @@ if __name__ == '__main__':
                     # add instrument
                     hdu[0].header.set('INSTRUME', instrument)
 
-                    # add filter type
-                    hdu[0].header.set('R Filters',filter_R)
-                    hdu[0].header.set('Ha Filters', filter_Ha)
-
-
-                    # add filter
-                    if 'ha' in f:
-                        hdu[0].header.set('FILTER', 'Ha4')
-                    else:
-                        hdu[0].header.set('FILTER', 'R')
-
                     # add fwhm
                     hdu[0].header.set('FWHM', fwhm)
 
+                    #add filters
+                    hdu[0].header.set('R_Filters', ','.join(rfilters))
+                    hdu[0].header.set('Ha_Filters', ','.join(hafilters))
+
+
+                    if 'ha' in f.lower():
+                        filter_index = 0
+                        hdu[0].header.set('FILTER', hafilters[filter_index])
+                        hdu[0].header.set('FILT_WAVE', filter_ha_props[filter_index][0])  # central wavelength
+                        hdu[0].header.set('FILT_WID', filter_ha_props[filter_index][1])  # width
+                        hdu[0].header.set('PHOTZP', hzps[filter_index])  # zero point
+
+                    else:
+                        filter_index = 0
+                        hdu[0].header.set('FILTER', rfilters[filter_index])
+                        hdu[0].header.set('FILT_WAVE', filter_r_props[filter_index][0])
+                        hdu[0].header.set('FILT_WID', filter_r_props[filter_index][1])
+                        hdu[0].header.set('PHOTZP', rzps[filter_index])
 
                     # prepend an 'h' to image name and save
                     outfile = 'h'+f
