@@ -36,8 +36,12 @@ import os
 from astropy.io import fits
 import sys
 
+from pydantic_core.core_schema import filter_dict_schema
+from pygments.filters import get_filter_by_name
+
 homedir = os.getenv("HOME")
 tabledir = os.path.join(homedir,'research/Virgo/koopmann-images/paper-tables/')
+import numpy as np
 
 def get_coords(galname):
     """
@@ -248,60 +252,291 @@ def get_pixel_scale(instrument):
     
     return pixelScale
 
+
 def get_filters(galname):
-    """ match galaxy to its corresponding r and halpha filter """
-    # TODO: read in tables from KKY01 and KK06 and match halpha and r filter, or create a dictionary
-    
-    pass
+    """
+    INPUT:
+        galname: e.g. NGC4178, IC3392
+
+    RETURN:
+        filter_R, filter_Ha
+    """
+
+    galname = galname.replace(' ', '')
+
+    foundMatch = False
+    filter_R = []
+    filter_Ha = []
+
+    def extract_names(line):
+        clean_line = line.replace('/', ' ')
+        tokens = clean_line.split()
+
+        names = []
+        i = 0
+        while i < len(tokens) - 1:
+            if tokens[i] in ['NGC', 'IC', 'UGC']:
+                names.append(tokens[i] + tokens[i + 1])
+                i += 2
+            else:
+                i += 1
+        return names
+
+    with open(os.path.join(tabledir, 'KKY01-table3.txt'), 'r') as f:
+        lines = f.readlines()
+
+    for idx, line in enumerate(lines):
+        if line.startswith(('NGC', 'IC', 'UGC')):
+
+            names = extract_names(line)
+
+            if galname in names:
+                t = line.split()
+                i = 6
+
+                if '/' in t[i]:
+                    i += 1
+
+                r_parts = [t[i]]
+                i += 1
+                while r_parts[-1].endswith(','):
+                    r_parts.append(t[i])
+                    i += 1
+                col_R = ' '.join(r_parts)
+
+                ha_parts = [t[i]]
+                i += 1
+                if i < len(t) and t[i].isdigit():
+                    ha_parts.append(t[i])
+                    i += 1
+                col_Ha = ''.join(ha_parts)
+
+                filter_R = col_R.split(', ')
+                filter_Ha = [col_Ha]
+
+                # handle continuation row (nan galaxy row)
+                if idx + 1 < len(lines):
+                    next_line = lines[idx + 1]
+
+                    if not next_line.startswith(('NGC', 'IC', 'UGC')):
+
+                        # only override if Ha is missing in row 1
+                        if '\\ldots' in col_Ha or 'ldots' in col_Ha:
+                            t2 = next_line.split()
+
+                            i2 = 4
+                            if i2 < len(t2) and '/' in t2[i2]:
+                                i2 += 1
+
+                            # extract additional R filters
+                            r_parts2 = [t2[i2]]
+                            i2 += 1
+                            while i2 < len(t2) and r_parts2[-1].endswith(','):
+                                r_parts2.append(t2[i2])
+                                i2 += 1
+                            col_R2 = ' '.join(r_parts2)
+
+                            # extract Ha from row 2
+                            if i2 < len(t2):
+                                ha_parts2 = [t2[i2]]
+                                i2 += 1
+                                if i2 < len(t2) and t2[i2].isdigit():
+                                    ha_parts2.append(t2[i2])
+                                col_Ha2 = ''.join(ha_parts2)
+
+                                # merging
+                                filter_R.extend(col_R2.split(', '))
+                                filter_Ha = [col_Ha2]
+
+                                filter_R = [r for r in filter_R if r != '\\ldots']
+
+                foundMatch = True
+                break
+
+    if not foundMatch:
+        with open(os.path.join(tabledir, 'KK06-table3.txt'), 'r') as f:
+            lines = f.readlines()
+
+        for idx, line in enumerate(lines):
+            if line.startswith(('NGC', 'IC', 'UGC')):
+
+                names = extract_names(line)
+
+                if galname in names:
+                    t = line.split()
+                    i = 6
+
+                    if '/' in t[i]:
+                        i += 1
+
+                    r_parts = [t[i]]
+                    i += 1
+                    while r_parts[-1].endswith(','):
+                        r_parts.append(t[i])
+                        i += 1
+                    col_R = ' '.join(r_parts)
+
+                    ha_parts = [t[i]]
+                    i += 1
+                    if i < len(t) and t[i].isdigit():
+                        ha_parts.append(t[i])
+                        i += 1
+                    col_Ha = ''.join(ha_parts)
+
+                    filter_R = col_R.split(', ')
+                    filter_Ha = [col_Ha]
+
+                    # handle continuation row (nan galaxy row)
+                    if idx + 1 < len(lines):
+                        next_line = lines[idx + 1]
+
+                        if not next_line.startswith(('NGC', 'IC', 'UGC')):
+
+                            if '\\ldots' in col_Ha or 'ldots' in col_Ha:
+                                t2 = next_line.split()
+
+                                i2 = 4
+                                if i2 < len(t2) and '/' in t2[i2]:
+                                    i2 += 1
+
+                                r_parts2 = [t2[i2]]
+                                i2 += 1
+                                while i2 < len(t2) and r_parts2[-1].endswith(','):
+                                    r_parts2.append(t2[i2])
+                                    i2 += 1
+                                col_R2 = ' '.join(r_parts2)
+
+                                if i2 < len(t2):
+                                    ha_parts2 = [t2[i2]]
+                                    i2 += 1
+                                    if i2 < len(t2) and t2[i2].isdigit():
+                                        ha_parts2.append(t2[i2])
+                                    col_Ha2 = ''.join(ha_parts2)
+
+                                    filter_R.extend(col_R2.split(', '))
+                                    filter_Ha = [col_Ha2]
+
+                                    filter_R = [r for r in filter_R if r != '\\ldots']
+
+                    foundMatch = True
+                    break
+
+    return filter_R, filter_Ha
 
 
+def get_filter_props(galname=None, filter_name=None):
+    """Get filter central wavelength and width.
 
-def get_filter_props(filter):
-    """ get filter center and width  """
-    filter_wave_dwave = {'Halpha1':[6563,80],\
-                             'Halpha2':[6608,76],\
-                             'Halpha3':[6573,68],\
-                             'Halpha4':[6618,74],\
-                             'Halpha5':[6563,78],\
-                             'Halpha6':[6606,75],\
-                             'R':[6425,1540],\
-                             'nmR':[6470,1110],\
-                             'sR':[7024,380]
-                             }
-    return filter_wave_dwave[filter]
+    INPUT:
+        galname: e.g. NGC4178, IC3392
+        OR
+        filter_name: e.g. 'H\\alpha1', 'R'
+
+    RETURN:
+        If galname is provided:
+            filter_R_props: list of [center, width] for R filters
+            filter_Ha_props: list of [center, width] for H-alpha filters
+        If filter_name is provided:
+            [center, width] for that filter
+
+        Units are in Angstroms.
+    """
+    filter_wave_dwave = {
+        'H\\alpha1':[6563,80],
+        'H\\alpha2':[6608,76],
+        'H\\alpha3':[6573,68],
+        'H\\alpha4':[6618,74],
+        'H\\alpha5':[6563,78],
+        'H\\alpha6':[6606,75],
+        'R':[6425,1540],
+        'nmR':[6470,1110],
+        'sR':[7024,380]
+    }
+
+    if galname:
+        filter_R, filter_Ha = get_filters(galname)
+        filter_R_props = [filter_wave_dwave[f] for f in filter_R]
+        filter_Ha_props = [filter_wave_dwave[f] for f in filter_Ha]
+        return filter_R_props, filter_Ha_props
+
+    elif filter_name:
+        return filter_wave_dwave[filter_name]
+
+    else:
+        raise ValueError("You must provide either galname or filter_name")
+
+def _pick_r_filter(filter_r_names):
+    ifilter = 0
+    if len(filter_r_names) > 1:
+        for i,rf in enumerate(filter_r_names):
+            print(rf)
+            if rf == 'R':
+                print("found match to R")
+                ifilter = i
+    else:
+        print("only found one filter")
+        ifilter = 0
+    return ifilter
 
 def get_zp(galname):
-    """  get PHOTZP based on flux ZP and filter width """
+    """Get PHOTZP based on flux ZP and filter width for all R and H-alpha filters.
+
+    INPUT:
+        galname: e.g. NGC4178, IC3392
+
+    RETURN:
+        RAB_ZPs: list of AB magnitude ZPs for R filters
+        HAB_ZPs: list of AB magnitude ZPs for H-alpha filters
+
+
+        Units are in erg/s/cm^2
+    """
     # CONSTANTS
-    c = 3e10 # speed of light in cm/s
-    f0 = 1e-18 # flux zp in erg/s/cm^2
+    c = 3e10       # speed of light in cm/s
+    f0 = 1e-18     # flux zp in erg/s/cm^2
+    ifilter = 0
+    filter_R_names, filter_ha_names = get_filters(galname)
+    filter_R_props, filter_ha_props = get_filter_props(galname)
 
-    ##################################################
-    # get filters
-    ##################################################    
-    rfilter, hafilter = get_filters(galname)
+    # choose the right R filter if there are more than one
+    ifilter = _pick_r_filter(filter_R_names)
+    filter_R_names = [filter_R_names[ifilter]]
+    filter_R_props = [filter_R_props[ifilter]]
 
-    ##################################################
-    # get halpha ZP
-    ##################################################    
-    # get filter width
-    hcenter_A, hwidth_A = get_filter_props(hafilter)
-    hcenter_cm = hcenter_A * 1e-8
-    hwidth_cm = hwidth_A * 1e-8    
-    # calc ZP
-    HZP = f0 * c * hwidth_cm/hcenter_cm**2
+    def calc_zp(cwave_cm, dwave_cm):
+        """calculate AB ZP from center wave and width"""
+        c = 3.e10 # speed of light in cm/s
+        dnu = c*dwave_cm/cwave_cm**2 # freq width in Hz
+        fZP_Jy = f0 / dnu / 1.e-23 # convert erg/s/cm^2 to Jy
+        # convert to AB mag, flux_zero = 3631 Jy
+        # use mag difference formula: m2 - m1 = 2.5*log10(f1/f2)
+        ab_zp = 2.5 * np.log10(3631./fZP_Jy)
+        return ab_zp
 
-    ##################################################
-    # get r-band ZP
-    ##################################################    
-    # get filter width
-    rcenter_A, rwidth_A = get_filter_props(rfilter)
-    rcenter_cm = rcenter_A * 1e-8
-    rwidth_cm = rwidth_A * 1e-8    
-    # calc ZP
-    RZP = f0 * c * rwidth_cm/rcenter_cm**2
+    RZPs = []
+    for rcenter_A, rwidth_A in filter_R_props:
+        rcenter_cm = rcenter_A * 1e-8 # convert A to cm
+        rwidth_cm = rwidth_A * 1e-8 # convert A to cm
 
-    return RZP, HZP
+        RZPs.append(calc_zp(rcenter_cm,rwidth_cm))
+
+    HZPs = []
+    for hcenter_A, hwidth_A in filter_ha_props:
+        hcenter_cm = hcenter_A * 1e-8
+        hwidth_cm = hwidth_A * 1e-8
+        HZPs.append(calc_zp(hcenter_cm,hwidth_cm))
+
+    image_props = {
+        "rfilter_name": filter_R_names[0],
+        "hfilter_name": filter_ha_names[0].replace("\\",""),
+        "rfilter_center_A": filter_R_props[0][0],
+        "rfilter_width_A":filter_R_props[0][1],
+        "hfilter_center_A": filter_ha_props[0][0],
+        "hfilter_width_A": filter_ha_props[0][1],
+        "rfilter_ZP": np.round(float(RZPs[0]),3),
+        "hfilter_ZP": np.round(HZPs[0],3)
+    }
+    return image_props
 
     
 if __name__ == '__main__':
@@ -341,7 +576,16 @@ if __name__ == '__main__':
             if instrument is None:
                 print(f"WARNING: could not find instrument for {galname}, {d}")
                 sys.exit()
+
             fwhm = get_fwhm(galname)
+            #rfilters, hafilters = get_filters(galname)
+            #filter_r_props, filter_ha_props = get_filter_props(galname)
+            image_dict = get_zp(galname)
+            print(f"DEBUG get_zp: {image_dict}")
+            #print(f"DEBUG: R ZP = {rzps}")
+            #print(f"DEBUG: H ZP = {hzps}")
+
+
             pixelScale = get_pixel_scale(instrument)
             pixelScaleDeg = float(pixelScale)/3600 # convert from arcsec/pix to deg/pix
 
@@ -352,6 +596,7 @@ if __name__ == '__main__':
                     continue
                 if os.path.isfile(f) & ('.fits' in f):
                     hdu = fits.open(f)
+
 
                     # get size of image (naxis1, naxis2)                
                     naxis1 = hdu[0].header['NAXIS1']
@@ -380,14 +625,25 @@ if __name__ == '__main__':
                     # add instrument
                     hdu[0].header.set('INSTRUME', instrument)
 
-                    # add filter
-                    if 'ha' in f:
-                        hdu[0].header.set('FILTER', 'Ha4')
-                    else:
-                        hdu[0].header.set('FILTER', 'R')
-
                     # add fwhm
-                    hdu[0].header.set('FWHM', fwhm)
+                    hdu[0].header.set('FWHM', fwhm,"FWHM in arcsec")
+
+                    #add filters
+                    #hdu[0].header.set('R_Filters', ','.join(rfilters))
+                    #hdu[0].header.set('Ha_Filters', ','.join(hafilters))
+
+
+                    if 'ha' in f.lower():
+                        hdu[0].header.set('FILTER', image_dict['hfilter_name'])
+                        hdu[0].header.set('FILTWCEN', image_dict['hfilter_center_A'],"filter center A")  # central wavelength
+                        hdu[0].header.set('FILTWID', image_dict['hfilter_width_A'],"filter width A")  # width
+                        hdu[0].header.set('PHOTZP', image_dict['hfilter_ZP'],"AB mag ZP")  # zero point
+
+                    else:
+                        hdu[0].header.set('FILTER', image_dict['rfilter_name'])
+                        hdu[0].header.set('FILTWCEN', image_dict['rfilter_center_A'],"filter center A")  # central wavelength
+                        hdu[0].header.set('FILTWID', image_dict['rfilter_width_A'],"filter width A")  # width
+                        hdu[0].header.set('PHOTZP', image_dict['rfilter_ZP'],"AB mag ZP")  # zero point
 
 
                     # prepend an 'h' to image name and save
