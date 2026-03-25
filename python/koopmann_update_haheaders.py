@@ -36,8 +36,12 @@ import os
 from astropy.io import fits
 import sys
 
+from pydantic_core.core_schema import filter_dict_schema
+from pygments.filters import get_filter_by_name
+
 homedir = os.getenv("HOME")
 tabledir = os.path.join(homedir,'research/Virgo/koopmann-images/paper-tables/')
+import numpy as np
 
 def get_coords(galname):
     """
@@ -453,6 +457,19 @@ def get_filter_props(galname=None, filter_name=None):
     else:
         raise ValueError("You must provide either galname or filter_name")
 
+def _pick_r_filter(filter_r_names):
+    ifilter = 0
+    if len(filter_r_names) > 1:
+        for i,rf in enumerate(filter_r_names):
+            print(rf)
+            if rf == 'R':
+                print("found match to R")
+                ifilter = i
+    else:
+        print("only found one filter")
+        ifilter = 0
+    return ifilter
+
 def get_zp(galname):
     """Get PHOTZP based on flux ZP and filter width for all R and H-alpha filters.
 
@@ -460,30 +477,58 @@ def get_zp(galname):
         galname: e.g. NGC4178, IC3392
 
     RETURN:
-        RZPs: list of ZPs for R filters
-        HZPs: list of ZPs for H-alpha filters
+        RAB_ZPs: list of AB magnitude ZPs for R filters
+        HAB_ZPs: list of AB magnitude ZPs for H-alpha filters
+
 
         Units are in erg/s/cm^2
     """
     # CONSTANTS
     c = 3e10       # speed of light in cm/s
     f0 = 1e-18     # flux zp in erg/s/cm^2
+    ifilter = 0
+    filter_R_names, filter_ha_names = get_filters(galname)
+    filter_R_props, filter_ha_props = get_filter_props(galname)
 
-    filter_R_props, filter_Ha_props = get_filter_props(galname)
+    # choose the right R filter if there are more than one
+    ifilter = _pick_r_filter(filter_R_names)
+    filter_R_names = [filter_R_names[ifilter]]
+    filter_R_props = [filter_R_props[ifilter]]
+
+    def calc_zp(cwave_cm, dwave_cm):
+        """calculate AB ZP from center wave and width"""
+        c = 3.e10 # speed of light in cm/s
+        dnu = c*dwave_cm/cwave_cm**2 # freq width in Hz
+        fZP_Jy = f0 / dnu / 1.e-23 # convert erg/s/cm^2 to Jy
+        # convert to AB mag, flux_zero = 3631 Jy
+        # use mag difference formula: m2 - m1 = 2.5*log10(f1/f2)
+        ab_zp = 2.5 * np.log10(3631./fZP_Jy)
+        return ab_zp
 
     RZPs = []
     for rcenter_A, rwidth_A in filter_R_props:
-        rcenter_cm = rcenter_A * 1e-8
-        rwidth_cm = rwidth_A * 1e-8
-        RZPs.append(f0 * c * rwidth_cm / rcenter_cm**2)
+        rcenter_cm = rcenter_A * 1e-8 # convert A to cm
+        rwidth_cm = rwidth_A * 1e-8 # convert A to cm
+
+        RZPs.append(calc_zp(rcenter_cm,rwidth_cm))
 
     HZPs = []
-    for hcenter_A, hwidth_A in filter_Ha_props:
+    for hcenter_A, hwidth_A in filter_ha_props:
         hcenter_cm = hcenter_A * 1e-8
         hwidth_cm = hwidth_A * 1e-8
-        HZPs.append(f0 * c * hwidth_cm / hcenter_cm**2)
+        HZPs.append(calc_zp(hcenter_cm,hwidth_cm))
 
-    return RZPs, HZPs
+    image_props = {
+        "rfilter_name": filter_R_names[0],
+        "hfilter_name": filter_ha_names[0].replace("\\",""),
+        "rfilter_center_A": filter_R_props[0][0],
+        "rfilter_width_A":filter_R_props[0][1],
+        "hfilter_center_A": filter_ha_props[0][0],
+        "hfilter_width_A": filter_ha_props[0][1],
+        "rfilter_ZP": np.round(float(RZPs[0]),3),
+        "hfilter_ZP": np.round(HZPs[0],3)
+    }
+    return image_props
 
     
 if __name__ == '__main__':
@@ -525,9 +570,13 @@ if __name__ == '__main__':
                 sys.exit()
 
             fwhm = get_fwhm(galname)
-            rfilters, hafilters = get_filters(galname)
-            filter_r_props, filter_ha_props = get_filter_props(galname)
-            rzps, hzps = get_zp(galname)
+            #rfilters, hafilters = get_filters(galname)
+            #filter_r_props, filter_ha_props = get_filter_props(galname)
+            image_dict = get_zp(galname)
+            print(f"DEBUG get_zp: {image_dict}")
+            #print(f"DEBUG: R ZP = {rzps}")
+            #print(f"DEBUG: H ZP = {hzps}")
+
 
             pixelScale = get_pixel_scale(instrument)
             pixelScaleDeg = float(pixelScale)/3600 # convert from arcsec/pix to deg/pix
@@ -539,6 +588,7 @@ if __name__ == '__main__':
                     continue
                 if os.path.isfile(f) & ('.fits' in f):
                     hdu = fits.open(f)
+
 
                     # get size of image (naxis1, naxis2)                
                     naxis1 = hdu[0].header['NAXIS1']
@@ -568,26 +618,25 @@ if __name__ == '__main__':
                     hdu[0].header.set('INSTRUME', instrument)
 
                     # add fwhm
-                    hdu[0].header.set('FWHM', fwhm)
+                    hdu[0].header.set('FWHM', fwhm,"FWHM in arcsec")
 
                     #add filters
-                    hdu[0].header.set('R_Filters', ','.join(rfilters))
-                    hdu[0].header.set('Ha_Filters', ','.join(hafilters))
+                    #hdu[0].header.set('R_Filters', ','.join(rfilters))
+                    #hdu[0].header.set('Ha_Filters', ','.join(hafilters))
 
 
                     if 'ha' in f.lower():
-                        filter_index = 0
-                        hdu[0].header.set('FILTER', hafilters[filter_index])
-                        hdu[0].header.set('FILT_WAVE', filter_ha_props[filter_index][0])  # central wavelength
-                        hdu[0].header.set('FILT_WID', filter_ha_props[filter_index][1])  # width
-                        hdu[0].header.set('PHOTZP', hzps[filter_index])  # zero point
+                        hdu[0].header.set('FILTER', image_dict['hfilter_name'])
+                        hdu[0].header.set('FILTWCEN', image_dict['hfilter_center_A'],"filter center A")  # central wavelength
+                        hdu[0].header.set('FILTWID', image_dict['hfilter_width_A'],"filter width A")  # width
+                        hdu[0].header.set('PHOTZP', image_dict['hfilter_ZP'],"AB mag ZP")  # zero point
 
                     else:
-                        filter_index = 0
-                        hdu[0].header.set('FILTER', rfilters[filter_index])
-                        hdu[0].header.set('FILT_WAVE', filter_r_props[filter_index][0])
-                        hdu[0].header.set('FILT_WID', filter_r_props[filter_index][1])
-                        hdu[0].header.set('PHOTZP', rzps[filter_index])
+                        hdu[0].header.set('FILTER', image_dict['rfilter_name'])
+                        hdu[0].header.set('FILTWCEN', image_dict['rfilter_center_A'],"filter center A")  # central wavelength
+                        hdu[0].header.set('FILTWID', image_dict['rfilter_width_A'],"filter width A")  # width
+                        hdu[0].header.set('PHOTZP', image_dict['rfilter_ZP'],"AB mag ZP")  # zero point
+
 
                     # prepend an 'h' to image name and save
                     outfile = 'h'+f
