@@ -326,7 +326,8 @@ class coadd_image():
         #self.get_zpimage_firstpass()
         if 'CS' not in self.filter:
             self.get_zpplot_firstpass()            
-            self.get_zp_magcomp_firstpass()        
+            self.get_zp_magcomp_firstpass()
+            self.get_se_panstarrs_positions()
         #self.get_zpplot_secondpass()                
         #self.get_zpimage_secondpass()
         #self.get_zp_magcomp_secondpass()
@@ -477,12 +478,22 @@ class coadd_image():
             #print('search path = ',os.path.join(self.zpdir,self.intprefix+"*getzp-xyresidual-fitted.png"))
             zpsurf = glob.glob(os.path.join(self.zpdir,self.intprefix+"*getzp*fitted*.png"))[0]
         zpplot_png = os.path.join(self.plotdir,'n'+imagebase+"-getzp-xyresidual-fitted.png")
-        if os.path.exists(self.zpplot_png):
+        if not os.path.exists(self.zpplot_png):
             os.system('cp '+zpsurf+' '+self.zpplot_png)
         else:
             if os.path.exists(zpplot_png):
-                self.pzplot_png = zpplot_png
-        pass
+                self.zpplot_png = zpplot_png
+        
+    def get_se_panstarrs_positions(self):
+        ''' get the zp image, first pass'''
+        imagebase = os.path.basename(self.imagename).replace('-noback-coadd.fits','').replace('.fits','')
+        print(self.zpdir,imagebase,"-se-pan-positions.png")
+        fname = os.path.join(self.zpdir,imagebase+"-se-pan-positions.png")
+        self.se_panstarrs_positions =  os.path.join(self.plotdir,imagebase+"-se-pan-positions.png")
+        if
+        os.system('cp '+fname+' '+self.se_panstarrs_positions)
+
+    
     def get_zpplot_firstpass(self):
         ''' get the zp image, first pass'''
         imagebase = os.path.basename(self.imagename).replace('-noback-coadd.fits','').replace('.fits','')
@@ -508,6 +519,7 @@ class coadd_image():
         except:
             self.zpplot2_png = None
         pass
+    
     def get_zpimage_firstpass(self):
         ''' get the zp image, first pass'''
         # check that png file exists
@@ -1199,9 +1211,10 @@ class build_html_pointing():
 
     def write_rband_zp(self):
         ''' make table with rband zp fit '''
-        labels=['Fit','Residuals']#,'Residual<br> Surface']
+        labels=['Fit','Residuals','SE vs PANSTARRS']#,'Residual<br> Surface']
         images = [os.path.basename(self.pointing.r.pancomp_png),\
-                  os.path.basename(self.pointing.r.zpplot_png)]#,\
+                  os.path.basename(self.pointing.r.zpplot_png),
+                  os.path.basename(self.pointing.r.se_panstarrs_positions)]#,\
                   #os.path.basename(self.pointing.r.flux_comp)]
         buildweb.write_table(self.html,labels=labels,images=images,images2=None)
         #if self.pointing.r.pancomp2_png is not None:
@@ -1243,9 +1256,10 @@ class build_html_pointing():
 
     def write_ha_zp(self):
         ''' make table with rband zp fit '''
-        labels=['ZP Fit','Residuals']#,'Residual<br> Surface']
+        labels=['ZP Fit','Residuals','SE vs PANSTARRS']#,'Residual<br> Surface']
         images = [os.path.basename(self.pointing.ha.pancomp_png),\
-                  os.path.basename(self.pointing.ha.zpplot_png)]
+                  os.path.basename(self.pointing.ha.zpplot_png),
+                  os.path.basename(self.pointing.ha.se_panstarrs_positions)]
                   #os.path.basename(self.pointing.ha.zpsurf_png)]
         buildweb.write_table(self.html,labels=labels,images=images,images2=None)
 
