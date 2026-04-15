@@ -35,6 +35,9 @@ def write_table(html,images=None,labels=None,images2=None):
     
     html.write('</table>\n')
 
+
+
+
 def write_text_table(html,labels,data,data2=None):    
     html.write('<table width="90%"; table-layout: fixed>\n')
     html.write('<tr>')
