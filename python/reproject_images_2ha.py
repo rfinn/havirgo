@@ -27,7 +27,8 @@ import sys
 import os
 from astropy.io import fits
 import glob
-from reproject import reproject_interp
+#from reproject import reproject_interp
+from reproject import reproject_adaptive
 
 def reproject_image(infile, reffile, outname):
     """reproject infile to reffile image"""

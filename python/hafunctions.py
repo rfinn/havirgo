@@ -240,7 +240,13 @@ meerkat_HI_mass = {'VFID5859':7.84,\
                    'VFID5844':np.nan,\
                    'VFID5879':np.nan}
 
-
+# width of CO single dish beam
+# NGC 5356, NGC 5560, and NGC 5577 >> Boselli+14: Kitt Peak HPBW = 55 arcsec
+# otherwise from IRAM - same as for NOEMA paper
+CO_single_dish_beam_arcsec = {
+                'VFID5842':55,
+                'VFID6018':55,
+    'VFID6091':55}
 
                    #'VFID5851': 
 HIdir = homedir+'/research/Virgo/alma/2023/MeerKAT_ALMA_target_list/'
@@ -2092,6 +2098,41 @@ def get_CO_footprint(ax, COfilename):
     footprint = CO_WCS.calc_footprint()
     print("DEBUG: footprint = ",footprint)
     return footprint
+
+def plot_single_dish_CO_beam(ax, vfid,jpeg_data, legwcs):
+
+    from astropy.visualization.wcsaxes import SphericalCircle
+    from astropy.coordinates import SkyCoord
+    import astropy.units as u
+
+
+    try:
+        co_single_radius_arcsec = CO_single_dish_beam_arcsec[vfid]
+    except KeyError:
+        co_single_radius_arcsec = 22.
+    rad = co_single_radius_arcsec * u.arcsec
+    # center of image from WCS
+    #ny, nx = np.shape(jpeg_data)[0], np.shape(jpeg_data)[1]
+    #xc, yc = nx/2, ny/2
+    #ra_c, dec_c = legwcs.wcs_pix2world(xc, yc, 0)
+
+    vflag = v.main['VFID'] == vfid
+
+    ra_c = v.main['RA'][vflag][0]
+    dec_c = v.main['DEC'][vflag][0]      
+    
+    center = SkyCoord(ra_c*u.deg, dec_c*u.deg, frame='icrs')
+    
+    # 22 arcsec circle
+    circ = SphericalCircle(
+        center,
+        rad,
+        edgecolor='cyan',
+        facecolor='none',
+        linewidth=2,
+        transform=ax.get_transform('world')
+        )
+    ax.add_patch(circ)
     
 def plot_mstar_sfr_CO(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xticks=True,figsize=[16,6],\
                             cbfrac=.08,cbaspect=20,clevels=[4],contourFlag=True,rmax=None,\
@@ -2332,6 +2373,7 @@ def plot_mstar_sfr_CO(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xticks=Tru
     ax1 = plt.subplot(1,4,1,projection=legwcs)
     plt.imshow(jpeg_data)
 
+    #add_metallicity_markers(ax1, fig)
 
     # check if HI moment zero map is available
     COfilename = CO_file[vfid]
@@ -2347,30 +2389,7 @@ def plot_mstar_sfr_CO(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xticks=Tru
     #ax1.set_ylabel("DEC",fontsize=16)    
 
     # add noema primary beam of 22" circle
-    if noema:
-        #plot_noema_footprint(ax1, COfilename, r=22.)
-
-        from astropy.visualization.wcsaxes import SphericalCircle
-        from astropy.coordinates import SkyCoord
-        import astropy.units as u
-
-
-        # center of image from WCS
-        ny, nx = np.shape(jpeg_data)[0], np.shape(jpeg_data)[1]
-        xc, yc = nx/2, ny/2
-        ra_c, dec_c = legwcs.wcs_pix2world(xc, yc, 0)
-        center = SkyCoord(ra_c*u.deg, dec_c*u.deg, frame='icrs')
-
-        # 22 arcsec circle
-        circ = SphericalCircle(
-            center,
-            22*u.arcsec,
-            edgecolor='cyan',
-            facecolor='none',
-            linewidth=2,
-            transform=ax1.get_transform('world')
-            )
-        ax1.add_patch(circ)
+    #plot_single_dish_CO_beam(ax1, vfid, jpeg_data, legwcs)
     
     if xmin is not None:
         # plot the legacy image in panel 1
@@ -2803,6 +2822,8 @@ def plot_mstar_sfr_COall(dirname,xmin=None,xmax=None,ymin=None,ymax=None,xticks=
     ax5 = plt.subplot(nrow,ncol,5,projection=legwcs)
     plt.imshow(jpeg_data)    
 
+
+    plot_single_dish_CO_beam(ax5, vfid, jpeg_data, legwcs)    
     #ax1.set_xlabel("RA",fontsize=16)
     #ax1.set_ylabel("DEC",fontsize=16)    
     leg_axes = [ax1,ax5]
