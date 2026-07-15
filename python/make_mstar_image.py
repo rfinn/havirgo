@@ -135,8 +135,70 @@ class galaxy():
             self.mask = mask > 0
         
         pass
+
+    def get_mstar_image(self, makeplots=False):
+        """Create stellar mass image from Legacy r-band and g-r image."""
+
+        smoothing = 15
+        rZP = 22.5
+        Msun_r_AB = 4.61
+
+        rhdu = fits.open(self.legacy_r2ha)
+        rdata = rhdu[0].data.astype(float)
+
+        rsmooth = convolution.convolve_fft(
+            rdata,
+            convolution.Box2DKernel(smoothing),
+            allow_huge=True,
+            nan_treatment="interpolate",
+        )
+
+        grhdu = fits.open(self.legacy_gr)
+        mag_gr = grhdu[0].data.astype(float)
+
+        good = np.isfinite(rsmooth) & (rsmooth > 0) & np.isfinite(mag_gr)
+
+        Mr_vr = np.full_like(rsmooth, np.nan, dtype=float)
+        Mr_vcosmic = np.full_like(rsmooth, np.nan, dtype=float)
+
+        Mr_vr[good] = (
+            rZP
+            - 2.5 * np.log10(rsmooth[good])
+            - 5 * np.log10(self.d_vr.to("pc").value)
+            + 5
+        )
+
+        Mr_vcosmic[good] = (
+            rZP
+            - 2.5 * np.log10(rsmooth[good])
+            - 5 * np.log10(self.d_vcosmic.to("pc").value)
+            + 5
+        )
+
+        self.logMstar_vr = np.full_like(rsmooth, np.nan, dtype=float)
+        self.logMstar_vcosmic = np.full_like(rsmooth, np.nan, dtype=float)
+
+        self.logMstar_vr[good] = ar + br * mag_gr[good] + (Mr_vr[good] - Msun_r_AB) / (-2.5)
+        self.logMstar_vcosmic[good] = ar + br * mag_gr[good] + (Mr_vcosmic[good] - Msun_r_AB) / (-2.5)
+
+        hdr = rhdu[0].header.copy()
+        hdr["MSTARZP"] = (rZP, "Legacy r-band zeropoint")
+        hdr["MSUNRAB"] = (Msun_r_AB, "Solar absolute magnitude in r, AB")
+        hdr["MLREL"] = ("RoedigerCourteau2015", "Color-M/L relation")
+        hdr["ML_AR"] = (ar, "log M/L intercept")
+        hdr["ML_BR"] = (br, "log M/L color coefficient")
+
+        hdu = fits.PrimaryHDU(10.0 ** (self.logMstar_vr - 7), header=hdr)
+        hdu.writeto(self.dirname + "-mstar-vr.fits", overwrite=True)
+
+        hdu = fits.PrimaryHDU(10.0 ** (self.logMstar_vcosmic - 7), header=hdr)
+        hdu.writeto(self.dirname + "-mstar-vcosmic.fits", overwrite=True)
+
+        rhdu.close()
+        grhdu.close()
     
-    def get_mstar_image(self,makeplots=False):
+    
+    def get_mstar_image_prehapy(self,makeplots=False):
         """ create mstar image from rband and g-r image and vr  """
         # smoothing was 20, setting it to 5 to see if the effective radius changes
         smoothing=15

@@ -363,7 +363,7 @@ CO_width = {'VFID5709':COwidthdir+'n5470_width_COmap_masked.fits',\
 
 
 acbfrac = {'VFID5889':.045,\
-           'VFID5851':.045,\
+            'VFID5851':.045,\
           'VFID5855':0.08,\
           'VFID5842':0.08,\
           'VFID5859':0.05,\
@@ -422,8 +422,102 @@ HIfiles = {'VFID5859':'research/Virgo/alma/2023/MeerKAT_ALMA_target_list/J1355_f
 ###########################################
 ## FUNCTIONS
 ###########################################
+def add_scale(
+    ax,
+    vr=1100,
+    pscale=.331,
+    barsize=5.,
+    color='k',
+    fontsize=16,
+    xscale=.09,
+    yscale=.9,
+    dytext=.08,
+    capfrac=0.18,
+    lw=2,
+):
+    '''
+    ax = axis for drawing on
+    vr = cosmic recession velocity
+    pscale = pixel scale, in arcsec/pix
+    barsize = size of marker in kpc
+    fontsize = fontsize for the text
+    capfrac = endcap height as a fraction of the bar length in pixels
+    lw = line width
+    '''
 
-def add_scale(ax,vr=1100,pscale=.331,barsize=5.,color='k',fontsize=16,xscale=.09,yscale=.9,dytext=.08):
+    from astropy.cosmology import WMAP9 as cosmo
+    import numpy as np
+
+    z = vr / 3.e5
+
+    # angular diameter distance in Mpc
+    add = cosmo.angular_diameter_distance(z)
+
+    # convert to kpc/arcsec
+    add_kpc_arcsec = add.value * 1000 * np.pi / (180 * 3600)
+
+    # convert barsize from kpc to arcsec
+    barsize_arcsec = barsize / add_kpc_arcsec
+
+    # convert barsize from arcsec to pixels
+    barsize_pixels = barsize_arcsec / pscale
+
+    # get current image limits
+    x1, x2 = ax.get_xlim()
+    y1, y2 = ax.get_ylim()
+
+    xline1 = x1 + xscale * (x2 - x1)
+    xline2 = xline1 + barsize_pixels
+
+    yline = y1 + yscale * (y2 - y1)
+
+    # endcap height in pixels
+    capsize_pixels = capfrac * barsize_pixels
+    ycap1 = yline - 0.5 * capsize_pixels
+    ycap2 = yline + 0.5 * capsize_pixels
+
+    # label position
+    xtext = xline1 + 0.5 * barsize_pixels
+    ytext = yline - dytext * (y2 - y1)
+
+    # horizontal bar
+    ax.plot(
+        [xline1, xline2],
+        [yline, yline],
+        '-',
+        lw=lw,
+        color=color,
+    )
+
+    # left endcap
+    ax.plot(
+        [xline1, xline1],
+        [ycap1, ycap2],
+        '-',
+        lw=lw,
+        color=color,
+    )
+
+    # right endcap
+    ax.plot(
+        [xline2, xline2],
+        [ycap1, ycap2],
+        '-',
+        lw=lw,
+        color=color,
+    )
+
+    # label
+    ax.text(
+        xtext,
+        ytext,
+        '{:.0f} kpc'.format(barsize),
+        horizontalalignment='center',
+        fontsize=fontsize,
+        color=color,
+    )
+    
+def add_scale_original(ax,vr=1100,pscale=.331,barsize=5.,color='k',fontsize=16,xscale=.09,yscale=.9,dytext=.08):
     '''
     ax = axis for drawing on
     vr = cosmic recession velocity
@@ -928,11 +1022,13 @@ def add_spine(ax,color='c'):
     spine  = Table.read(spinedir+'filament_spine_VirgoIII.fits')
     ax.plot(spine['ra'],spine['dec'],'c--',color=color,transform=ax.get_transform('world'))#, ,label='Filament Spine')
 
-def plot_spines(multicolor=True,colorone=None,color=None,legend=True):
+def plot_spines(multicolor=True,colorone=None,color=None,legend=True,plotone=None):
     import glob
     sfiles = glob.glob(homedir+'/research/Virgo/tables-north/spines/filament*.fits')
     ncolor = 0
     for i,f in enumerate(sfiles):
+        if (plotone is not None) and (plotone not in f):
+            continue
         spine  = Table.read(f)
         if legend:
             mylabel = os.path.basename(f).replace('filament_spine_','').replace('.fits','').replace('_Filament','')
@@ -2975,9 +3071,1667 @@ def hide_xyticks_wcs(ax):
     lat.set_ticklabel_visible(False)
     lat.set_ticks_visible(False)         
     
+from scipy import ndimage as ndi
+
+def clean_limit_mask_for_contours(mask, min_pixels=10, do_closing=True):
+    """
+    Clean a boolean mask for display contours only.
+
+    Removes small isolated regions and optionally smooths/fills small gaps.
+    This should not be used for the actual depletion map calculation.
+    """
+    mask = np.asarray(mask, dtype=bool)
+
+    # Label connected regions
+    structure = ndi.generate_binary_structure(2, 2)  # 8-connected
+    labels, nlab = ndi.label(mask, structure=structure)
+
+    if nlab == 0:
+        return mask
+
+    # Remove small islands
+    counts = np.bincount(labels.ravel())
+    keep = counts >= min_pixels
+    keep[0] = False  # background
+
+    cleaned = keep[labels]
+
+    # Optional cosmetic cleanup of jagged holes/gaps
+    if do_closing:
+        cleaned = ndi.binary_closing(cleaned, structure=structure, iterations=1)
+
+    return cleaned
 
 
-def get_depletion_map(dirname,vr=None, H0=74., cmap='magma_r', verbose=False, sfr_limit=1e-5, alma=False,convolveflag=False,alt_title=None):
+def add_limit_contours(
+    ax,
+    upper_mask,
+    lower_mask,
+    x1,
+    x2,
+    y1,
+    y2,
+    show_upper=True,
+    show_lower=True,
+    upper_color="magenta",
+    lower_color="cyan",
+    upper_ls="solid",
+    lower_ls="solid",
+    lw=1.2,
+    alpha=0.9,
+):
+    """
+    Add depletion-time upper/lower-limit contours to an image panel.
+
+    upper_mask:
+        Halpha detected, CO not detected.
+    lower_mask:
+        CO detected, Halpha not detected.
+    """
+
+    if show_upper:
+        upper_zoom = upper_mask[y1:y2, x1:x2].astype(float)
+
+        if np.any(upper_zoom):
+            ax.contour(
+                upper_zoom,
+                levels=[0.5],
+                colors=upper_color,
+                linestyles=upper_ls,
+                linewidths=lw,
+                alpha=alpha,
+            )
+
+    if show_lower:
+        lower_zoom = lower_mask[y1:y2, x1:x2].astype(float)
+
+        if np.any(lower_zoom):
+            ax.contour(
+                lower_zoom,
+                levels=[0.5],
+                colors=lower_color,
+                linestyles=lower_ls,
+                linewidths=lw,
+                alpha=alpha,
+            )
+
+def get_ks_points_one_galaxy(
+    dirname,
+    vr,
+    nsigma=3,
+    alma=False,
+    rootdir=None,
+    H0=74.,
+    return_mask=False,
+    verbose=True,
+):
+    """
+    Extract resolved Kennicutt-Schmidt points for one galaxy.
+
+    Returns pixels/regions where:
+      - CO is detected with SNR > nsigma
+      - Halpha/SFR is detected with SNR > nsigma
+      - both Sigma_H2 and Sigma_SFR are finite and positive
+
+    Assumes get_depletion_map has already created:
+      dirname-Sigma-H2-kpc2.fits
+      dirname-Sigma-sfr-kpc2.fits
+
+    Parameters
+    ----------
+    dirname : str
+        Galaxy cutout directory name.
+    vr : float
+        Recession velocity used for distance/kpc conversion.
+    nsigma : float
+        Detection threshold. Default is 3.
+    alma : bool
+        If True, use co_rms_map[vfid]. If False, use scalar co_rms[vfid].
+    rootdir : str or None
+        Parent directory containing dirname. If None, use current directory.
+    H0 : float
+        Hubble constant used for D_Mpc = vr/H0.
+    return_mask : bool
+        If True, also return the boolean detected-both mask.
+    verbose : bool
+        Print summary information.
+
+    Returns
+    -------
+    result : dict
+        Dictionary containing sigma_H2, sigma_sfr, log_sigma_H2,
+        log_sigma_sfr, galaxy, vfid, and optionally detected_both_mask.
+    """
+
+    import os
+    import numpy as np
+    from astropy.io import fits
+    from astropy import wcs
+    from astropy.wcs import WCS
+
+    vfid = dirname.split("-")[0]
+
+    if rootdir is None:
+        galpath = dirname
+    else:
+        galpath = os.path.join(rootdir, dirname)
+
+    sigma_H2_file = os.path.join(galpath, f"{dirname}-Sigma-H2-kpc2.fits")
+    sigma_sfr_file = os.path.join(galpath, f"{dirname}-Sigma-sfr-kpc2.fits")
+
+    if not os.path.exists(sigma_H2_file):
+        raise FileNotFoundError(f"Missing Sigma_H2 file: {sigma_H2_file}")
+
+    if not os.path.exists(sigma_sfr_file):
+        raise FileNotFoundError(f"Missing Sigma_SFR file: {sigma_sfr_file}")
+
+    sigma_H2, h2_header = fits.getdata(sigma_H2_file, header=True)
+    sigma_sfr, sfr_header = fits.getdata(sigma_sfr_file, header=True)
+
+    if sigma_H2.shape != sigma_sfr.shape:
+        raise ValueError(
+            f"Shape mismatch: Sigma_H2 has shape {sigma_H2.shape}, "
+            f"but Sigma_SFR has shape {sigma_sfr.shape}"
+        )
+
+    co_imwcs = WCS(h2_header)
+    kpc_per_pixel = get_kpc_per_pixel(co_imwcs, vr)
+
+    ##################################################
+    # CO/H2 SNR threshold in Msun/kpc^2
+    ##################################################
+
+    D_Mpc = vr / H0
+    alpha_CO = 4.3
+
+    pixscale_deg = wcs.utils.proj_plane_pixel_scales(co_imwcs)[0]
+    pixel_area_sq_deg = pixscale_deg**2
+
+    beam_area_sq_deg = np.pi / 4 * float(h2_header["BMAJ"]) * float(h2_header["BMIN"])
+    scale_factor = beam_area_sq_deg / pixel_area_sq_deg
+
+    if alma:
+        # rms map is assumed to be Jy/beam km/s on the CO grid
+        rms_map = fits.getdata(co_rms_map[vfid])
+
+        co_rms_Msun_beam = (
+            rms_map
+            * 1.05e4
+            * alpha_CO / 4.3
+            * D_Mpc**2
+        )
+
+        co_rms_Msun_pixel = co_rms_Msun_beam / np.sqrt(scale_factor)
+        sigma_H2_rms = co_rms_Msun_pixel / kpc_per_pixel**2
+
+    else:
+        co_rms_Msun_beam = (
+            co_rms[vfid]
+            * 1.05e4
+            * alpha_CO / 4.3
+            * D_Mpc**2
+        )
+
+        co_rms_Msun_pixel = co_rms_Msun_beam / np.sqrt(scale_factor)
+        sigma_H2_rms = co_rms_Msun_pixel / kpc_per_pixel**2
+
+    co_detected = sigma_H2 > nsigma * sigma_H2_rms
+
+    ##################################################
+    # Halpha/SFR SNR threshold in Msun/yr/kpc^2
+    ##################################################
+
+    sigma_sfr_rms = halpha_rms[vfid] / kpc_per_pixel**2
+    ha_detected = sigma_sfr > nsigma * sigma_sfr_rms
+
+    ##################################################
+    # Combined valid KS mask
+    ##################################################
+
+    detected_both = (
+        co_detected
+        & ha_detected
+        & np.isfinite(sigma_H2)
+        & np.isfinite(sigma_sfr)
+        & (sigma_H2 > 0)
+        & (sigma_sfr > 0)
+    )
+
+    sigma_H2_out = sigma_H2[detected_both]/1e6
+    sigma_sfr_out = sigma_sfr[detected_both]
+
+
+    result = {
+        "galaxy": dirname,
+        "vfid": vfid,
+
+        # original internal units
+        "sigma_H2_kpc2": sigma_H2_out,
+        "sigma_sfr_kpc2": sigma_sfr_out,
+
+        # plotting units
+        "sigma_H2_pc2": sigma_H2_pc2_out,
+        "sigma_sfr": sigma_sfr_out,
+
+        "log_sigma_H2_pc2": np.log10(sigma_H2_pc2_out),
+        "log_sigma_sfr": np.log10(sigma_sfr_out),
+        "n_points": len(sigma_H2_out),
+        }
+
+    if return_mask:
+        result["detected_both_mask"] = detected_both
+
+    if verbose:
+        print(
+            f"{dirname}: {len(sigma_H2_out)} pixels with "
+            f"CO SNR>{nsigma} and Halpha SNR>{nsigma}"
+        )
+
+        if len(sigma_H2_out) > 0:
+            print(
+                f"  log Sigma_H2 range: "
+                f"{np.nanmin(result['log_sigma_H2']):.2f} to "
+                f"{np.nanmax(result['log_sigma_H2']):.2f}"
+            )
+            print(
+                f"  log Sigma_SFR range: "
+                f"{np.nanmin(result['log_sigma_sfr']):.2f} to "
+                f"{np.nanmax(result['log_sigma_sfr']):.2f}"
+            )
+
+    return result
+
+def _trim_for_blocks(arr, block_size, yoff=0, xoff=0):
+    """
+    Trim a 2D array so it can be reshaped into non-overlapping square blocks.
+    """
+
+    arr = arr[yoff:, xoff:]
+
+    ny, nx = arr.shape
+    ny_trim = (ny // block_size) * block_size
+    nx_trim = (nx // block_size) * block_size
+
+    return arr[:ny_trim, :nx_trim]
+
+
+def _block_sum(arr, block_size, good=None, yoff=0, xoff=0):
+    """
+    Sum a 2D array in non-overlapping block_size x block_size regions.
+
+    If good is supplied, values outside good are treated as zero.
+    """
+
+    import numpy as np
+
+    arr_trim = _trim_for_blocks(arr, block_size, yoff=yoff, xoff=xoff)
+
+    if good is not None:
+        good_trim = _trim_for_blocks(good, block_size, yoff=yoff, xoff=xoff)
+        arr_trim = np.where(good_trim, arr_trim, 0.0)
+
+    ny, nx = arr_trim.shape
+    nyb = ny // block_size
+    nxb = nx // block_size
+
+    return arr_trim.reshape(nyb, block_size, nxb, block_size).sum(axis=(1, 3))
+
+
+def _block_count(good, block_size, yoff=0, xoff=0):
+    """
+    Count True pixels in non-overlapping block_size x block_size regions.
+    """
+
+    return _block_sum(
+        good.astype(float),
+        block_size,
+        good=None,
+        yoff=yoff,
+        xoff=xoff,
+    )
+
+def get_ks_points_one_galaxy(
+    dirname,
+    vr,
+    nsigma=3,
+    alma=False,
+    rootdir=None,
+    H0=74.,
+    return_mask=False,
+    verbose=True,
+):
+    """
+    Extract resolved Kennicutt-Schmidt points for one galaxy.
+
+    Returns pixels/regions where:
+      - CO is detected with SNR > nsigma
+      - Halpha/SFR is detected with SNR > nsigma
+      - both Sigma_H2 and Sigma_SFR are finite and positive
+
+    Assumes get_depletion_map has already created:
+      dirname-Sigma-H2-kpc2.fits
+      dirname-Sigma-sfr-kpc2.fits
+
+    Parameters
+    ----------
+    dirname : str
+        Galaxy cutout directory name.
+    vr : float
+        Recession velocity used for distance/kpc conversion.
+    nsigma : float
+        Detection threshold. Default is 3.
+    alma : bool
+        If True, use co_rms_map[vfid]. If False, use scalar co_rms[vfid].
+    rootdir : str or None
+        Parent directory containing dirname. If None, use current directory.
+    H0 : float
+        Hubble constant used for D_Mpc = vr/H0.
+    return_mask : bool
+        If True, also return the boolean detected-both mask.
+    verbose : bool
+        Print summary information.
+
+    Returns
+    -------
+    result : dict
+        Dictionary containing sigma_H2, sigma_sfr, log_sigma_H2,
+        log_sigma_sfr, galaxy, vfid, and optionally detected_both_mask.
+    """
+
+    import os
+    import numpy as np
+    from astropy.io import fits
+    from astropy import wcs
+    from astropy.wcs import WCS
+
+    vfid = dirname.split("-")[0]
+
+    if rootdir is None:
+        galpath = dirname
+    else:
+        galpath = os.path.join(rootdir, dirname)
+
+    sigma_H2_file = os.path.join(galpath, f"{dirname}-Sigma-H2-kpc2.fits")
+    sigma_sfr_file = os.path.join(galpath, f"{dirname}-Sigma-sfr-kpc2.fits")
+
+    if not os.path.exists(sigma_H2_file):
+        raise FileNotFoundError(f"Missing Sigma_H2 file: {sigma_H2_file}")
+
+    if not os.path.exists(sigma_sfr_file):
+        raise FileNotFoundError(f"Missing Sigma_SFR file: {sigma_sfr_file}")
+
+    sigma_H2, h2_header = fits.getdata(sigma_H2_file, header=True)
+    sigma_sfr, sfr_header = fits.getdata(sigma_sfr_file, header=True)
+
+    if sigma_H2.shape != sigma_sfr.shape:
+        raise ValueError(
+            f"Shape mismatch: Sigma_H2 has shape {sigma_H2.shape}, "
+            f"but Sigma_SFR has shape {sigma_sfr.shape}"
+        )
+
+    co_imwcs = WCS(h2_header)
+    kpc_per_pixel = get_kpc_per_pixel(co_imwcs, vr)
+
+    ##################################################
+    # CO/H2 SNR threshold in Msun/kpc^2
+    ##################################################
+
+    D_Mpc = vr / H0
+    alpha_CO = 4.3
+
+    pixscale_deg = wcs.utils.proj_plane_pixel_scales(co_imwcs)[0]
+    pixel_area_sq_deg = pixscale_deg**2
+
+    beam_area_sq_deg = np.pi / 4 * float(h2_header["BMAJ"]) * float(h2_header["BMIN"])
+    scale_factor = beam_area_sq_deg / pixel_area_sq_deg
+
+    if alma:
+        # rms map is assumed to be Jy/beam km/s on the CO grid
+        rms_map = fits.getdata(co_rms_map[vfid])
+
+        co_rms_Msun_beam = (
+            rms_map
+            * 1.05e4
+            * alpha_CO / 4.3
+            * D_Mpc**2
+        )
+
+        co_rms_Msun_pixel = co_rms_Msun_beam / np.sqrt(scale_factor)
+        sigma_H2_rms = co_rms_Msun_pixel / kpc_per_pixel**2
+
+    else:
+        co_rms_Msun_beam = (
+            co_rms[vfid]
+            * 1.05e4
+            * alpha_CO / 4.3
+            * D_Mpc**2
+        )
+
+        co_rms_Msun_pixel = co_rms_Msun_beam / np.sqrt(scale_factor)
+        sigma_H2_rms = co_rms_Msun_pixel / kpc_per_pixel**2
+
+    co_detected = sigma_H2 > nsigma * sigma_H2_rms
+
+    ##################################################
+    # Halpha/SFR SNR threshold in Msun/yr/kpc^2
+    ##################################################
+
+    sigma_sfr_rms = halpha_rms[vfid] / kpc_per_pixel**2
+    ha_detected = sigma_sfr > nsigma * sigma_sfr_rms
+
+    ##################################################
+    # Combined valid KS mask
+    ##################################################
+
+    detected_both = (
+        co_detected
+        & ha_detected
+        & np.isfinite(sigma_H2)
+        & np.isfinite(sigma_sfr)
+        & (sigma_H2 > 0)
+        & (sigma_sfr > 0)
+    )
+
+    sigma_H2_out = sigma_H2[detected_both]
+    sigma_sfr_out = sigma_sfr[detected_both]
+
+    result = {
+        "galaxy": dirname,
+        "vfid": vfid,
+        "sigma_H2": sigma_H2_out,
+        "sigma_sfr": sigma_sfr_out,
+        "log_sigma_H2": np.log10(sigma_H2_out),
+        "log_sigma_sfr": np.log10(sigma_sfr_out),
+        "n_points": len(sigma_H2_out),
+    }
+
+    if return_mask:
+        result["detected_both_mask"] = detected_both
+
+    if verbose:
+        print(
+            f"{dirname}: {len(sigma_H2_out)} pixels with "
+            f"CO SNR>{nsigma} and Halpha SNR>{nsigma}"
+        )
+
+        if len(sigma_H2_out) > 0:
+            print(
+                f"  log Sigma_H2 range: "
+                f"{np.nanmin(result['log_sigma_H2']):.2f} to "
+                f"{np.nanmax(result['log_sigma_H2']):.2f}"
+            )
+            print(
+                f"  log Sigma_SFR range: "
+                f"{np.nanmin(result['log_sigma_sfr']):.2f} to "
+                f"{np.nanmax(result['log_sigma_sfr']):.2f}"
+            )
+
+    return result
+
+def get_ks_points_one_galaxy_binned(
+    dirname,
+    vr,
+    nsigma=3,
+    alma=False,
+    rootdir=None,
+    H0=74.,
+    binsize_pix=None,
+    binsize_kpc=None,
+    min_valid_frac=0.5,
+    yoff=0,
+    xoff=0,
+    return_all_bins=False,
+    verbose=True,
+):
+    """
+    Extract resolved KS points using approximately beam-sized independent regions.
+
+    The function bins the Sigma_H2 and Sigma_SFR maps into non-overlapping
+    square regions whose area is approximately one CO beam area.
+
+    Selection:
+      - binned CO SNR > nsigma
+      - binned Halpha/SFR SNR > nsigma
+      - binned Sigma_H2 > 0
+      - binned Sigma_SFR > 0
+      - at least min_valid_frac of the pixels in the bin are valid
+
+    Parameters
+    ----------
+    dirname : str
+        Galaxy cutout directory name.
+    vr : float
+        Cosmic recession velocity used for kpc conversion.
+    nsigma : float
+        Detection threshold.
+    alma : bool
+        If True, use co_rms_map[vfid]. If False, use scalar co_rms[vfid].
+    rootdir : str or None
+        Parent directory containing dirname. If None, use current directory.
+    H0 : float
+        Hubble constant for D_Mpc = vr/H0.
+    binsize_pix : int or None
+        Size of square bin in pixels. If None, use sqrt(beam area / pixel area).
+    min_valid_frac : float
+        Minimum fraction of pixels in a bin that must be finite/usable.
+    yoff, xoff : int
+        Optional grid offsets in pixels. Useful for checking sensitivity to bin placement.
+    return_all_bins : bool
+        If True, include full binned maps and SNR maps in the output.
+    verbose : bool
+        Print summary information.
+
+    Returns
+    -------
+    result : dict
+        Contains sigma_H2, sigma_sfr, log_sigma_H2, log_sigma_sfr,
+        co_snr, ha_snr, and metadata.
+    """
+
+    import os
+    import numpy as np
+    from astropy.io import fits
+    from astropy import wcs
+    from astropy.wcs import WCS
+
+    vfid = dirname.split("-")[0]
+    t = dirname.split("-")
+    galtitle = t[0]+'-'+t[1]
+    if rootdir is None:
+        galpath = dirname
+    else:
+        galpath = os.path.join(rootdir, dirname)
+
+    sigma_H2_file = os.path.join(galpath, f"{dirname}-Sigma-H2-kpc2.fits")
+    sigma_sfr_file = os.path.join(galpath, f"{dirname}-Sigma-sfr-kpc2.fits")
+
+    if not os.path.exists(sigma_H2_file):
+        raise FileNotFoundError(f"Missing Sigma_H2 file: {sigma_H2_file}")
+
+    if not os.path.exists(sigma_sfr_file):
+        raise FileNotFoundError(f"Missing Sigma_SFR file: {sigma_sfr_file}")
+
+    sigma_H2, h2_header = fits.getdata(sigma_H2_file, header=True)
+    sigma_sfr, sfr_header = fits.getdata(sigma_sfr_file, header=True)
+
+    if sigma_H2.shape != sigma_sfr.shape:
+        raise ValueError(
+            f"Shape mismatch: Sigma_H2 has shape {sigma_H2.shape}, "
+            f"but Sigma_SFR has shape {sigma_sfr.shape}"
+        )
+
+    co_imwcs = WCS(h2_header)
+    kpc_per_pixel = get_kpc_per_pixel(co_imwcs, vr)
+    pixel_area_kpc2 = kpc_per_pixel**2
+
+    ##################################################
+    # Beam area in pixels
+    ##################################################
+
+    pixscale_deg = wcs.utils.proj_plane_pixel_scales(co_imwcs)[0]
+    pixel_area_sq_deg = pixscale_deg**2
+
+    beam_area_sq_deg = np.pi / 4 * float(h2_header["BMAJ"]) * float(h2_header["BMIN"])
+
+    beam_area_pix = beam_area_sq_deg / pixel_area_sq_deg
+
+    print(f"{dirname}: bin size = {np.sqrt(beam_area_pix)*kpc_per_pixel:.3f} kpc")    
+
+    if binsize_kpc is not None:
+        # Use square bins with side length approximately binsize_kpc
+        binsize_pix = max(1, int(np.round(binsize_kpc / kpc_per_pixel)))
+
+    elif binsize_pix is None:
+        # Default: square bins with area approximately equal to one CO beam
+        binsize_pix = max(1, int(np.round(np.sqrt(beam_area_pix))))
+
+
+    bin_npix = binsize_pix**2
+    min_valid_pixels = int(np.ceil(min_valid_frac * bin_npix))
+
+    ##################################################
+    # CO/H2 RMS in Sigma units
+    ##################################################
+
+    D_Mpc = vr / H0
+    alpha_CO = 4.3
+
+    if alma:
+        rms_map = fits.getdata(co_rms_map[vfid])
+
+        if rms_map.shape != sigma_H2.shape:
+            raise ValueError(
+                f"CO rms map shape {rms_map.shape} does not match "
+                f"Sigma_H2 shape {sigma_H2.shape}"
+            )
+
+        co_rms_Msun_beam = (
+            rms_map
+            * 1.05e4
+            * alpha_CO / 4.3
+            * D_Mpc**2
+        )
+
+        # Same convention as get_depletion_map:
+        # pixel rms = beam rms / sqrt(beam_area_pix)
+        co_rms_Msun_pixel = co_rms_Msun_beam / np.sqrt(beam_area_pix)
+        sigma_H2_rms = co_rms_Msun_pixel / pixel_area_kpc2
+
+    else:
+        co_rms_Msun_beam = (
+            co_rms[vfid]
+            * 1.05e4
+            * alpha_CO / 4.3
+            * D_Mpc**2
+        )
+
+        co_rms_Msun_pixel = co_rms_Msun_beam / np.sqrt(beam_area_pix)
+        sigma_H2_rms = co_rms_Msun_pixel / pixel_area_kpc2
+
+    ##################################################
+    # Halpha/SFR RMS
+    ##################################################
+
+    # In get_depletion_map, halpha_rms[vfid] is used as SFR/pixel
+    # on the reprojected SFR map. Convert the binned sum to SNR using
+    # SFR/pixel noise directly.
+    sfr_rms_pixel = halpha_rms[vfid]
+
+    ##################################################
+    # Valid pixels
+    ##################################################
+
+    valid = (
+        np.isfinite(sigma_H2)
+        & np.isfinite(sigma_sfr)
+    )
+
+    ##################################################
+    # Convert surface densities to per-pixel mass/SFR
+    ##################################################
+
+    H2_mass_pix = sigma_H2 * pixel_area_kpc2
+    sfr_pix = sigma_sfr * pixel_area_kpc2
+
+    ##################################################
+    # Bin signal
+    ##################################################
+
+    H2_mass_bin = _block_sum(
+        H2_mass_pix,
+        binsize_pix,
+        good=valid,
+        yoff=yoff,
+        xoff=xoff,
+    )
+
+    sfr_bin = _block_sum(
+        sfr_pix,
+        binsize_pix,
+        good=valid,
+        yoff=yoff,
+        xoff=xoff,
+    )
+
+    n_valid_bin = _block_count(
+        valid,
+        binsize_pix,
+        yoff=yoff,
+        xoff=xoff,
+    )
+
+    area_bin_kpc2 = n_valid_bin * pixel_area_kpc2
+
+    with np.errstate(invalid="ignore", divide="ignore"):
+        sigma_H2_bin = H2_mass_bin / area_bin_kpc2
+        sigma_sfr_bin = sfr_bin / area_bin_kpc2
+
+    ##################################################
+    # Bin noise
+    ##################################################
+
+    if np.ndim(sigma_H2_rms) == 0:
+        H2_mass_err_pix = sigma_H2_rms * pixel_area_kpc2
+        H2_mass_err_bin = np.sqrt(n_valid_bin) * H2_mass_err_pix
+    else:
+        H2_mass_err_pix = sigma_H2_rms * pixel_area_kpc2
+        H2_mass_err2_bin = _block_sum(
+            H2_mass_err_pix**2,
+            binsize_pix,
+            good=valid & np.isfinite(H2_mass_err_pix),
+            yoff=yoff,
+            xoff=xoff,
+        )
+        H2_mass_err_bin = np.sqrt(H2_mass_err2_bin)
+
+    sfr_err_bin = np.sqrt(n_valid_bin) * sfr_rms_pixel
+
+    with np.errstate(invalid="ignore", divide="ignore"):
+        co_snr_bin = H2_mass_bin / H2_mass_err_bin
+        ha_snr_bin = sfr_bin / sfr_err_bin
+
+    ##################################################
+    # Final detected-both mask
+    ##################################################
+
+    detected_both_bin = (
+        (n_valid_bin >= min_valid_pixels)
+        & np.isfinite(sigma_H2_bin)
+        & np.isfinite(sigma_sfr_bin)
+        & np.isfinite(co_snr_bin)
+        & np.isfinite(ha_snr_bin)
+        & (sigma_H2_bin > 0)
+        & (sigma_sfr_bin > 0)
+        & (co_snr_bin > nsigma)
+        & (ha_snr_bin > nsigma)
+    )
+
+    ##################################################
+    # Bin centers in original pixel coordinates
+    ##################################################
+
+    nyb, nxb = sigma_H2_bin.shape
+
+    y_centers = yoff + np.arange(nyb) * binsize_pix + 0.5 * (binsize_pix - 1)
+    x_centers = xoff + np.arange(nxb) * binsize_pix + 0.5 * (binsize_pix - 1)
+    xbin, ybin = np.meshgrid(x_centers, y_centers)
+
+    ##################################################
+    # Package output
+    ##################################################
+    sigma_H2_out = sigma_H2_bin[detected_both_bin]
+    sigma_sfr_out = sigma_sfr_bin[detected_both_bin]
+
+    sigma_H2_pc2_out = sigma_H2_out / 1e6
+
+    result = {
+        "galaxy": dirname,
+        "vfid": vfid,
+        "galtitle": galtitle,
+        "sigma_H2_kpc2": sigma_H2_out,
+        "sigma_H2_pc2": sigma_H2_pc2_out,
+        "sigma_sfr_kpc2": sigma_sfr_out,
+
+        "log_sigma_H2_pc2": np.log10(sigma_H2_pc2_out),
+        "log_sigma_sfr": np.log10(sigma_sfr_out),
+
+        "co_snr": co_snr_bin[detected_both_bin],
+        "ha_snr": ha_snr_bin[detected_both_bin],
+        "xbin": xbin[detected_both_bin],
+        "ybin": ybin[detected_both_bin],
+        "n_valid_pix": n_valid_bin[detected_both_bin],
+        "n_points": len(sigma_H2_out),
+        "binsize_pix": binsize_pix,
+        "bin_npix": bin_npix,
+        "beam_area_pix": beam_area_pix,
+        "min_valid_pixels": min_valid_pixels,
+        "kpc_per_pixel": kpc_per_pixel,
+        }
+    
+
+    if return_all_bins:
+        result["sigma_H2_bin_map"] = sigma_H2_bin
+        result["sigma_sfr_bin_map"] = sigma_sfr_bin
+        result["co_snr_bin_map"] = co_snr_bin
+        result["ha_snr_bin_map"] = ha_snr_bin
+        result["detected_both_bin_map"] = detected_both_bin
+        result["n_valid_bin_map"] = n_valid_bin
+
+    if verbose:
+        print("########################################")
+        print(dirname)
+        print("########################################")
+        print(f"beam area = {beam_area_pix:.1f} pixels")
+        print(f"using binsize_pix = {binsize_pix}")
+        print(f"bin area = {bin_npix} pixels")
+        print(f"minimum valid pixels per bin = {min_valid_pixels}")
+        print(f"binned CO detections:      {np.sum(co_snr_bin > nsigma)}")
+        print(f"binned Halpha detections:  {np.sum(ha_snr_bin > nsigma)}")
+        print(f"binned detected in both:   {result['n_points']}")
+
+        if result["n_points"] > 0:
+            print(
+                f"log Sigma_H2 range: "
+                f"{np.nanmin(result['log_sigma_H2_pc2']):.2f} to "
+                f"{np.nanmax(result['log_sigma_H2_pc2']):.2f}"
+            )
+            print(
+                f"log Sigma_SFR range: "
+                f"{np.nanmin(result['log_sigma_sfr']):.2f} to "
+                f"{np.nanmax(result['log_sigma_sfr']):.2f}"
+            )
+
+    return result
+
+def get_ks_points_many_galaxies(
+    dirnames,
+    vr_dict,
+    nsigma=3,
+    alma=False,
+    rootdir=None,
+    H0=74.,
+    verbose=True,
+):
+    """
+    Collect resolved KS points for several galaxies.
+
+    Parameters
+    ----------
+    dirnames : list of str
+        Galaxy directory names.
+    vr_dict : dict
+        Dictionary keyed by VFID or dirname with recession velocity.
+        Example keys can be 'VFID5855' or full dirname.
+    nsigma : float
+        Detection threshold.
+    alma : bool or dict
+        If bool, use same alma flag for all galaxies.
+        If dict, keyed by VFID or dirname.
+    rootdir : str or None
+        Parent directory containing galaxy directories.
+
+    Returns
+    -------
+    ks_df : pandas.DataFrame
+        One row per detected CO+Halpha pixel.
+    """
+
+    import numpy as np
+    import pandas as pd
+
+    rows = []
+
+    for dirname in dirnames:
+        vfid = dirname.split("-")[0]
+
+        if dirname in vr_dict:
+            vr = vr_dict[dirname]
+        elif vfid in vr_dict:
+            vr = vr_dict[vfid]
+        else:
+            raise KeyError(f"No vr found for {dirname} or {vfid}")
+
+        if isinstance(alma, dict):
+            if dirname in alma:
+                alma_flag = alma[dirname]
+            elif vfid in alma:
+                alma_flag = alma[vfid]
+            else:
+                alma_flag = False
+        else:
+            alma_flag = alma
+
+        result = get_ks_points_one_galaxy(
+            dirname,
+            vr=vr,
+            nsigma=nsigma,
+            alma=alma_flag,
+            rootdir=rootdir,
+            H0=H0,
+            return_mask=False,
+            verbose=verbose,
+        )
+
+        n = result["n_points"]
+
+        if n == 0:
+            continue
+
+        rows.append(
+            pd.DataFrame(
+                {
+                    "dirname": dirname,
+                    "vfid": vfid,
+                    "galtitle":result["galtitle"],
+                    "sigma_H2_kpc2": result["sigma_H2_kpc2"],
+                    "sigma_H2_pc2": result["sigma_H2_pc2"],
+                    "sigma_sfr_kpc2": result["sigma_sfr_kpc2"],
+                    "log_sigma_H2_pc2": result["log_sigma_H2_pc2"],
+                    "log_sigma_sfr": result["log_sigma_sfr"],
+                    "co_snr": result["co_snr"],
+                    "ha_snr": result["ha_snr"],
+                }
+            )
+        )
+
+        # rows.append(
+        #     pd.DataFrame(
+        #         {
+        #             "dirname": dirname,
+        #             "vfid": vfid,
+        #             "sigma_H2": result["sigma_H2"],
+        #             "sigma_sfr": result["sigma_sfr"],
+        #             "log_sigma_H2": result["log_sigma_H2"],
+        #             "log_sigma_sfr": result["log_sigma_sfr"],
+        #         }
+        #     )
+        # )
+
+    if len(rows) == 0:
+        return pd.DataFrame(
+            columns=[
+                "dirname",
+                "vfid",
+                "sigma_H2",
+                "sigma_sfr",
+                "log_sigma_H2",
+                "log_sigma_sfr",
+            ]
+        )
+
+    ks_df = pd.concat(rows, ignore_index=True)
+
+    if verbose:
+        print()
+        print(f"Total KS points: {len(ks_df)}")
+        print(f"Number of galaxies: {ks_df['vfid'].nunique()}")
+
+    return ks_df
+
+def _binned_percentiles_by_x(
+    x,
+    y,
+    bins,
+    min_points_per_bin=5,
+):
+    """
+    Calculate median x, median y, and 16/84 percentile y values
+    in bins of x.
+    """
+
+    import numpy as np
+
+    x = np.asarray(x)
+    y = np.asarray(y)
+
+    good = np.isfinite(x) & np.isfinite(y)
+    x = x[good]
+    y = y[good]
+
+    x_med = []
+    y_med = []
+    y_p16 = []
+    y_p84 = []
+    n_bin = []
+
+    for i in range(len(bins) - 1):
+        if i == len(bins) - 2:
+            in_bin = (x >= bins[i]) & (x <= bins[i + 1])
+        else:
+            in_bin = (x >= bins[i]) & (x < bins[i + 1])
+
+        n = np.sum(in_bin)
+
+        if n < min_points_per_bin:
+            continue
+
+        x_med.append(np.nanmedian(x[in_bin]))
+        y_med.append(np.nanmedian(y[in_bin]))
+        y_p16.append(np.nanpercentile(y[in_bin], 16))
+        y_p84.append(np.nanpercentile(y[in_bin], 84))
+        n_bin.append(n)
+
+    return {
+        "x_med": np.asarray(x_med),
+        "y_med": np.asarray(y_med),
+        "y_p16": np.asarray(y_p16),
+        "y_p84": np.asarray(y_p84),
+        "n_bin": np.asarray(n_bin),
+    }
+
+
+def plot_resolved_ks_relation(
+    ks_df,
+    ax=None,
+    x_col="log_sigma_H2_pc2",
+    y_col="log_sigma_sfr_kpc2",
+    group_col="vfid",
+    alpha=0.2,
+    s=18,
+    nbins=10,
+    bins=None,
+    bins_by="global",
+    min_points_per_bin=8,
+    show_points=True,
+    show_running_median=True,
+    show_percentile_region=True,
+    median_lw=2.5,
+    percentile_alpha=0.18,
+    show_legend=True,
+    plot_constant_tdep=True,
+    tdep_yr=(1e8, 1e9, 1e10),
+    plot_comparisons=False,
+):
+    """
+    Plot resolved Kennicutt-Schmidt relation for multiple galaxies.
+
+    For each galaxy:
+      - plot individual points with alpha=0.2 by default
+      - calculate running median in bins of log Sigma_H2
+      - shade 16-84 percentile range in each bin
+
+    Expected default columns:
+      log_sigma_H2_pc2
+      log_sigma_sfr_kpc2
+      vfid
+    """
+
+    import numpy as np
+    import matplotlib.pyplot as plt
+
+    if ax is None:
+        fig, ax = plt.subplots(figsize=(6.5, 5.2))
+    else:
+        fig = ax.figure
+
+    df = ks_df.copy()
+
+    good = (
+        np.isfinite(df[x_col])
+        & np.isfinite(df[y_col])
+    )
+    df = df.loc[good]
+
+    if len(df) == 0:
+        raise ValueError("No finite KS points found.")
+
+    ##################################################
+    # Set up global bins
+    ##################################################
+
+    if bins is None and bins_by == "global":
+        xmin = np.nanmin(df[x_col])
+        xmax = np.nanmax(df[x_col])
+        bins_global = np.linspace(xmin, xmax, nbins + 1)
+    elif bins is not None:
+        bins_global = np.asarray(bins)
+    else:
+        bins_global = None
+
+    ##################################################
+    # Stable matplotlib color cycle
+    ##################################################
+
+    color_cycle = plt.rcParams["axes.prop_cycle"].by_key()["color"]
+
+    ##################################################
+    # Plot each galaxy separately
+    ##################################################
+
+    for j, (gal, g) in enumerate(df.groupby(group_col)):
+        x = np.asarray(g[x_col])
+        y = np.asarray(g[y_col])
+
+        color = color_cycle[j % len(color_cycle)]
+
+        if show_points:
+            ax.scatter(
+                x,
+                y,
+                s=s,
+                alpha=alpha,
+                color=color,
+                label=str(gal),
+                edgecolors="none",
+            )
+
+        if not show_running_median:
+            continue
+
+        if bins_by == "galaxy" and bins is None:
+            if len(g) < min_points_per_bin:
+                continue
+
+            xmin_g = np.nanmin(x)
+            xmax_g = np.nanmax(x)
+
+            if not np.isfinite(xmin_g) or not np.isfinite(xmax_g) or xmin_g == xmax_g:
+                continue
+
+            bins_use = np.linspace(xmin_g, xmax_g, nbins + 1)
+        else:
+            bins_use = bins_global
+
+        stats = _binned_percentiles_by_x(
+            x,
+            y,
+            bins_use,
+            min_points_per_bin=min_points_per_bin,
+        )
+
+        x_med = stats["x_med"]
+        y_med = stats["y_med"]
+        y_p16 = stats["y_p16"]
+        y_p84 = stats["y_p84"]
+
+        if len(x_med) == 0:
+            continue
+
+        if show_percentile_region:
+            ax.fill_between(
+                x_med,
+                y_p16,
+                y_p84,
+                color=color,
+                alpha=percentile_alpha,
+                linewidth=0,
+                zorder=2,
+            )
+
+        ax.plot(
+            x_med,
+            y_med,
+            color=color,
+            lw=median_lw,
+            zorder=3,
+        )
+
+    ##################################################
+    # Constant depletion-time guide lines
+    ##################################################
+
+    if plot_constant_tdep:
+        xgrid = np.linspace(
+            np.nanmin(df[x_col]) - 0.2,
+            np.nanmax(df[x_col]) + 0.2,
+            100,
+        )
+
+        for tdep in tdep_yr:
+            log_tdep = np.log10(tdep)
+
+            # x is log Sigma_H2 in Msun/pc^2.
+            # Convert Sigma_H2 to Msun/kpc^2 by adding 6 dex.
+            # log Sigma_SFR = log Sigma_H2(pc^-2) + 6 - log tau_dep(yr)
+            ygrid = xgrid + 6 - log_tdep
+
+            if log_tdep == 9:
+                thiscolor = 'k'
+            else:
+                thiscolor = "0.6"
+            ax.plot(
+                xgrid,
+                ygrid,
+                ls="--",
+                lw=1,
+                color=thiscolor,
+                alpha=0.8,
+                zorder=1,
+            )
+
+            if log_tdep == 9:            
+
+                label = fr"COLIBRE / {tdep / 1e9:g} Gyr"
+                thiscolor='k' 
+                thisfontsize=11               
+            else:
+                label = fr"{tdep / 1e9:g} Gyr"
+                thiscolor = "0.35"
+                thisfontsize=9
+            ax.text(
+                xgrid[-1],
+                ygrid[-1],
+                label,
+                fontsize=thisfontsize,
+                color=thiscolor,
+                ha="right",
+                va="bottom",
+            )
+
+    ##################################################
+    # Plot comparison data
+    ##################################################
+    if plot_comparisons:
+        # Leroy+2013
+        log10_a = -2.40 # pm .09
+        n = 0.95 #pm 0.15
+        scatter = 0.3
+
+        xgrid = np.linspace(0,2.5,
+            
+            100,
+        )
+        
+        ygrid = n * (log10_a + xgrid - np.log10(10))
+        ax.plot(xgrid, ygrid, ls="-", lw='2',color='0.35',label=r"Local disks: H$\alpha$+24$\mu$m (Leroy+2013)")
+        plt.fill_between(xgrid, y1=ygrid + scatter, y2=ygrid - scatter, color='k',alpha=.15)
+
+        label = f"local disks"
+        ax.text(
+                xgrid[-1],
+                ygrid[-1],
+                label,
+                fontsize=11,
+                color="0.35",
+                ha="left",
+                va="bottom",
+            )
+    ##################################################
+    # Labels and formatting
+    ##################################################
+
+    ax.set_xlabel(
+        r"$\log_{10}\,\Sigma_{\rm H_2}\ [{\rm M_\odot\,pc^{-2}}]$",fontsize=16
+    )
+    ax.set_ylabel(
+        r"$\log_{10}\,\Sigma_{\rm SFR_{H\alpha}}\ [{\rm M_\odot\,yr^{-1}\,kpc^{-2}}]$",fontsize=16
+    )
+
+    ax.grid(alpha=0.25)
+
+    if show_legend:
+        leg = ax.legend(
+            fontsize=8,
+            frameon=False,
+            loc="best",
+            markerscale=1.8,
+            
+        )
+        for lh in leg.legend_handles[0:-1]: 
+            lh.set_alpha(1)
+
+    fig.tight_layout()
+
+    return fig, ax
+
+
+
+
+# def plot_resolved_ks_relation(
+#     ks_df,
+#     ax=None,
+#     alpha=0.2,
+#     s=18,
+#     show_legend=True,
+#     plot_constant_tdep=True,
+#     plot_running_median=True,
+#     nbins=12,
+#     min_points_per_bin=10,
+#     median_color="k",
+#     median_lw=2.5,
+#     percentile_alpha=0.25,
+# ):
+#     """
+#     Plot resolved Kennicutt-Schmidt relation with optional running median
+#     and 16-84 percentile range.
+
+#     Expected dataframe columns:
+#         log_sigma_H2_pc2
+#         log_sigma_sfr
+#         vfid
+
+#     Units:
+#         x-axis: log10 Sigma_H2 [Msun pc^-2]
+#         y-axis: log10 Sigma_SFR [Msun yr^-1 kpc^-2]
+#     """
+
+#     import numpy as np
+#     import matplotlib.pyplot as plt
+
+#     if ax is None:
+#         fig, ax = plt.subplots(figsize=(6, 5))
+#     else:
+#         fig = ax.figure
+
+#     ##################################################
+#     # Plot individual points
+#     ##################################################
+
+#     for vfid, g in ks_df.groupby("vfid"):
+#         ax.scatter(
+#             g["log_sigma_H2_pc2"],
+#             g["log_sigma_sfr_kpc2"],
+#             s=s,
+#             alpha=alpha,
+#             label=vfid,
+#         )
+
+#     ##################################################
+#     # Running median and 16-84 percentile envelope
+#     ##################################################
+
+#     if plot_running_median:
+#         x = np.asarray(ks_df["log_sigma_H2_pc2"])
+#         y = np.asarray(ks_df["log_sigma_sfr_kpc2"])
+
+#         good = np.isfinite(x) & np.isfinite(y)
+#         x = x[good]
+#         y = y[good]
+
+#         bins = np.linspace(np.nanmin(x), np.nanmax(x), nbins + 1)
+#         bin_centers = 0.5 * (bins[:-1] + bins[1:])
+
+#         x_med = []
+#         y_med = []
+#         y_p16 = []
+#         y_p84 = []
+#         n_bin = []
+
+#         for i in range(nbins):
+#             in_bin = (x >= bins[i]) & (x < bins[i + 1])
+
+#             # include the right edge in the last bin
+#             if i == nbins - 1:
+#                 in_bin = (x >= bins[i]) & (x <= bins[i + 1])
+
+#             if np.sum(in_bin) < min_points_per_bin:
+#                 continue
+
+#             x_med.append(np.nanmedian(x[in_bin]))
+#             y_med.append(np.nanmedian(y[in_bin]))
+#             y_p16.append(np.nanpercentile(y[in_bin], 16))
+#             y_p84.append(np.nanpercentile(y[in_bin], 84))
+#             n_bin.append(np.sum(in_bin))
+
+#         x_med = np.asarray(x_med)
+#         y_med = np.asarray(y_med)
+#         y_p16 = np.asarray(y_p16)
+#         y_p84 = np.asarray(y_p84)
+
+#         if len(x_med) > 0:
+#             ax.fill_between(
+#                 x_med,
+#                 y_p16,
+#                 y_p84,
+#                 color=median_color,
+#                 alpha=percentile_alpha,
+#                 linewidth=0,
+#                 label="16-84 percentile",
+#             )
+
+#             ax.plot(
+#                 x_med,
+#                 y_med,
+#                 color=median_color,
+#                 lw=median_lw,
+#                 label="Running median",
+#             )
+
+#     ##################################################
+#     # Constant depletion-time guide lines
+#     ##################################################
+
+#     if plot_constant_tdep:
+#         xgrid = np.linspace(
+#             np.nanmin(ks_df["log_sigma_H2_pc2"]) - 0.2,
+#             np.nanmax(ks_df["log_sigma_H2_pc2"]) + 0.2,
+#             100,
+#         )
+
+#         # Sigma_H2 is in Msun/pc^2.
+#         # Convert to Msun/kpc^2 by adding 6 dex:
+#         # log Sigma_SFR = log Sigma_H2(pc^-2) + 6 - log tau_dep(yr)
+#         for log_tdep in [8, 9, 10]:
+#             ygrid = xgrid + 6 - log_tdep
+
+#             ax.plot(
+#                 xgrid,
+#                 ygrid,
+#                 ls="--",
+#                 lw=1,
+#                 color="0.6",
+#                 alpha=0.8,
+#             )
+
+#             ax.text(
+#                 xgrid[-1],
+#                 ygrid[-1],
+#                 rf"$10^{{{log_tdep}}}$ yr",
+#                 fontsize=9,
+#                 color="0.35",
+#                 ha="right",
+#                 va="bottom",
+#             )
+
+#     ##################################################
+#     # Labels and formatting
+#     ##################################################
+
+#     ax.set_xlabel(
+#         r"$\log_{10}\,\Sigma_{\rm H_2}\ [{\rm M_\odot\,pc^{-2}}]$"
+#     )
+#     ax.set_ylabel(
+#         r"$\log_{10}\,\Sigma_{\rm SFR}\ [{\rm M_\odot\,yr^{-1}\,kpc^{-2}}]$"
+#     )
+
+#     ax.grid(alpha=0.25)
+
+#     if show_legend:
+#         ax.legend(
+#             fontsize=8,
+#             frameon=False,
+#             loc="best",
+#             markerscale=1.5,
+#         )
+
+#     fig.tight_layout()
+
+#     return fig, ax
+
+
+
+def plot_resolved_ks_relation_kpc(
+    ks_df,
+    ax=None,
+    alpha=0.2,
+    s=20,
+    show_legend=True,
+    plot_constant_tdep=True,
+):
+    """
+    Plot resolved Kennicutt-Schmidt relation for several galaxies.
+
+    Expects a dataframe from get_ks_points_many_galaxies().
+    """
+
+    import numpy as np
+    import matplotlib.pyplot as plt
+
+    if ax is None:
+        fig, ax = plt.subplots(figsize=(6, 5))
+    else:
+        fig = ax.figure
+
+    for vfid, g in ks_df.groupby("vfid"):
+        ax.scatter(
+            g["log_sigma_H2"],
+            g["log_sigma_sfr"],
+            s=s,
+            alpha=alpha,
+            label=vfid,
+        )
+
+    if plot_constant_tdep:
+        xgrid = np.linspace(
+            np.nanmin(ks_df["log_sigma_H2"]) - 0.2,
+            np.nanmax(ks_df["log_sigma_H2"]) + 0.2,
+            100,
+        )
+
+        # Sigma_SFR = Sigma_H2 / tau_dep
+        # Units:
+        #   Sigma_H2: Msun/kpc^2
+        #   Sigma_SFR: Msun/yr/kpc^2
+        for log_tdep in [8, 9, 10]:
+            ygrid = xgrid - log_tdep
+
+            ax.plot(
+                xgrid,
+                ygrid,
+                ls="--",
+                lw=1,
+                color="0.5",
+                alpha=0.7,
+            )
+
+            ax.text(
+                xgrid[-1],
+                ygrid[-1],
+                rf"$10^{{{log_tdep}}}$ yr",
+                fontsize=9,
+                color="0.35",
+                ha="right",
+                va="bottom",
+            )
+
+    ax.set_xlabel(r"$\log_{10}\,\Sigma_{\rm H_2}\ [{\rm M_\odot\,kpc^{-2}}]$")
+    ax.set_ylabel(r"$\log_{10}\,\Sigma_{\rm SFR}\ [{\rm M_\odot\,yr^{-1}\,kpc^{-2}}]$")
+
+    ax.grid(alpha=0.25)
+
+    if show_legend:
+        ax.legend(
+            fontsize=8,
+            frameon=False,
+            loc="best",
+            markerscale=1.5,
+        )
+
+    fig.tight_layout()
+
+    return fig, ax
+
+
+
+def get_ks_points_many_galaxies_binned(
+    dirnames,
+    vr_dict,
+    nsigma=3,
+    alma=False,
+    rootdir=None,
+    H0=74.,
+    binsize_pix=None,
+    binsize_kpc=None,
+    min_valid_frac=0.5,
+    verbose=True,
+):
+    """
+    Collect beam-binned KS points for several galaxies.
+
+    Returns one pandas DataFrame with one row per detected beam-sized region.
+    """
+
+    import pandas as pd
+
+    rows = []
+
+    for dirname in dirnames:
+        t = dirname.split("-")
+        vfid = t[0]
+        
+        if dirname in vr_dict:
+            vr = vr_dict[dirname]
+        elif vfid in vr_dict:
+            vr = vr_dict[vfid]
+        else:
+            raise KeyError(f"No vr found for {dirname} or {vfid}")
+
+        if isinstance(alma, dict):
+            if dirname in alma:
+                alma_flag = alma[dirname]
+            elif vfid in alma:
+                alma_flag = alma[vfid]
+            else:
+                alma_flag = False
+        else:
+            alma_flag = alma
+
+        result = get_ks_points_one_galaxy_binned(
+            dirname,
+            vr=vr,
+            nsigma=nsigma,
+            alma=alma_flag,
+            rootdir=rootdir,
+            H0=H0,
+            binsize_pix=binsize_pix,
+            binsize_kpc=binsize_kpc,
+            min_valid_frac=min_valid_frac,
+            verbose=verbose,
+            )
+
+
+        if result["n_points"] == 0:
+            continue
+
+        # reference dictionary
+        # result = {
+        #     "galaxy": dirname,
+        #     "vfid": vfid,
+
+        #     "sigma_H2_kpc2": sigma_H2_out,
+        #     "sigma_H2_pc2": sigma_H2_pc2_out,
+        #     "sigma_sfr_kpc2": sigma_sfr_out,
+
+        #     "log_sigma_H2_pc2": np.log10(sigma_H2_pc2_out),
+        #     "log_sigma_sfr": np.log10(sigma_sfr_out),
+
+        #     "co_snr": co_snr_bin[detected_both_bin],
+        #     "ha_snr": ha_snr_bin[detected_both_bin],
+        #     "xbin": xbin[detected_both_bin],
+        #     "ybin": ybin[detected_both_bin],
+        #     "n_valid_pix": n_valid_bin[detected_both_bin],
+        #     "n_points": len(sigma_H2_out),
+        #     "binsize_pix": binsize_pix,
+        #     "bin_npix": bin_npix,
+        #     "beam_area_pix": beam_area_pix,
+        #     "min_valid_pixels": min_valid_pixels,
+        #     "kpc_per_pixel": kpc_per_pixel,
+        #     }
+            
+
+        rows.append(
+            pd.DataFrame(
+                {
+                    "dirname": dirname,
+                    "vfid": vfid,
+                    "galtitle": result["galtitle"],                    
+                    "sigma_H2_pc2": result["sigma_H2_pc2"],
+                    "sigma_sfr_kpc2": result["sigma_sfr_kpc2"],
+                    "log_sigma_H2_pc2": result["log_sigma_H2_pc2"],
+                    "log_sigma_sfr_kpc2": result["log_sigma_sfr"],
+                    "co_snr": result["co_snr"],
+                    "ha_snr": result["ha_snr"],
+                    "xbin": result["xbin"],
+                    "ybin": result["ybin"],
+                    "n_valid_pix": result["n_valid_pix"],
+                    "binsize_pix": result["binsize_pix"],
+                    "beam_area_pix": result["beam_area_pix"],
+                }
+            )
+        )
+
+    if len(rows) == 0:
+        return pd.DataFrame(
+            columns=[
+                "dirname",
+                "vfid",
+                "sigma_H2_pc2",
+                "sigma_sfr_kpc2",
+                "log_sigma_H2_pc2",
+                "log_sigma_sfr_kpc2",
+                "co_snr",
+                "ha_snr",
+                "xbin",
+                "ybin",
+                "n_valid_pix",
+                "binsize_pix",
+                "beam_area_pix",
+            ]
+        )
+
+    ks_df = pd.concat(rows, ignore_index=True)
+
+    if verbose:
+        print()
+        print(f"Total beam-binned KS points: {len(ks_df)}")
+        print(f"Number of galaxies: {ks_df['vfid'].nunique()}")
+
+    return ks_df
+
+
+
+def get_depletion_map(dirname,vr=None, H0=74., cmap='magma_r', verbose=False, sfr_limit=1e-5, alma=False,convolveflag=False,alt_title=None,
+                          show_tdep_limits=True):
     """
     GOAL:
     * get depletion map for CO
@@ -3069,11 +4823,18 @@ def get_depletion_map(dirname,vr=None, H0=74., cmap='magma_r', verbose=False, sf
     # signal scales with scale_factor, but rms scales as sqrt(scale_factor)
     # so snr scales as sqrt(scale_factor)
     co_rms_Msun_pixel = (co_rms_Msun_beam ) / np.sqrt(scale_factor) # Msun/pixel
-    print(f"CO rms Msun/pixel = {co_rms_Msun_pixel:.3e}")
+    #print("DEBUG: ",co_rms_Msun_pixel)
+    try:
+        print(f"CO rms Msun/pixel = {co_rms_Msun_pixel:.3e}")
+    except TypeError:
+        print(f"CO rms Msun/pixel = {np.nanmedian(co_rms_Msun_pixel):.3e}")
     if vr is not None:
         # scale data to convert to flux/kpc^2
         kpc_per_pixel = get_kpc_per_pixel(co_imwcs,vr)
-        print(f"CO rms Msun/kpc^2 = {co_rms_Msun_pixel/kpc_per_pixel**2:.3e}, kpc/pixel={kpc_per_pixel:.2e}, vr={vr:.1f}")
+        try:
+            print(f"CO rms Msun/kpc^2 = {co_rms_Msun_pixel/kpc_per_pixel**2:.3e}, kpc/pixel={kpc_per_pixel:.2e}, vr={vr:.1f}")
+        except TypeError:
+            print(f"CO rms Msun/kpc^2 = {np.nanmedian(co_rms_Msun_pixel)/kpc_per_pixel**2:.3e}, kpc/pixel={kpc_per_pixel:.2e}, vr={vr:.1f}")
 
         print()
         
@@ -3129,57 +4890,144 @@ def get_depletion_map(dirname,vr=None, H0=74., cmap='magma_r', verbose=False, sf
         print(f"{vfid}: max value in image before reprojection = {np.nanmax(hdat)}, halpha_rms = {halpha_rms[vfid]}")
 
 
-    ##################################################
-    ## Convolve Halpha Image to match CO
-    ##################################################
+    # ##################################################
+    # ## Convolve Halpha Image to match CO
+    # ##################################################
 
-    if convolveflag:
-        # convolve halpha to radio
-        sys.path.append(homedir+'/github/havirgo/python/')
-        import convolve_halpha_2_radio as cr
-        radiobeam_PA = cheader['BPA']# in degrees
-        radiobeam_a = (cheader['BMAJ']*u.deg).to(u.arcsec).value
-        radiobeam_b = (cheader['BMIN']*u.deg).to(u.arcsec).value
+    # if convolveflag:
+    #     # convolve halpha to radio
+    #     sys.path.append(homedir+'/github/havirgo/python/')
+    #     import convolve_halpha_2_radio as cr
+    #     radiobeam_PA = cheader['BPA']# in degrees
+    #     radiobeam_a = (cheader['BMAJ']*u.deg).to(u.arcsec).value
+    #     radiobeam_b = (cheader['BMIN']*u.deg).to(u.arcsec).value
         
-        outname, csfr_dat = cr.convolve_image(sfrim, ha_fwhm, radiobeam_a, radiobeam_b, radiobeam_PA)
+    #     outname, csfr_dat = cr.convolve_image(sfrim, ha_fwhm, radiobeam_a, radiobeam_b, radiobeam_PA)
+
 
     ##################################################
-    ## Reproject Image
+    ## Convolve/Reproject Halpha Image to match CO grid
     ##################################################
-    from reproject import reproject_adaptive
+    from reproject import reproject_adaptive, reproject_interp
+    #from reproject import reproject_adaptive
 
-    ##
-    # reproject the halpha image onto the CO image
-    ##    
-    # TODONE - are we doing the reprojection right - yes, adaptive with conserve_flux=True is correct
     out_header = cheader
 
     if convolveflag:
-        convolved_hdu = fits.ImageHDU(data=csfr_dat,header=hdu.header)
-        crsfr_dat, crfootprint = reproject_adaptive(convolved_hdu, out_header, conserve_flux=True)
+        outfile = f"{vfid}_sfr_reproject_adaptive_True_convolved_alma.fits"
     else:
-        rsfr_dat, rfootprint = reproject_adaptive(hdu, out_header, conserve_flux=True)
+        outfile = f"{vfid}_sfr_reproject_adaptive_True_alma.fits"
+
+    if os.path.exists(outfile):
+        print(f"reading existing reprojected SFR image: {outfile}")
+
+        if convolveflag:
+            crsfr_dat, cached_header = fits.getdata(outfile, header=True)
+        else:
+            rsfr_dat, cached_header = fits.getdata(outfile, header=True)
+
+    else:
+        print(f"creating reprojected SFR image: {outfile}")
+
+        if convolveflag:
+            # convolve halpha to radio
+            sys.path.append(homedir + '/github/havirgo/python/')
+            import convolve_halpha_2_radio as cr
+
+            radiobeam_PA = cheader['BPA']  # degrees
+            radiobeam_a = (cheader['BMAJ'] * u.deg).to(u.arcsec).value
+            radiobeam_b = (cheader['BMIN'] * u.deg).to(u.arcsec).value
+
+            outname, csfr_dat = cr.convolve_image(
+                sfrim,
+                ha_fwhm,
+                radiobeam_a,
+                radiobeam_b,
+                radiobeam_PA,
+            )
+
+            convolved_hdu = fits.ImageHDU(data=csfr_dat, header=hdu.header)
+
+            crsfr_dat, crfootprint = reproject_adaptive(
+                convolved_hdu,
+                out_header,
+                conserve_flux=True,
+            )
+
+            fits.writeto(outfile, crsfr_dat, header=out_header, overwrite=True)
+
+        else:
+            rsfr_dat, rfootprint = reproject_adaptive(
+                hdu,
+                out_header,
+                conserve_flux=True,
+            )
+
+            fits.writeto(outfile, rsfr_dat, header=out_header, overwrite=True)
 
 
         
-    # when using reproject_exact, need to be in sb units
-    #rsfr_sb, rfootprint = reproject_exact(hdu, out_header)#, conserve_flux=True)        
-    # need to convert back to flux
-    #rsfr_dat = rsfr_sb #* (pixscale_area_sr_out)#/pixscale_area_sr_in)
-    
-    #print("ratio of out/in pixel areas = ",(pixscale_area_sr_out/pixscale_area_sr_in))
 
-    #print(f"ratio of rsfr_dat / rsfr_sb = {np.nanmean(rsfr_dat/rsfr_sb)}")
-    
-    # write out reprojected halpha image
-    if convolveflag:
-        outfile = f"{vfid}_reproject_adaptive_True_convolved_alma.fits"
-        fits.writeto(outfile,crsfr_dat, header = out_header, overwrite=True)
-    else:
-        outfile = f"{vfid}_reproject_adaptive_True_alma.fits"
-        fits.writeto(outfile,rsfr_dat, header = out_header, overwrite=True)
+        
+    # ##################################################
+    # ## Reproject Image
+    # ##################################################
     
 
+    # ##
+    # # reproject the halpha image onto the CO image
+    # ##    
+    # # TODONE - are we doing the reprojection right - yes, adaptive with conserve_flux=True is correct
+    # out_header = cheader
+
+    # if convolveflag:
+    #     convolved_hdu = fits.ImageHDU(data=csfr_dat,header=hdu.header)
+    #     crsfr_dat, crfootprint = reproject_adaptive(convolved_hdu, out_header, conserve_flux=True)
+    # else:
+    #     rsfr_dat, rfootprint = reproject_adaptive(hdu, out_header, conserve_flux=True)
+
+
+        
+    # # when using reproject_exact, need to be in sb units
+    # #rsfr_sb, rfootprint = reproject_exact(hdu, out_header)#, conserve_flux=True)        
+    # # need to convert back to flux
+    # #rsfr_dat = rsfr_sb #* (pixscale_area_sr_out)#/pixscale_area_sr_in)
+    
+    # #print("ratio of out/in pixel areas = ",(pixscale_area_sr_out/pixscale_area_sr_in))
+
+    # #print(f"ratio of rsfr_dat / rsfr_sb = {np.nanmean(rsfr_dat/rsfr_sb)}")
+    
+    # # write out reprojected halpha image
+    # if convolveflag:
+    #     outfile = f"{vfid}_sfr_reproject_adaptive_True_convolved_alma.fits"
+    #     fits.writeto(outfile,crsfr_dat, header = out_header, overwrite=True)
+    # else:
+    #     outfile = f"{vfid}_sfr_reproject_adaptive_True_alma.fits"
+    #     fits.writeto(outfile,rsfr_dat, header = out_header, overwrite=True)
+    
+
+    # Reproject the Halpha/R mask onto the CO grid.
+    # Use nearest-neighbor because this is a mask, not flux.
+    hmask_hdu = fits.ImageHDU(
+        data=np.asarray(hmaskdat, dtype=float),
+        header=hdu.header,
+    )
+
+    rhmask_dat, rhmask_footprint = reproject_interp(
+        hmask_hdu,
+        out_header,
+        order="nearest-neighbor",
+    )
+
+    # True where the Halpha/SFR pixel should be ignored.
+    ha_mask_on_co_grid = (
+        (rhmask_dat > 0.5)
+        | ~np.isfinite(rhmask_dat)
+        | (rhmask_footprint == 0)
+    )
+
+    
+        
     # compare the sum of the original and reprojected images
     #flux_in = np.nansum(hdu.data) * pixscale_area_sr_in
 
@@ -3283,9 +5131,24 @@ def get_depletion_map(dirname,vr=None, H0=74., cmap='magma_r', verbose=False, sf
     #    plt.title("co_nan_flag")
     
     # if CO is detected (not nan), but SFR isn't
+    # 
     tdep_lower_flag = ~co_nan_flag & halpha_nan_flag
+
+    # CO not detected (nan_flag), but SFR is (not nan)
+    # CO_rms / SFR gives the upper limit b/c CO could be lower
     tdep_upper_flag = co_nan_flag & ~halpha_nan_flag
 
+
+    # Do not identify upper/lower limits inside masked Halpha regions
+    # such as stars or other bad pixels.
+    ha_valid_on_co_grid = ~ha_mask_on_co_grid
+    
+    # CO detected, Halpha not detected, and Halpha pixel is usable
+    tdep_lower_flag = ~co_nan_flag & halpha_nan_flag & ha_valid_on_co_grid
+
+    # CO not detected, Halpha detected, and Halpha pixel is usable
+    tdep_upper_flag = co_nan_flag & ~halpha_nan_flag & ha_valid_on_co_grid
+    
     # create an image that just has the upper and lower limts so we can visualize
     tdep_limits_image = np.zeros_like(depletion)
 
@@ -3294,7 +5157,7 @@ def get_depletion_map(dirname,vr=None, H0=74., cmap='magma_r', verbose=False, sf
     if alma:
         tdep_limits_image[tdep_upper_flag] = (NSIGMA * co_rms_Msun_pixel[tdep_upper_flag]) / (sfr_dep_dat[tdep_upper_flag] * extinction_correction)
         # we detect CO but not SFR
-        tdep_limits_image[tdep_lower_flag] = cdat[tdep_lower_flag]/ (3 * halpha_rms[vfid] * extinction_correction)    
+        tdep_limits_image[tdep_lower_flag] = cdat[tdep_lower_flag]/ (NSIGMA * halpha_rms[vfid] * extinction_correction)    
 
     else:
         tdep_limits_image[tdep_upper_flag] = (NSIGMA * co_rms_Msun_pixel) / (sfr_dep_dat[tdep_upper_flag] * extinction_correction)
@@ -3312,7 +5175,7 @@ def get_depletion_map(dirname,vr=None, H0=74., cmap='magma_r', verbose=False, sf
         #lower_limit = (cdat[tdep_lower_flag]/ (3 * halpha_rms[vfid] * extinction_correction)).flatten()
         #print(f"tau_dep lower limits: min={np.min(lower_limit)}, max={np.min(lower_limit)}")
 
-        tdep_limits_image[tdep_lower_flag] = cdat[tdep_lower_flag] / (3 * halpha_rms[vfid] * extinction_correction)
+        tdep_limits_image[tdep_lower_flag] = cdat[tdep_lower_flag] / (NSIGMA * halpha_rms[vfid] * extinction_correction)
 
         lower_limit = tdep_limits_image[tdep_lower_flag]
 
@@ -3328,8 +5191,41 @@ def get_depletion_map(dirname,vr=None, H0=74., cmap='magma_r', verbose=False, sf
 
     depletion_with_limits[limit_flag] = tdep_limits_image[limit_flag]
 
+    # save depletion map as a fits image
+
+    dep_map_fits = fits.PrimaryHDU(depletion_with_limits)
+    dep_map_fits.header = cheader
+    dep_map_fits.header["BUNIT"] = ("yr", "Gas depletion time")
+    dep_map_filename = sfrim.replace('-sfr-vr.fits','-tdepletion.fits')
+    dep_map_fits.writeto(dep_map_filename, overwrite=True)
+    print("saving depletion map to ",dep_map_filename)
+
+
+    log_dep = np.log10(depletion_with_limits)
+    dep_map_fits.header["BUNIT"] = ("log10(yr)", "Gas depletion time")    
+    log_dep_map_filename = sfrim.replace('-sfr-vr.fits','-tdepletion-log.fits')
+    dep_map_fits.writeto(log_dep_map_filename, overwrite=True)
+    
     # testing if we remove limits
 
+
+    # create smoothed version of limits for plotting contours
+    # Use approximately one CO beam area as the minimum contourable region.
+    # scale_factor = beam_area / pixel_area was already calculated above.
+    limit_min_pixels = max(10, int(np.ceil(scale_factor)))
+
+    tdep_upper_flag_contour = clean_limit_mask_for_contours(
+        tdep_upper_flag,
+        min_pixels=limit_min_pixels,
+        do_closing=True,
+    )
+
+    tdep_lower_flag_contour = clean_limit_mask_for_contours(
+        tdep_lower_flag,
+        min_pixels=limit_min_pixels,
+        do_closing=True,
+    )
+    
     #depletion_with_limits = cdat / (sfr_dep_dat * extinction_correction)
     if verbose:
         ####################################
@@ -3365,12 +5261,64 @@ def get_depletion_map(dirname,vr=None, H0=74., cmap='magma_r', verbose=False, sf
     size_ratio = 1
     #print(f"Testing: size_ratio={size_ratio:.2f}", codepletion_figsize['VFID5842'][1],myfigsize[1])
 
+
+    # Limit contour styling
+    upper_limit_contour_color = "magenta"  # Halpha detected, CO not detected
+    lower_limit_contour_color = "deepskyblue" #"cyan"     # CO detected, Halpha not detected
+    limit_contour_lw = 1.2
+    limit_contour_alpha = 0.9
+
     #################################################
     ## PANEL 1 - CO
     #################################################    
     
     ax1 = plt.subplot(1,3,1, projection=co_imwcs)
     plt.imshow(cdat_masked[y1:y2,x1:x2], cmap='viridis')
+
+    # save image of CO mass/kpc^2
+    kpc_per_pixel = get_kpc_per_pixel(co_imwcs,vr)
+
+    sigma_H2_kpc2 = cdat / kpc_per_pixel**2
+
+    co_kpc_fits = fits.PrimaryHDU(sigma_H2_kpc2)
+    co_kpc_fits.header = cheader
+    co_kpc_fits.header["BUNIT"] = ("Msun/kpc2", "Molecular gas surface density")
+    co_kpc_filename = sfrim.replace('-sfr-vr.fits', '-Sigma-H2-kpc2.fits')
+    co_kpc_fits.writeto(co_kpc_filename, overwrite=True)
+
+
+    # co_kpc_fits = fits.PrimaryHDU(cdat_masked/kpc_per_pixel**2)
+    # co_kpc_fits.header = cheader
+    # co_kpc_filename = sfrim.replace('-sfr-vr.fits','-Sigma-H2-kpc2.fits')
+    # co_kpc_fits.writeto(co_kpc_filename, overwrite=True)
+    print("saving Sigma H2 mass/kpc^2 ",co_kpc_filename)
+
+    ###############################################
+    # add a physical scale to the CO panel
+    ###############################################
+    pscale = wcs.utils.proj_plane_pixel_scales(co_imwcs)  # deg/pixel
+    pscale_arcsec = np.abs(pscale[0]) * 3600              # arcsec/pixel
+
+
+    # Contours showing upper limits:
+    # Halpha detected, CO not detected
+    if show_tdep_limits:
+        show_both_limit_contours=False
+        add_limit_contours(
+            ax1,
+            tdep_upper_flag_contour,
+            tdep_lower_flag_contour,
+            x1,
+            x2,
+            y1,
+            y2,
+            show_upper=True,
+            show_lower=show_both_limit_contours,
+            )
+
+
+ 
+    
     plt.title(titles[0],fontsize=14)
     plt.text(-.1,0.5,galname,verticalalignment='center',transform=plt.gca().transAxes,fontsize=14,rotation=90)
     #plt.title("CO Intensity Map")
@@ -3393,6 +5341,19 @@ def get_depletion_map(dirname,vr=None, H0=74., cmap='magma_r', verbose=False, sf
     # plot CO beam
     plot_HI_beam(ax1,COfilename,cheader,color='steelblue')
 
+
+    add_scale(
+        ax1,
+        vr=vr,
+        pscale=pscale_arcsec,
+        color='k',
+        barsize=1,
+        fontsize=12,
+        #xscale=.85,
+        yscale=0.95,
+    )    
+    
+
     #################################################
     ## PANEL 2 - SIGMA_SFR
     #################################################    
@@ -3404,10 +5365,23 @@ def get_depletion_map(dirname,vr=None, H0=74., cmap='magma_r', verbose=False, sf
     if vr is not None:
         # scale data to convert to flux/kpc^2
         kpc_per_pixel = get_kpc_per_pixel(co_imwcs,vr)
+        
         if convolveflag:
             rsfr_dat_kpc2 = crsfr_dat/(kpc_per_pixel**2)
         else:
             rsfr_dat_kpc2 = rsfr_dat/(kpc_per_pixel**2)
+        # save SFR/kpc^2 image
+        # save image of CO mass/kpc^2
+        # create a masked version
+        rsfr_dat_kpc2_masked = rsfr_dat_kpc2.copy()
+        rsfr_dat_kpc2_masked[ha_mask_on_co_grid] = np.nan
+        sfr_kpc_fits = fits.PrimaryHDU(rsfr_dat_kpc2_masked)
+        sfr_kpc_fits.header = cheader
+        sfr_kpc_filename = sfrim.replace('-sfr-vr.fits','-Sigma-sfr-kpc2.fits')
+        sfr_kpc_fits.writeto(sfr_kpc_filename, overwrite=True)
+        print("saving sfr/kpc^2 ",sfr_kpc_filename)
+
+    
         v1 = 0 # vmin[i]/kpc_per_pixel**2
         v2 = sfr_limit/kpc_per_pixel**2
         #myclevels = myclevels/kpc_per_pixel**2
@@ -3415,6 +5389,36 @@ def get_depletion_map(dirname,vr=None, H0=74., cmap='magma_r', verbose=False, sf
     else:
         # plot result
         plt.imshow(rsfr_dat[y1:y2,x1:x2], vmin=0.0,vmax=1.e-5, cmap=cmap)
+
+    # Contours showing lower limits:
+    # CO detected, Halpha not detected
+
+    if show_tdep_limits:
+        add_limit_contours(
+            ax2,
+            tdep_upper_flag_contour,
+            tdep_lower_flag_contour,
+            x1,
+            x2,
+            y1,
+            y2,
+            show_upper=show_both_limit_contours,
+            show_lower=True,
+            )
+
+    # lower_limit_mask_zoom = tdep_lower_flag_contour[y1:y2, x1:x2].astype(float)
+
+
+    # if np.any(lower_limit_mask_zoom):
+    #     ax2.contour(
+    #         lower_limit_mask_zoom,
+    #         levels=[0.5],
+    #         colors=lower_limit_contour_color,
+    #         linewidths=limit_contour_lw,
+    #         alpha=limit_contour_alpha,
+    #         )
+
+        
     plt.title(titles[1],fontsize=14)
     #plt.title("SFR")
     #cbaxes = inset_axes(ax2, width="80%", height="5%", loc=8)
@@ -3473,7 +5477,14 @@ def get_depletion_map(dirname,vr=None, H0=74., cmap='magma_r', verbose=False, sf
     #plt.colorbar(fraction=.08, label='log10(t_depletion)')
 
     hide_xyticks_wcs(ax3)
-    plt.savefig(os.path.join(plotdir,galname)+'-depletion-map.png',dpi=150,bbox_inches="tight")
+    if show_tdep_limits:
+        outname = os.path.join(plotdir,galname)+'-depletion-map-with-limits.png'
+    else:
+        outname = os.path.join(plotdir,galname)+'-depletion-map-no-limits.png'
+        
+    plt.savefig(outname,dpi=300,bbox_inches="tight")
+        
+    #plt.savefig(os.path.join(plotdir,galname)+'-depletion-map.png',dpi=150,bbox_inches="tight")        
     #plt.savefig(os.path.join(plotdir,dirname)+'-depletion-map.pdf',dpi=150,bbox_inches="tight")    
 
     
@@ -4974,18 +6985,26 @@ def plot_phase_space_normalized(sepmax=15):
     plt.savefig(plotdir+'/NGC5364_Virgo_phasespace_normalized.pdf')    
 
 
-def plot_sky_positions_with_filaments(multicolor=True,plotlegend=True):
+def plot_sky_positions_with_filaments(multicolor=True,plotlegend=True,plotN5566=False,zoom_virgo3=False):
 
     plt.figure(figsize=(11,5))
     plt.subplots_adjust(right=.95,top=.95)
-    plot_spines(multicolor=multicolor,colorone='VirgoIII',color='m',legend=plotlegend)
-    plt.plot(v.main['RA'],v.main['DEC'],'k.',alpha=.1,label='Virgo Filament Catalog')
+    if zoom_virgo3:
+        plotone="VirgoIII"
+    else:
+        plotone=None
+    plot_spines(multicolor=multicolor,colorone='VirgoIII',color='m',legend=plotlegend,plotone=plotone)
+    plt.plot(v.main['RA'],v.main['DEC'],'k.',alpha=.4,label='Virgo Filament Catalog')
     # plot CO sources
     flag = v.main['HAobsflag'] #& ~v.main['COflag']
     #plt.plot(v.main['RA'][flag],v.main['DEC'][flag],'cs',alpha=.5,mfc='None',label=r'$H\alpha$',markersize=8)
     flag = v.groupMembs
-    plt.plot(v.main['RA'][flag],v.main['DEC'][flag],'co',alpha=.8,label=r'$\rm NGC5364~Group$',markersize=5)    
+    plt.plot(v.main['RA'][flag],v.main['DEC'][flag],'cs',mec='k', color='#00FFFF',alpha=.8,label=r'$\rm NGC5364~Group$',markersize=10)    
 
+    if plotN5566:
+        flag = v.groupMembs_n5566
+        plt.plot(v.main['RA'][flag],v.main['DEC'][flag],'m^',color="chartreuse", mec='k',alpha=.8,label=r'$\rm NGC5566~Group$',markersize=10)    
+    
 
     
 
@@ -4994,8 +7013,10 @@ def plot_sky_positions_with_filaments(multicolor=True,plotlegend=True):
     #flag = v.main['COflag'] & v.main['HAobsflag']
     #plt.plot(v.main['RA'][flag],v.main['DEC'][flag],'co',markersize=5,alpha=.7,label=r'$CO + H\alpha$',mec='0.5')
     plt.axis([118,262,-1,65])
-    plt.legend(loc='lower right')#bbox_to_anchor=(1.01,1),loc='upper left')
+    plt.legend(loc='lower right',fontsize=14)#bbox_to_anchor=(1.01,1),loc='upper left')
 
+    if zoom_virgo3:
+        plt.axis([203,231,-3,10])
 
 
     plt.gca().invert_xaxis()
@@ -5005,13 +7026,29 @@ def plot_sky_positions_with_filaments(multicolor=True,plotlegend=True):
     plt.yticks(fontsize=14)
     #plt.legend(loc='upper right')
     #plt.title('Filamentary Structures Surrounding the Virgo Cluster',fontsize=18)
-    plt.savefig(plotdir+'/ngc5364_positions_filaments.png',dpi=150,bbox_inches="tight")
-    plt.savefig(plotdir+'/ngc5364_positions_filaments.pdf')
+    if plotN5566:
+        outfile = plotdir+'/ngc5364_ngc5566_positions_filaments.png'
+    else:
+        outfile = plotdir+'/ngc5364_positions_filaments.png'
+    if zoom_virgo3:
+        outfile = outfile.replace(".png","zoomv3.png")
+    
+    plt.savefig(outfile,dpi=300,bbox_inches="tight")
+    plt.savefig(outfile.replace(".png",".pdf"))
+
+
 class grouptables(vtables):
     def get_group_members(self):
         self.groupMembs = self.kt['PGC1'] == 49547
         print(f"number of Kourkchi group members = {np.sum(self.groupMembs)}")
         self.groupMembsHA = (self.kt['PGC1'] == 49547) & (self.main['HAobsflag'])
+
+    def get_group_members_ngc5566(self):
+        self.groupMembs_n5566 = self.kt['PGC1'] == 51233
+        print(f"number of Kourkchi members in NGC5566 group = {np.sum(self.groupMembs_n5566)}")
+        self.groupMembsHA_n5566 = (self.kt['PGC1'] == 51233) & (self.main['HAobsflag'])
+        print(f"number of Kourkchi members in NGC5566 group w/Ha obs= {np.sum(self.groupMembsHA_n5566)}")
+        
     def get_mass_weighted_center(self):
         """get RA and DEC of mass weighted center  """
 
@@ -5197,8 +7234,10 @@ if __name__ == '__main__':
     v = grouptables(args.tabledir,args.tableprefix) 
     v.read_all()
     v.get_group_members()
+
     v.get_mass_weighted_center()    
     v.get_distance_Virgo()
     v.get_biweight_location_scale()
     v.get_dr_rvirial()
+    v.get_group_members_ngc5566()        
     groupMembs = v.kt['PGC1'] == 49547

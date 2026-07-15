@@ -50,8 +50,9 @@ class haplots(vtables):
     
     def get_sample_flag(self):
         # SNR in halpha
-        snr_flag = np.abs(self.halpha['HF_TOT']/self.halpha['HF_TOT_ERR']) > 3
-        snr_flag = (self.halpha['HM16'] > 10)
+        #snr_flag = np.abs(self.halpha['HF_TOT']/self.halpha['HF_TOT_ERR']) > 3
+        #snr_flag = (self.halpha['HM16'] > 10)
+        snr_flag = np.abs(self.halpha['H_R24_FLUX_CGS']/self.halpha['H_R24_FLUX_CGS_ERR']) > 5        
         # stellar mass cut
         # get mass weighted center
         badMassFlag = self.magphys['logMstar_med'] < 2
@@ -111,13 +112,16 @@ class haplots(vtables):
     def correct_halpha_flux(self):
         self.hacorr = self.halpha['FILT_COR']
     def get_detect_flag(self):
-        self.detect_flag = self.halpha['ELLIP_HSUM'] > 0
-        self.rdetect_flag = self.halpha['M24'] > 0        
+        #self.detect_flag = self.halpha['ELLIP_HSUM'] > 0
+        #self.rdetect_flag = self.halpha['M24'] > 0        
 
+        self.detect_flag = self.halpha['H_R24_FLUX_CGS'] > 0
+        self.rdetect_flag = self.halpha['R24_FLUX_CGS'] > 0        
+        
         pass
     def plot_fwhm_r_h(self):
-        x = self.halpha['R_FWHM']
-        y = self.halpha['H_FWHM'] - x
+        x = self.halpha['R_FWHM_PSF']
+        y = self.halpha['H_FWHM_PSF'] - x
 
 
         flag = self.main['HAobsflag'] & (x > 0)
@@ -159,8 +163,8 @@ class haplots(vtables):
         plt.axhline(y=ave+std,ls='--',color='k')
         plt.axhline(y=ave-std,ls='--',color='k')        
         print(f"H FWHM - R FWHM = {np.mean(y):.2f} +/- {std:.2f}")
-        plt.savefig(plotdir+"FWHM-Halpha-vs-R.pdf")
-        plt.savefig(plotdir+"FWHM-Halpha-vs-R.png")
+        plt.savefig(plotdir+"FWHM-Halpha-vs-R.pdf",dpi=300, bbox_inches="tight", pad_inches=0.02)
+        plt.savefig(plotdir+"FWHM-Halpha-vs-R.png",dpi=300, bbox_inches="tight", pad_inches=0.02)
 
     def compare_m24_ephot(self):
         """compare r-band mag 24 with JM's ephot  """
