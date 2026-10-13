@@ -1,0 +1,8 @@
+alma_image,single_dish_observation,single_dish_beam_arcsec,SCO_10,errSCO_10,pointing_mode
+n5348-co10-mean.fits,IRAM_30m,21,8.35,1.93,single
+n5356-co10-mean.fits,KPNO_12m,55,43.25,18.32,multiple
+n5470-co10-mean.fits,IRAM_30m,21,15.41,1.87,single
+n5560-co10-mean.fits,KPNO_12m,55,52.73,23.60,multiple
+n5566-co10-mean.fits,IRAM_30m,21,71.58,2.58,single
+n5577-co10-mean.fits,KPNO_12m,55,19.16,8.11,multiple
+u9661-co10-mean.fits,IRAM_30m,21,10.23,1.13,single
